@@ -1,0 +1,3 @@
+# ignore datasets directory
+datasets/
+MNIST/
