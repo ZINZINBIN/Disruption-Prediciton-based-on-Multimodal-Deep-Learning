@@ -2,10 +2,12 @@ import numpy as np
 import torch 
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Optional, Tuple, List
+import math
+from typing import Optional, Tuple, List, Union
+from torch.nn.modules.utils import _triple
 
 class ConvBlock(nn.Module):
-    def __init__(self, in_channels : int, out_channels : int, kernel_size : int, stride : int = 1, dilation : int = 1, padding : int = 0, bias : bool = False, alpha : float = 0.01):
+    def __init__(self, in_channels : int, out_channels : int, kernel_size : int, stride : int = 1, dilation : int = 1, padding : int = 1, bias : bool = False, alpha : float = 0.01):
         super(ConvBlock, self).__init__()
         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding, dilation, bias = bias)
         self.bn = nn.BatchNorm2d(out_channels)
@@ -15,17 +17,97 @@ class ConvBlock(nn.Module):
         x = self.relu(self.bn(self.conv(x)))
         return x
 
-class TemporalConvBlock(nn.Module):
-    def __init__(self, in_channels : int, out_channels : int, kernel_size : int, stride : int = 1, dilation : int = 1, padding : int = 0, bias : bool = False, alpha : float = 0.01):
-        super(TemporalConvBlock, self).__init__()
-        self.conv = nn.Conv3d(in_channels, out_channels, kernel_size, stride, padding , dilation, bias = bias)
+class Conv3dBlock(nn.Module):
+    def __init__(self, in_channels : int, out_channels : int, kernel_size = 3, stride = 1, dilation : int = 1, padding = 1, bias : bool = False, alpha : float = 0.01):
+        super(Conv3dBlock, self).__init__()
+
+        if type(stride) == Tuple:
+            strides = stride
+        else:
+            strides = (1, stride, stride)
+
+        if type(kernel_size) ==  Tuple:
+            kernel_sizes = kernel_size
+        else:
+            kernel_sizes = (1, kernel_size, kernel_size)
+
+        if type(padding) == Tuple:
+            paddings = padding
+        else:
+            paddings = (1, padding, padding)
+
+        self.conv = nn.Conv3d(
+            in_channels, 
+            out_channels, 
+            kernel_size = kernel_sizes, 
+            stride =  strides, 
+            padding = paddings, 
+            dilation = dilation, 
+            bias = bias)
+
         self.bn = nn.BatchNorm3d(out_channels)
         self.relu = nn.LeakyReLU(alpha)
 
     def forward(self, x):
         x = self.relu(self.bn(self.conv(x)))
         return x
-    
+
+class SpatioTemporalConv(nn.Module):
+    def __init__(self, in_channels : int, out_channels : int, kernel_size = (3,1,1), stride = (1,1,1), dilation : int = 1, padding = (1,1,1), bias : bool = False, alpha : float = 0.01, is_first : bool = False):
+        super(SpatioTemporalConv, self).__init__()
+
+        kernel_size = _triple(kernel_size)
+        stride = _triple(kernel_size)
+        padding =  _triple(kernel_size)
+
+        if is_first:
+            # spatio conv
+            spatio_kernel_size = kernel_size
+            spatio_stride = (1, stride[1], stride[2])
+            spatio_padding = padding
+
+            # temporal conv
+            temporal_kernel_size = (3,1,1)
+            temporal_stride = (stride[0], 1, 1)
+            temporal_padding = (1,0,0)
+
+            middle_channels = 45
+
+            self.spatio_conv = Conv3dBlock(in_channels, middle_channels, spatio_kernel_size, spatio_stride, dilation, spatio_padding, False, alpha)
+            self.temporal_conv = Conv3dBlock(middle_channels, out_channels,  temporal_kernel_size, temporal_stride, temporal_padding, False, alpha)
+        else:
+            spatio_kernel_size = (1, kernel_size[1], kernel_size[2])
+            spatio_stride = (1, stride[1], stride[2])
+            spatio_padding = (0, padding[1], padding[2])
+
+            temporal_kernel_size = (kernel_size[0],1,1)
+            temporal_stride = (stride[0], 1, 1)
+            temporal_padding = (padding[0], 0, 0)
+
+            middle_channels = int(
+                math.floor(
+                    (kernel_size[0] * kernel_size[1] * kernel_size[2] * in_channels * out_channels) / \
+                        (kernel_size[1] * kernel_size[2] * in_channels + kernel_size[0] * out_channels)
+                )
+            )
+            self.spatio_conv = Conv3dBlock(in_channels, middle_channels, spatio_kernel_size, spatio_stride, dilation, spatio_padding, spatio_padding, bias, alpha)
+            self.temporal_conv = Conv3dBlock(middle_channels, out_channels, temporal_kernel_size, temporal_stride, dilation, temporal_padding, bias, alpha)
+
+    def forward(self, x):
+        x = self.spatio_conv(x)
+        x = self.temporal_conv(x)
+        return x
+
+class SpatioTemporalResBlock(nn.Module):
+    def __init__(self, in_channels : int, out_channels : int, kernel_size : Tuple[int,int,int] = (3,1,1), downsample = False):
+        super(SpatioTemporalResBlock, self).__init__()
+        self.downsample = downsample
+
+        padding = kernel_size // 2
+
+        if self.downsample:
+            self.downsample_conv = SpatioTemporalConv(in_channels, out_channels, kernel_size = (1,1,1), stride = (2,2,2), dilation = dilation, padding )
+
 # Spatial transformer layer
 class SpatialTransformer(nn.Module):
     def __init__(self, 
@@ -91,3 +173,94 @@ class SpatialTransformer(nn.Module):
         grid = F.affine_grid(theta, x.size())
         x = F.grid_sample(x, grid)
         return x
+
+# From SlowFast model
+class SubBatchNorm3D(nn.Module):
+    def __init__(self, num_split, **kwargs):
+        super(SubBatchNorm3D, self).__init__()
+        self.num_split = num_split
+        self.num_features = kwargs['num_features']
+
+        if kwargs.get("affine", True):
+            self.affine = True
+            kwargs['affine'] = False
+            self.weight = nn.Parameter(torch.ones(self.num_features))
+            self.bias = nn.Parameter(torch.zeros(self.num_features))
+        
+        else:
+            self.affine = False
+
+        self.bn = nn.BatchNorm3d(**kwargs)
+        kwargs['num_features'] = self.num_features * self.num_split
+        self.split_bn = nn.BatchNorm3d(**kwargs)
+
+    def get_aggregated_mean_std(self, means, stds, n):
+        mean = means.view(n, -1).sum(0) / n
+        std = (
+            stds.view(n,-1).sum(0) / n + ((means.view(n,-1) - mean)**2).view(n, -1).sum(0) /  n
+        )
+
+        return mean.detach(), std.detach()
+
+    def aggregate_stats(self):
+        if self.split_bn.track_running_stats:
+            ( self.bn.running_mean.data, self.bn.running_var.data, ) = self.get_aggregated_mean_std(
+                self.split_bn.running_mean,
+                self.split_bn.running_var,
+                self.num_split
+            )
+    def forward(self, x):
+        if self.training:
+            n,c,t,h,w = x.shape
+            x  = x.view(n // self.num_split, c * self.num_split,  t, h, w)
+            x = self.split_bn(x)
+            x = x.view(n,c,t,h,w)
+
+        else:
+            x = self.bn(x)
+        
+        if self.affine:
+            x = x * self.weight.view((-1,1,1,1))
+            x = x + self.bias.view((-1,1,1,1))
+        return x
+
+class Swish(nn.Module):
+    def __init__(self):
+        super(Swish, self).__init__()
+
+    def forward(self, x):
+        return SwishEfficient.apply(x)
+
+class SwishEfficient(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, x):
+        result = x * torch.sigmoid(x)
+        ctx.save_for_backward(x)
+        return result
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        x = ctx.saved_variables[0]
+        sigmoid_x = torch.sigmoid(x)
+        return grad_output * (sigmoid_x * (1 + x * (1 - sigmoid_x)))
+
+class Bottleneck(nn.Module):
+    def __init__(
+        self, 
+        in_planes : int, 
+        planes : List[int], 
+        kernel_size : int = 3,
+        stride :int = 1, 
+        dilation : int = 1,
+        padding : int = 1,
+        bias : bool = False,
+        alpha : float = 0.01,
+        downsample = None, 
+        index = 0, 
+        base_bn_splits = 8
+        ):
+        super(Bottleneck, self).__init__()
+        self.index = index
+        self.base_bn_splits = base_bn_splits
+        self.conv1 = TemporalConvBlock(in_planes, planes[0], kernel_size, stride, dilation, padding, bias, alpha)
+        self.bn1 = SubBatchNorm3D(num_splits = base_bn_splits, num_features = planes[0], affine = True)

@@ -24,6 +24,60 @@ mnist_test_loader = torch.utils.data.DataLoader(
         transforms.Normalize((0.1307,), (0.3081,))
     ])), batch_size=64, shuffle=True, num_workers=4)
 
+video_height = 256
+video_width = 256
+video_channel = 3
+
+# Training dataset for kinetics
+kinetic_train_loader = torch.utils.data.DataLoader(
+    datasets.Kinetics(
+        root='.', split = 'train', download=True,
+        frames_per_clip = 6,
+        transform=transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.1307,), (0.3081,)),
+            ]
+        )
+    ), batch_size=64, shuffle=True, num_workers=4
+)
+
+# Test dataset for mnist
+kinetic_test_loader = torch.utils.data.DataLoader(
+    datasets.Kinetics(
+        root='.', split = 'test', download=True, 
+        frames_per_clip = 6,
+        transform=transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.1307,), (0.3081,))
+    ])), batch_size=64, shuffle=True, num_workers=4)
+
+
+# Training dataset for UCF101
+ucf_train_loader = torch.utils.data.DataLoader(
+    datasets.UCF101(
+        root='.', split = 'train', download=True,
+        frames_per_clip = 6,
+        transform=transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.1307,), (0.3081,)),
+            ]
+        )
+    ), batch_size=64, shuffle=True, num_workers=4
+)
+
+# Test dataset for UCF101
+ucf_test_loader = torch.utils.data.DataLoader(
+    datasets.UCF101(
+        root='.', split = 'test', download=True, 
+        frames_per_clip = 6,
+        transform=transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.1307,), (0.3081,))
+    ])), batch_size=64, shuffle=True, num_workers=4)
+
+
+
+
 def convert_image_np(inp:torch.Tensor):
     """Convert a Tensor to numpy image."""
     inp = inp.numpy().transpose((1, 2, 0))
