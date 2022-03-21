@@ -79,3 +79,4 @@ class SpatialTransformer(nn.Module):
         grid = F.affine_grid(theta, x.size())
         x = F.grid_sample(x, grid)
         return x
+
