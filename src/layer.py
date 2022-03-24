@@ -21,17 +21,17 @@ class Conv3dBlock(nn.Module):
     def __init__(self, in_channels : int, out_channels : int, kernel_size = 3, stride = 1, dilation : int = 1, padding = 1, bias : bool = False, alpha : float = 0.01):
         super(Conv3dBlock, self).__init__()
 
-        if type(stride) == Tuple:
+        if type(stride) == tuple:
             strides = stride
         else:
             strides = (1, stride, stride)
 
-        if type(kernel_size) ==  Tuple:
+        if type(kernel_size) == tuple:
             kernel_sizes = kernel_size
         else:
             kernel_sizes = (1, kernel_size, kernel_size)
 
-        if type(padding) == Tuple:
+        if type(padding) == tuple:
             paddings = padding
         else:
             paddings = (1, padding, padding)
@@ -56,9 +56,12 @@ class SpatioTemporalConv(nn.Module):
     def __init__(self, in_channels : int, out_channels : int, kernel_size = (3,1,1), stride = (1,1,1), dilation : int = 1, padding = (1,1,1), bias : bool = False, alpha : float = 0.01, is_first : bool = False):
         super(SpatioTemporalConv, self).__init__()
 
-        kernel_size = _triple(kernel_size)
-        stride = _triple(kernel_size)
-        padding =  _triple(kernel_size)
+        if type(kernel_size) == int:
+            kernel_size = _triple(kernel_size)
+        if type(stride) ==  int:
+            stride = _triple(stride)
+        if type(padding) == int:
+            padding =  _triple(padding)
 
         if is_first:
             # spatio conv
@@ -74,7 +77,7 @@ class SpatioTemporalConv(nn.Module):
             middle_channels = 45
 
             self.spatio_conv = Conv3dBlock(in_channels, middle_channels, spatio_kernel_size, spatio_stride, dilation, spatio_padding, False, alpha)
-            self.temporal_conv = Conv3dBlock(middle_channels, out_channels,  temporal_kernel_size, temporal_stride, temporal_padding, False, alpha)
+            self.temporal_conv = Conv3dBlock(middle_channels, out_channels, temporal_kernel_size, temporal_stride,  dilation, temporal_padding, False, alpha)
         else:
             spatio_kernel_size = (1, kernel_size[1], kernel_size[2])
             spatio_stride = (1, stride[1], stride[2])
@@ -90,7 +93,7 @@ class SpatioTemporalConv(nn.Module):
                         (kernel_size[1] * kernel_size[2] * in_channels + kernel_size[0] * out_channels)
                 )
             )
-            self.spatio_conv = Conv3dBlock(in_channels, middle_channels, spatio_kernel_size, spatio_stride, dilation, spatio_padding, spatio_padding, bias, alpha)
+            self.spatio_conv = Conv3dBlock(in_channels, middle_channels, spatio_kernel_size, spatio_stride, dilation, spatio_padding, bias, alpha)
             self.temporal_conv = Conv3dBlock(middle_channels, out_channels, temporal_kernel_size, temporal_stride, dilation, temporal_padding, bias, alpha)
 
     def forward(self, x):
@@ -99,14 +102,48 @@ class SpatioTemporalConv(nn.Module):
         return x
 
 class SpatioTemporalResBlock(nn.Module):
-    def __init__(self, in_channels : int, out_channels : int, kernel_size : Tuple[int,int,int] = (3,1,1), downsample = False):
+    def __init__(self, in_channels : int, out_channels : int, kernel_size : Union[Tuple[int,int,int], int] = (3,1,1), downsample : bool = False, dilation : int = 1, alpha :float = 0.01):
         super(SpatioTemporalResBlock, self).__init__()
         self.downsample = downsample
 
         padding = kernel_size // 2
 
         if self.downsample:
-            self.downsample_conv = SpatioTemporalConv(in_channels, out_channels, kernel_size = (1,1,1), stride = (2,2,2), dilation = dilation, padding )
+            self.downsample_conv = SpatioTemporalConv(in_channels, out_channels, kernel_size = 1, stride = 2, dilation = dilation, padding = 0)
+            
+            self.conv1 = SpatioTemporalConv(in_channels, out_channels, kernel_size, stride =  (2,2,2), dilation=dilation, padding = padding)
+        else:
+            self.conv1 = SpatioTemporalConv(in_channels, out_channels, kernel_size, stride = (1,1,1), dilation = dilation, padding =padding)
+        
+        self.conv2 = SpatioTemporalConv(out_channels, out_channels, kernel_size, stride = (1,1,1), padding = padding, dilation = dilation)
+        self.relu = nn.LeakyReLU(alpha)
+
+    def forward(self, x):
+
+        res = self.conv1(x)
+        res = self.conv2(res)
+
+        if self.downsample:
+            x = self.downsample_conv(x)
+
+        
+        return self.relu(x+res)
+        
+class SpatioTemporalResLayer(nn.Module):
+    def __init__(self, in_channels : int, out_channels : int, kernel_size : Union[Tuple[int,int,int], int] = (3,1,1), downsample : bool = False, dilation : int = 1, alpha :float = 0.01, layer_size : int = 4):
+        super(SpatioTemporalResLayer, self).__init__()
+        self.block1 = SpatioTemporalResBlock(in_channels, out_channels, kernel_size, downsample = downsample, dilation = dilation, alpha = alpha)
+        self.blocks = nn.ModuleList([])
+
+        for _ in range(layer_size - 1):        
+            self.blocks.append(
+                SpatioTemporalResBlock(out_channels, out_channels, kernel_size, downsample = False, dilation = dilation, alpha = alpha)
+            )
+    def forward(self, x):
+        x = self.block1(x)
+        for block in self.blocks:
+            x = block(x)
+        return x
 
 # Spatial transformer layer
 class SpatialTransformer(nn.Module):
@@ -262,5 +299,5 @@ class Bottleneck(nn.Module):
         super(Bottleneck, self).__init__()
         self.index = index
         self.base_bn_splits = base_bn_splits
-        self.conv1 = TemporalConvBlock(in_planes, planes[0], kernel_size, stride, dilation, padding, bias, alpha)
+        self.conv1 = Conv3dBlock(in_planes, planes[0], kernel_size, stride, dilation, padding, bias, alpha)
         self.bn1 = SubBatchNorm3D(num_splits = base_bn_splits, num_features = planes[0], affine = True)

@@ -108,4 +108,3 @@ def show_frame(frame):
     
     plt.imshow(frame_img)
     plt.show()
-    

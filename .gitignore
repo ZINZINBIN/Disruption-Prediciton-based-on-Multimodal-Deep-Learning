@@ -1,3 +1,4 @@
 # ignore datasets directory
-datasets/
+dataset/
 MNIST/
+#weights/
