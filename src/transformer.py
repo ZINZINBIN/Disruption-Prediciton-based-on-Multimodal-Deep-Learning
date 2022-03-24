@@ -189,28 +189,3 @@ class MulticlassClassifier(nn.Module):
         x = self.pooling(x.permute(0,2,1)).squeeze()
         x = self.mlp(x)
         return x
-
-class SBERTDisruptionClassifier(nn.Module):
-    def __init__(self, sbert : SBERT, mlp_hidden : int, num_classes : int = 2):
-        super(SBERTDisruptionClassifier, self).__init__()
-        self.sbert = sbert
-        enc_dims = self.get_sbert_output()
-        self.classifier = MulticlassClassifier(enc_dims, mlp_hidden, num_classes)
-
-    def get_sbert_output(self):
-        seq_len = self.sbert.max_len
-        num_features = self.sbert.num_features
-        doy_dims = seq_len
-
-        sample_x = torch.zeros((1, doy_dims))
-        sample_doy = torch.zeros((1, seq_len, num_features))
-        sample_mask = None
-        sample_output = self.sbert(sample_x, sample_doy, sample_mask)
-
-        return sample_output.size(1)
-
-    def forward(self, x : torch.Tensor, doy : torch.Tensor, mask : Optional[torch.Tensor]):
-        # doy : (batch_size, doy_dims)
-        # x : (batch_size, seq_len, num_features)
-        x = self.sbert(x, doy, mask)
-        return self.classifier(x, mask)

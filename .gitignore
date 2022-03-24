@@ -1,4 +1,6 @@
 # ignore datasets directory
 dataset/
 MNIST/
-#weights/
+
+# ignore .pt file
+*.pt

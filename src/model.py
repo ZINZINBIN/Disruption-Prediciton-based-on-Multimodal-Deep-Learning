@@ -9,6 +9,7 @@ import torch
 import torch.nn as nn
 from typing import Tuple, List
 from src.layer import *
+from src.transformer import *
 from pytorch_model_summary import summary
 
 # For Test
@@ -129,3 +130,101 @@ class R2Plus1DClassifier(nn.Module):
         input_size = (1, *self.input_size)
         sample = torch.zeros(input_size)
         print(summary(self, sample, max_depth = None, show_parent_layers = True, show_input = True))
+
+class VideoSpatioEncoder(nn.Module):
+    def __init__(
+        self, 
+        input_shape : Tuple[int,int,int,int] = (3, 8, 112, 112),
+        STN_conv_channels : List[int] = [1, 8, 16], 
+        STN_conv_kernels : List[int] = [8, 4],
+        STN_conv_strides : List[int] = [1, 1],
+        STN_conv_paddings : List[int] = [1, 1],
+        STN_pool_strides : List[int] =  [2, 2],
+        STN_pool_kernels : List[int] = [2, 2],
+        alpha : float = 0.01,
+        STN_theta_dim : int = 64
+        ):
+
+        self.input_shape = input_shape
+        self.seq_len = input_shape[1]
+
+        self.STN = SpatialTransformer3D(
+            input_shape = input_shape,
+            conv_channels=STN_conv_channels,
+            conv_kernels=STN_conv_kernels,
+            conv_strides=STN_conv_strides,
+            conv_paddings=STN_conv_paddings,
+            pool_strides=STN_pool_strides,
+            pool_kernels=STN_pool_kernels,
+            alpha = alpha,
+            theta_dim=STN_theta_dim 
+        )
+
+        self.conv_block1 = Conv3dResBlock(
+            in_channels = 3, 
+            out_channels = 64, 
+            kernel_size = 3, 
+            stride = 2, 
+            dilation = 1, 
+            padding = 1, 
+            bias = False, 
+            alpha = alpha, 
+            downsample  = True
+        )
+
+        self.pooling_block1 = nn.MaxPool3d(
+            kernel_size = (1, 3, 3),
+            stride = (1, 1, 1),
+            padding= (0,0,0)
+        )
+
+        self.conv_block2 = Conv3dResBlock(64, 128, 3, 2, 1, 1, False, alpha, False)
+        self.pooling_block2 = nn.MaxPool3d((1, 3, 3),(1, 1, 1),(0,0,0))
+
+        self.conv_block3 = Conv3dResBlock(128, 256, 3, 2, 1, 1, False, alpha, False)
+        self.pooling_block3 = nn.MaxPool3d((1, 3, 3),(1, 1, 1),(0,0,0))
+
+        self.conv_block4 = Conv3dResBlock(256, 256, 3, 2, 1, 1, False, alpha, False)
+        
+    def forward(self, x:torch.Tensor):
+        x = self.STN(x)
+        x = self.conv_block1(x)
+        x = self.pooling_block1(x)
+        x = self.conv_block2(x)
+        x = self.pooling_block2(x)
+        x = self.conv_block3(x)
+        x = self.pooling_block3(x)
+        x = self.conv_block4(x)
+
+        x = x.view(x.size(0),self.seq_len, -1)
+
+        return x
+
+class SBERTDisruptionClassifier(nn.Module):
+    def __init__(self, spatio_encoder : VideoSpatioEncoder, sbert : SBERT, mlp_hidden : int, num_classes : int = 2):
+        super(SBERTDisruptionClassifier, self).__init__()
+        self.spatio_encoder = spatio_encoder
+        self.sbert = sbert
+        enc_dims = self.get_sbert_output()
+        self.classifier = MulticlassClassifier(enc_dims, mlp_hidden, num_classes)
+
+    def get_sbert_output(self):
+        seq_len = self.sbert.max_len
+        num_features = self.sbert.num_features
+        doy_dims = seq_len
+
+        sample_x = torch.zeros((1, doy_dims))
+        sample_doy = torch.zeros((1, seq_len, num_features))
+        sample_mask = None
+        sample_output = self.sbert(sample_x, sample_doy, sample_mask)
+
+        return sample_output.size(1)
+
+    def forward(self, x : torch.Tensor):
+        x = self.spatio_encoder(x)
+
+        # doy : (batch_size, doy_dims)
+        # x : (batch_size, seq_len, num_features)
+        
+        # x = self.sbert(x, doy, mask)
+        # return self.classifier(x, mask)

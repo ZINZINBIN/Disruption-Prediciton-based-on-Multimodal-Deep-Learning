@@ -52,6 +52,57 @@ class Conv3dBlock(nn.Module):
         x = self.relu(self.bn(self.conv(x)))
         return x
 
+class Conv3dResBlock(nn.Module):
+    def __init__(self, in_channels : int, out_channels : int, kernel_size : int =  3, stride : int =  1, dilation : int = 1, padding :int =  1, bias : bool = False, alpha : float = 0.01, downsample : bool = True):
+        self.downsample = downsample
+
+        if self.downsample:
+            self.stride = (1, stride, stride)
+            self.padding = (0, padding, padding)
+        else:
+            pad = kernel_size // 2
+
+            self.stride = (1,1,1)
+            self.padding = (0, pad, pad)
+
+        self.kernel_size = (1, kernel_size, kernel_size)
+
+        if self.downsample:
+            self.downsample_conv = Conv3dBlock(
+                in_channels,
+                out_channels,
+                kernel_size = self.kernel_size,
+                stride = self.stride,
+                padding = self.padding,
+                dilation=dilation,
+                alpha = alpha,
+                bias = bias
+            )
+    
+        self.conv1 = Conv3dBlock(
+            in_channels,
+            out_channels,
+            kernel_size = self.kernel_size,
+            padding = self.padding,
+            stride=self.stride,
+            dilation=dilation,
+            alpha = alpha,
+            bias = bias
+        )
+
+        self.conv2 = nn.Conv3d(out_channels, out_channels, self.kernel_size,  self.stride,  self.padding, dilation, bias = bias )
+        self.bn2 = nn.BatchNorm3d(out_channels)
+        self.relu2 = nn.LeakyReLU(alpha)
+
+    def forward(self, x:torch.Tensor):
+        res = self.conv1(x)
+        res = self.bn2(self.conv2(res))
+        if self.downsample:
+            xi =  self.downsample_conv(x)
+        else:
+            xi = x
+        return self.relu2(xi + res)
+
 class SpatioTemporalConv(nn.Module):
     def __init__(self, in_channels : int, out_channels : int, kernel_size = (3,1,1), stride = (1,1,1), dilation : int = 1, padding = (1,1,1), bias : bool = False, alpha : float = 0.01, is_first : bool = False):
         super(SpatioTemporalConv, self).__init__()
@@ -126,7 +177,6 @@ class SpatioTemporalResBlock(nn.Module):
         if self.downsample:
             x = self.downsample_conv(x)
 
-        
         return self.relu(x+res)
         
 class SpatioTemporalResLayer(nn.Module):
@@ -211,6 +261,103 @@ class SpatialTransformer(nn.Module):
         x = F.grid_sample(x, grid)
         return x
 
+class SpatialTransformer3D(nn.Module):
+    def __init__(self, 
+    input_shape : Tuple[int, int, int, int] = (3, 8, 112, 112),
+    conv_channels : List[int] = [1, 8, 16], 
+    conv_kernels : List[int] = [8, 4],
+    conv_strides : List[int] = [1, 1],
+    conv_paddings : List[int] = [1, 1],
+    pool_strides : List[int] =  [2, 2],
+    pool_kernels : List[int] = [2, 2],
+    alpha : float = 0.01,
+    theta_dim : int = 64
+    ):
+
+        super(SpatialTransformer3D, self).__init__()
+        assert len(conv_channels) == len(conv_kernels) + 1, "length error"
+        assert len(conv_channels) == len(pool_strides) + 1, "length error"
+        assert len(conv_channels) == len(pool_kernels) + 1, "length error"
+
+        self.conv_channels = conv_channels
+        self.conv_kernels = conv_kernels
+        self.conv_paddings = conv_paddings
+        self.conv_strides = conv_strides
+        self.pool_strides = pool_strides
+        self.pool_kernels = pool_kernels
+        self.input_shape = input_shape
+        self.theta_dim =  theta_dim
+        self.localization = nn.ModuleList()
+        self.alpha = alpha
+        self.device = None
+
+        self.seq_len = input_shape[1]
+
+        for idx in range(len(conv_channels)-1):
+
+            in_channels = conv_channels[idx]
+            out_channels = conv_channels[idx+1]
+            kernel_size = (1, conv_kernels[idx], conv_kernels[idx])
+            stride = (1, conv_strides[idx], conv_strides[idx])
+            padding = (0, conv_paddings[idx],  conv_paddings[idx])
+
+            pool_kernel = (0, pool_kernels[idx], pool_kernels[idx])
+            pool_stride = (1, pool_strides[idx],  pool_strides[idx])
+
+
+            self.localization.append(
+                nn.Conv3d(in_channels, out_channels, kernel_size= kernel_size, stride = stride, padding = padding)
+            )
+            self.localization.append(
+                nn.MaxPool3d(pool_kernel, pool_stride)
+            )
+            self.localization.append(
+                nn.LeakyReLU(alpha)
+            )
+
+        local_output_shape = self.get_localization_output_size()
+
+        # theta : attention score from  sample
+        self.fc_loc = nn.Sequential(
+            nn.Linear(local_output_shape[-1], theta_dim),
+            nn.ReLU(),
+            nn.Linear(theta_dim, 6)
+        )
+
+    def get_localization_output_size(self):
+        if self.device is None:
+            self.device = next(self.localization.parameters()).device
+        sample_shape  =  (1, *(self.input_shape))
+        sample_inputs = torch.zeros(sample_shape).to(self.device)
+        sample_outputs = self.forward_localization(sample_inputs)
+        return sample_outputs.view(sample_inputs.size(0), self.seq_len, -1).size()
+        
+    def forward_localization(self, x):
+        for layer in self.localization:
+            x = layer.forward(x)
+        return x
+
+    def forward(self, x:torch.Tensor):
+        x_sampled = torch.zeros_like(x)
+        xs = self.forward_localization(x)
+        xs = xs.view(x.size(0), self.seq_len, -1)
+        theta = self.fc_loc(xs)
+
+        for idx in range(self.seq_len):
+            x_spatio = x[:,:,idx,:,:].squeeze(2)
+            x_theta = theta[:,idx,:].view(-1,2,3)
+            grid = F.affine_grid(x_theta, x_spatio.size())
+            grid = F.grid_sample(x_spatio, grid)
+            x_sampled[:,:,idx,:,:] = grid.unsqueeze(2)
+            
+        return x_sampled
+
+
+
+'''SlowFast model From Facebook AI  Research Team
+- different seq_distance to extract different features from slow and fast model
+- codes : github()
+'''
 # From SlowFast model
 class SubBatchNorm3D(nn.Module):
     def __init__(self, num_split, **kwargs):
