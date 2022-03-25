@@ -22,8 +22,9 @@ class PositionalEncoding(nn.Module):
 
         self.register_buffer('pe', pe)
 
-    def forward(self, doy):
-        return self.pe[doy, :]
+    def forward(self, doy:torch.Tensor):
+        doy = doy.type(dtype = torch.LongTensor)
+        return self.pe[doy.view(-1), :]
 
 class GELU(nn.Module):
     def forward(self, x):
@@ -82,7 +83,7 @@ class MultiHeadAttention(nn.Module):
         super(MultiHeadAttention,  self).__init__()
         assert d_model % h == 0
         
-        self.d_k = d_model / h
+        self.d_k = int(d_model / h)
         self.h = h
         self.d_model = d_model
 
@@ -96,6 +97,8 @@ class MultiHeadAttention(nn.Module):
 
     def forward(self, query : torch.Tensor, key : torch.Tensor, value : torch.Tensor, mask = None):
         batch_size = query.size(0)
+        # print("self.h : ", self.h)
+        # print("self.d_k : ", self.d_k)
 
         query, key, value = [
             l(x).view(batch_size, -1, self.h, self.d_k).transpose(1,2) for l, x in zip(self.linear_layers, (query, key, value))
@@ -129,7 +132,7 @@ class BertEmbedding(nn.Module):
         self.dropout = nn.Dropout(p = dropout)
         self.embed_size = embedding_dim
 
-    def forward(self, input_sequence : torch.Tensor, doy_sequence : torch.Tensor):
+    def forward(self, input_sequence : torch.Tensor, doy_sequence : torch.IntTensor):
         batch_size = input_sequence.size(0)
         seq_length = input_sequence.size(1)
 
@@ -157,8 +160,10 @@ class SBERT(nn.Module):
             TransformerBlock(hidden, attn_heads, hidden * 4, dropout) for _ in range(n_layers)
         ])
 
-    def forward(self, x : torch.Tensor, doy : torch.Tensor, mask : Optional[torch.Tensor]):
-        mask = (mask > 0).unsqueeze(1).repeat(1, x.size(1), 1).unsqueeze(1)
+    def forward(self, x : torch.Tensor, doy : torch.IntTensor, mask : Optional[torch.Tensor]):
+
+        if mask is not None:
+            mask = (mask > 0).unsqueeze(1).repeat(1, x.size(1), 1).unsqueeze(1)
 
         x = self.embedding(input_sequence = x, doy_sequence = doy)
 
@@ -168,10 +173,11 @@ class SBERT(nn.Module):
         return x
 
 class MulticlassClassifier(nn.Module):
-    def __init__(self, enc_dims : int, hidden : int, num_classes : int = 2, alpha : float = 0.01):
+    def __init__(self, enc_dims : int, hidden : int, seq_len : int = 8, num_classes : int = 2, alpha : float = 0.01):
         super(MulticlassClassifier, self).__init__()
         self.enc_dims = enc_dims
-        self.pooling = nn.MaxPool1d(enc_dims)
+        self.seq_len  =  seq_len
+        self.pooling = nn.MaxPool1d(seq_len)
         pooling_dims = self.get_pooling_dims()
         self.mlp = nn.Sequential(
             nn.Linear(pooling_dims, hidden),
@@ -181,11 +187,11 @@ class MulticlassClassifier(nn.Module):
         )
 
     def get_pooling_dims(self):
-        sample = torch.zeros((1, self.enc_dims))
-        sample_output = self.pooling(sample)
-        return sample_output.size(1)
+        sample = torch.zeros((1, self.seq_len, self.enc_dims))
+        sample_output = self.pooling(sample.permute(0,2,1)).squeeze()
+        return sample_output.size(-1)
 
-    def forward(self, x : torch.Tensor, mask : Optional[torch.Tensor] = None):
+    def forward(self, x : torch.Tensor):
         x = self.pooling(x.permute(0,2,1)).squeeze()
         x = self.mlp(x)
         return x

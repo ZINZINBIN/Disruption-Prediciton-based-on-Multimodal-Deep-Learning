@@ -5,6 +5,7 @@
 # Tabular data Encoder Model : TabNet or Transformer model
 # ======================================================================
 import numpy as np
+from torch import unsqueeze
 import torch 
 import torch.nn as nn
 from typing import Tuple, List
@@ -135,7 +136,7 @@ class VideoSpatioEncoder(nn.Module):
     def __init__(
         self, 
         input_shape : Tuple[int,int,int,int] = (3, 8, 112, 112),
-        STN_conv_channels : List[int] = [1, 8, 16], 
+        STN_conv_channels : List[int] = [3, 16, 32], 
         STN_conv_kernels : List[int] = [8, 4],
         STN_conv_strides : List[int] = [1, 1],
         STN_conv_paddings : List[int] = [1, 1],
@@ -144,7 +145,7 @@ class VideoSpatioEncoder(nn.Module):
         alpha : float = 0.01,
         STN_theta_dim : int = 64
         ):
-
+        super(VideoSpatioEncoder, self).__init__()
         self.input_shape = input_shape
         self.seq_len = input_shape[1]
 
@@ -175,19 +176,25 @@ class VideoSpatioEncoder(nn.Module):
         self.pooling_block1 = nn.MaxPool3d(
             kernel_size = (1, 3, 3),
             stride = (1, 1, 1),
-            padding= (0,0,0)
+            padding= (0, 0, 0)
         )
 
-        self.conv_block2 = Conv3dResBlock(64, 128, 3, 2, 1, 1, False, alpha, False)
+        self.conv_block2 = Conv3dResBlock(64, 128, 3, 2, 1, 1, False, alpha, True)
         self.pooling_block2 = nn.MaxPool3d((1, 3, 3),(1, 1, 1),(0,0,0))
 
-        self.conv_block3 = Conv3dResBlock(128, 256, 3, 2, 1, 1, False, alpha, False)
+        self.conv_block3 = Conv3dResBlock(128, 256, 3, 2, 1, 1, False, alpha, True)
         self.pooling_block3 = nn.MaxPool3d((1, 3, 3),(1, 1, 1),(0,0,0))
 
-        self.conv_block4 = Conv3dResBlock(256, 256, 3, 2, 1, 1, False, alpha, False)
+        self.conv_block4 = Conv3dResBlock(256, 512, 3, 2, 1, 1, False, alpha, True)
+
+    def get_output_size(self):
+        input_shape = (1, *(self.input_shape))
+        device = next(self.STN.parameters()).device
+        sample = torch.zeros(input_shape).to(device)
+        sample_output = self.forward(sample)
+        return sample_output.size()
         
     def forward(self, x:torch.Tensor):
-        x = self.STN(x)
         x = self.conv_block1(x)
         x = self.pooling_block1(x)
         x = self.conv_block2(x)
@@ -201,30 +208,33 @@ class VideoSpatioEncoder(nn.Module):
         return x
 
 class SBERTDisruptionClassifier(nn.Module):
-    def __init__(self, spatio_encoder : VideoSpatioEncoder, sbert : SBERT, mlp_hidden : int, num_classes : int = 2):
+    def __init__(self, spatio_encoder : VideoSpatioEncoder, sbert : SBERT, mlp_hidden : int, num_classes : int = 2, alpha : float = 0.01):
         super(SBERTDisruptionClassifier, self).__init__()
         self.spatio_encoder = spatio_encoder
         self.sbert = sbert
         enc_dims = self.get_sbert_output()
-        self.classifier = MulticlassClassifier(enc_dims, mlp_hidden, num_classes)
+        self.classifier = MulticlassClassifier(enc_dims, mlp_hidden, seq_len = sbert.max_len, num_classes = num_classes, alpha = alpha)
+        self.device = next(self.sbert.parameters()).device
 
     def get_sbert_output(self):
         seq_len = self.sbert.max_len
         num_features = self.sbert.num_features
         doy_dims = seq_len
 
-        sample_x = torch.zeros((1, doy_dims))
-        sample_doy = torch.zeros((1, seq_len, num_features))
-        sample_mask = None
-        sample_output = self.sbert(sample_x, sample_doy, sample_mask)
+        sample_x = torch.zeros((1, seq_len, num_features))
+        sample_doy = torch.IntTensor(list(map(int, range(1, doy_dims + 1)))).repeat(1, 1)
+        sample_mask = torch.IntTensor(list(map(int, range(1, doy_dims + 1)))).repeat(1, 1)
 
-        return sample_output.size(1)
+        sample_output = self.sbert.forward(sample_x, sample_doy, sample_mask)
+
+        return sample_output.size(2)
 
     def forward(self, x : torch.Tensor):
-        x = self.spatio_encoder(x)
-
         # doy : (batch_size, doy_dims)
         # x : (batch_size, seq_len, num_features)
-        
-        # x = self.sbert(x, doy, mask)
-        # return self.classifier(x, mask)
+        x = self.spatio_encoder(x)
+        doy = torch.IntTensor(list(map(int, range(1, self.sbert.max_len + 1)))).repeat(x.size(0), 1).to(self.device)
+        mask  = None
+        x = self.sbert(x, doy, mask)
+        x = self.classifier(x)
+        return x

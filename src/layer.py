@@ -34,7 +34,7 @@ class Conv3dBlock(nn.Module):
         if type(padding) == tuple:
             paddings = padding
         else:
-            paddings = (1, padding, padding)
+            paddings = (0, padding, padding)
 
         self.conv = nn.Conv3d(
             in_channels, 
@@ -54,14 +54,15 @@ class Conv3dBlock(nn.Module):
 
 class Conv3dResBlock(nn.Module):
     def __init__(self, in_channels : int, out_channels : int, kernel_size : int =  3, stride : int =  1, dilation : int = 1, padding :int =  1, bias : bool = False, alpha : float = 0.01, downsample : bool = True):
+        super(Conv3dResBlock, self).__init__()
         self.downsample = downsample
+
+        pad = kernel_size // 2
 
         if self.downsample:
             self.stride = (1, stride, stride)
             self.padding = (0, padding, padding)
         else:
-            pad = kernel_size // 2
-
             self.stride = (1,1,1)
             self.padding = (0, pad, pad)
 
@@ -90,7 +91,7 @@ class Conv3dResBlock(nn.Module):
             bias = bias
         )
 
-        self.conv2 = nn.Conv3d(out_channels, out_channels, self.kernel_size,  self.stride,  self.padding, dilation, bias = bias )
+        self.conv2 = nn.Conv3d(out_channels, out_channels, self.kernel_size, (1,1,1), (0,pad,pad), dilation, bias = bias )
         self.bn2 = nn.BatchNorm3d(out_channels)
         self.relu2 = nn.LeakyReLU(alpha)
 
@@ -264,7 +265,7 @@ class SpatialTransformer(nn.Module):
 class SpatialTransformer3D(nn.Module):
     def __init__(self, 
     input_shape : Tuple[int, int, int, int] = (3, 8, 112, 112),
-    conv_channels : List[int] = [1, 8, 16], 
+    conv_channels : List[int] = [3, 16, 32], 
     conv_kernels : List[int] = [8, 4],
     conv_strides : List[int] = [1, 1],
     conv_paddings : List[int] = [1, 1],
@@ -301,12 +302,12 @@ class SpatialTransformer3D(nn.Module):
             stride = (1, conv_strides[idx], conv_strides[idx])
             padding = (0, conv_paddings[idx],  conv_paddings[idx])
 
-            pool_kernel = (0, pool_kernels[idx], pool_kernels[idx])
+            pool_kernel = (1, pool_kernels[idx], pool_kernels[idx])
             pool_stride = (1, pool_strides[idx],  pool_strides[idx])
 
 
             self.localization.append(
-                nn.Conv3d(in_channels, out_channels, kernel_size= kernel_size, stride = stride, padding = padding)
+                nn.Conv3d(in_channels, out_channels, kernel_size= kernel_size, stride = stride, padding = padding, dilation = 1, padding_mode = 'zeros')
             )
             self.localization.append(
                 nn.MaxPool3d(pool_kernel, pool_stride)
@@ -332,7 +333,7 @@ class SpatialTransformer3D(nn.Module):
         sample_outputs = self.forward_localization(sample_inputs)
         return sample_outputs.view(sample_inputs.size(0), self.seq_len, -1).size()
         
-    def forward_localization(self, x):
+    def forward_localization(self, x:torch.Tensor)->torch.Tensor:
         for layer in self.localization:
             x = layer.forward(x)
         return x
@@ -348,7 +349,8 @@ class SpatialTransformer3D(nn.Module):
             x_theta = theta[:,idx,:].view(-1,2,3)
             grid = F.affine_grid(x_theta, x_spatio.size())
             grid = F.grid_sample(x_spatio, grid)
-            x_sampled[:,:,idx,:,:] = grid.unsqueeze(2)
+            # x_sampled[:,:,idx,:,:] = grid.unsqueeze(2)
+            x_sampled[:,:,idx,:,:] = grid
             
         return x_sampled
 

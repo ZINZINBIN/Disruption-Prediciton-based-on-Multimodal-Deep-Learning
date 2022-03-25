@@ -7,25 +7,24 @@ import argparse
 import matplotlib.pyplot as plt
 from src.dataloader import VideoDataset
 from torch.utils.data import DataLoader
-from src.model import R2Plus1DClassifier
+from src.R2Plus1DwithSTN import *
 from src.train import train
 from src.evaluate import evaluate
 from src.loss import FocalLoss
 from tqdm import tqdm
 
-parser = argparse.ArgumentParser(description="training R2Plus1D model")
+parser = argparse.ArgumentParser(description="training R2Plus1D with STN model")
 parser.add_argument("--batch_size", type = int, default = 8)
-parser.add_argument("--lr", type = float, default = 2e-4)
+parser.add_argument("--lr", type = float, default = 1e-3)
 parser.add_argument("--gamma", type = float, default = 0.999)
 parser.add_argument("--gpu_num", type = int, default = 0)
 parser.add_argument("--alpha", type = float, default = 0.01)
 parser.add_argument("--clip_len", type = int, default = 8)
-parser.add_argument("--wandb_save_name", type = str, default = "R2Plus1D-exp001")
-parser.add_argument("--num_epoch", type = int, default = 248)
-parser.add_argument("--verbose", type = int, default = 16)
-parser.add_argument("--save_best_dir", type = str, default = "./weights/R2Plus1D_best.pt")
-parser.add_argument("--save_result_dir", type = str, default = "./results/train_valid_loss_acc_R2Plus1D.png")
-parser.add_argument("--save_test_result", type = str, default = "./results/test_R2Plus1D.txt")
+parser.add_argument("--wandb_save_name", type = str, default = "R2Plus1D_STN-exp001")
+parser.add_argument("--num_epoch", type = int, default = 120)
+parser.add_argument("--verbose", type = int, default = 8)
+parser.add_argument("--save_best_dir", type = str, default = "./weights/R2P1D_STN_best.pt")
+parser.add_argument("--save_result_dir", type = str, default = "./results/train_valid_loss_acc_R2P1D_STN.png")
 parser.add_argument("--use_focal_loss", type = bool, default = False)
 
 args = vars(parser.parse_args())
@@ -41,7 +40,7 @@ torch.cuda.empty_cache()
 
 # device allocation
 if(torch.cuda.device_count() >= 1):
-    device = "cuda:" + str(args["gpu_num"])
+    device = "cuda:0"
 else:
     device = 'cpu'
 
@@ -64,7 +63,7 @@ if __name__ == "__main__":
     valid_loader_dist10 = DataLoader(valid_data_dist10, batch_size = batch_size, shuffle = True, num_workers = 4)
     test_loader_dist10 = DataLoader(test_data_dist10, batch_size = batch_size, shuffle = True, num_workers = 4)
 
-    model = R2Plus1DClassifier(
+    model = R2P1DwithSTNClassifier(
         input_size  = (3, 8, 112, 112),
         num_classes = 2, 
         layer_sizes = [2,2,2,2], 
@@ -105,8 +104,7 @@ if __name__ == "__main__":
         model,
         optimizer,
         loss_fn,
-        device,
-        save_dir = args["save_test_result"]
+        device
     )
     
     x_axis = range(1, num_epoch + 1)

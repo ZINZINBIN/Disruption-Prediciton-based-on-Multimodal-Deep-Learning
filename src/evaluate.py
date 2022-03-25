@@ -28,7 +28,8 @@ def evaluate(
     model : torch.nn.Module,
     optimizer : torch.optim.Optimizer,
     loss_fn = None,
-    device : str = "cpu"
+    device : str = "cpu",
+    save_dir : Optional[str] = None
 ):
     test_loss = 0
     test_acc = 0
@@ -75,5 +76,11 @@ def evaluate(
     print(classification_report(total_label, total_pred, labels = [0,1]))
     print("\n# total test score : {:.2f} and test loss : {:.3f}".format(test_acc, test_loss))
     print(conf_mat)
+
+    if save_dir:
+        with open(save_dir, 'w') as f:
+            f.write(classification_report(total_label, total_pred, labels = [0,1]))
+            summary = "\n# total test score : {:.2f} and test loss : {:.3f}".format(test_acc, test_loss)
+            f.write(summary)
 
     return test_loss, test_acc
