@@ -8,9 +8,11 @@ import numpy as np
 from torch import unsqueeze
 import torch 
 import torch.nn as nn
-from typing import Tuple, List
+from typing import Tuple, List, Dict
 from src.layer import *
 from src.transformer import *
+from src.resnet import *
+from src.slowfast import *
 from pytorch_model_summary import summary
 
 # For Test
@@ -136,30 +138,11 @@ class VideoSpatioEncoder(nn.Module):
     def __init__(
         self, 
         input_shape : Tuple[int,int,int,int] = (3, 8, 112, 112),
-        STN_conv_channels : List[int] = [3, 16, 32], 
-        STN_conv_kernels : List[int] = [8, 4],
-        STN_conv_strides : List[int] = [1, 1],
-        STN_conv_paddings : List[int] = [1, 1],
-        STN_pool_strides : List[int] =  [2, 2],
-        STN_pool_kernels : List[int] = [2, 2],
         alpha : float = 0.01,
-        STN_theta_dim : int = 64
         ):
         super(VideoSpatioEncoder, self).__init__()
         self.input_shape = input_shape
         self.seq_len = input_shape[1]
-
-        self.STN = SpatialTransformer3D(
-            input_shape = input_shape,
-            conv_channels=STN_conv_channels,
-            conv_kernels=STN_conv_kernels,
-            conv_strides=STN_conv_strides,
-            conv_paddings=STN_conv_paddings,
-            pool_strides=STN_pool_strides,
-            pool_kernels=STN_pool_kernels,
-            alpha = alpha,
-            theta_dim=STN_theta_dim 
-        )
 
         self.conv_block1 = Conv3dResBlock(
             in_channels = 3, 
@@ -189,7 +172,7 @@ class VideoSpatioEncoder(nn.Module):
 
     def get_output_size(self):
         input_shape = (1, *(self.input_shape))
-        device = next(self.STN.parameters()).device
+        device = next(self.conv_block1.parameters()).device
         sample = torch.zeros(input_shape).to(device)
         sample_output = self.forward(sample)
         return sample_output.size()
@@ -202,9 +185,97 @@ class VideoSpatioEncoder(nn.Module):
         x = self.conv_block3(x)
         x = self.pooling_block3(x)
         x = self.conv_block4(x)
-
         x = x.view(x.size(0),self.seq_len, -1)
 
+        return x
+
+class VideoSpatialEncoder(nn.Module):
+    def __init__(
+            self, 
+            input_shape : Tuple[int,int,int,int] = (3, 8, 112, 112),
+            block : Optional[Bottleneck3D] = Bottleneck3D,
+            layers : List[int] = [3,4,6,3],
+            #args_slownet : Optional[Dict] = None,
+            #args_fastnet : Optional[Dict] = None,
+            p : float = 0.5,
+            in_channels = 3,
+            num_classes = 2,
+            alpha = 4,
+            slow = 1,
+            t2s_mul = 2
+            #tau : int = 4,
+        ):
+        super(VideoSpatialEncoder, self).__init__()
+        self.input_shape = input_shape
+        self.seq_len = input_shape[1]
+        # self.tau = tau
+
+        self.resnet = ResNet3D(
+            block,
+            layers,
+            in_channels = in_channels,
+            num_classes = num_classes,
+            alpha = alpha,
+            slow = slow,
+            t2s_mul =  t2s_mul,
+        )
+
+        
+        # if args_slownet is not None:
+        #     self.slownet = resnet50_s(**args_slownet)
+        # else:
+        #     self.slownet = resnet50_s(
+        #         in_channels = 3,
+        #         num_classes = 2,
+        #         alpha = 4,
+        #         slow = 1,
+        #         t2s_mul = 2
+        #     )
+        
+        # if args_fastnet is not None:
+        #     self.fastnet = resnet50_f(**args_fastnet)
+        # else:
+        #     self.fastnet = resnet50_f(
+        #         in_channels = 3,
+        #         num_classes = 2,
+        #         alpha = 4,
+        #         slow = 0,
+        #         t2s_mul = 2
+        #     )
+
+        self.dropout = nn.Dropout(p = p)
+        
+    def get_output_size(self):
+        input_shape = (1, *(self.input_shape))
+        device = next(self.parameters()).device
+        sample = torch.zeros(input_shape).to(device)
+        sample_output = self.forward(sample)
+        return sample_output.size()
+        
+    def forward(self, x:torch.Tensor):
+
+        # x_slow = x[:,:,::self.tau, :, :]
+        # x_fast = x[:,:,::self.tau // self.fastnet.alpha,  :, :]
+        # x_fast, laterals = self.fastnet(x_fast)
+        # x_slow = self.slownet((x_slow, laterals))
+        # x  = torch.cat([x_slow, x_fast], dim = 1)
+
+        # x = self.resnet(x)
+
+        x = self.resnet.conv1(x)
+        x = self.resnet.bn1(x)
+        x = self.resnet.relu(x)
+        x = self.resnet.maxpool(x)
+        x = self.resnet.layer1(x)
+        x = self.resnet.layer2(x)
+        x = self.resnet.layer3(x)
+        x = self.resnet.layer4(x)
+
+        x = F.adaptive_avg_pool3d(x, 1)
+
+        x = self.dropout(x)
+
+        x = x.view(x.size(0),self.seq_len, -1)
         return x
 
 class SBERTDisruptionClassifier(nn.Module):
@@ -238,3 +309,9 @@ class SBERTDisruptionClassifier(nn.Module):
         x = self.sbert(x, doy, mask)
         x = self.classifier(x)
         return x
+
+    def summary(self)->None:
+        input_shape = (8, *(self.spatio_encoder.input_shape))
+        device = next(self.parameters()).device
+        sample = torch.zeros(input_shape).to(device)
+        print(summary(self, sample, max_depth = None, show_parent_layers = True, show_input = True))

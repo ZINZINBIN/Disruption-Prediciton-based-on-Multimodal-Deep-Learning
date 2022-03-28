@@ -52,6 +52,10 @@ class Conv3dBlock(nn.Module):
         x = self.relu(self.bn(self.conv(x)))
         return x
 
+class Conv3dTransposeBlock(nn.Module):
+    def __init__(self, in_channels : int, out_channels : int, kernel_size = 3, stride = 1, dilation : int = 1, padding = 1, bias : bool = False, alpha : float = 0.01):
+        super(Conv3dTransposeBlock, self).__init__()
+
 class Conv3dResBlock(nn.Module):
     def __init__(self, in_channels : int, out_channels : int, kernel_size : int =  3, stride : int =  1, dilation : int = 1, padding :int =  1, bias : bool = False, alpha : float = 0.01, downsample : bool = True):
         super(Conv3dResBlock, self).__init__()
@@ -353,7 +357,6 @@ class SpatialTransformer3D(nn.Module):
             x_sampled[:,:,idx,:,:] = grid
             
         return x_sampled
-
 
 
 '''SlowFast model From Facebook AI  Research Team

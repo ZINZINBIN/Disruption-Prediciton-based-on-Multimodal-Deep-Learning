@@ -15,18 +15,18 @@ from src.loss import FocalLoss
 from tqdm import tqdm
 
 parser = argparse.ArgumentParser(description="training SBERT Disruption Classifier")
-parser.add_argument("--batch_size", type = int, default = 8)
+parser.add_argument("--batch_size", type = int, default = 12)
 parser.add_argument("--lr", type = float, default = 2e-4)
 parser.add_argument("--gamma", type = float, default = 0.999)
 parser.add_argument("--gpu_num", type = int, default = 1)
 parser.add_argument("--alpha", type = float, default = 0.01)
-parser.add_argument("--clip_len", type = int, default = 8)
+parser.add_argument("--clip_len", type = int, default = 10)
 parser.add_argument("--wandb_save_name", type = str, default = "SBERT-exp001")
 parser.add_argument("--num_epoch", type = int, default = 248)
 parser.add_argument("--verbose", type = int, default = 16)
-parser.add_argument("--save_best_dir", type = str, default = "./weights/sbert_best.pt")
-parser.add_argument("--save_result_dir", type = str, default = "./results/train_valid_loss_acc_sbert.png")
-parser.add_argument("--save_test_result", type = str, default = "./results/test_SBERT.txt")
+parser.add_argument("--save_best_dir", type = str, default = "./weights/sbert_clip_10_best.pt")
+parser.add_argument("--save_result_dir", type = str, default = "./results/train_valid_loss_acc_sbert_clip_10.png")
+parser.add_argument("--save_test_result", type = str, default = "./results/test_SBERT_clip_10.txt")
 parser.add_argument("--use_focal_loss", type = bool, default = False)
 
 args = vars(parser.parse_args())
@@ -66,23 +66,18 @@ if __name__ == "__main__":
     test_loader_dist10 = DataLoader(test_data_dist10, batch_size = batch_size, shuffle = True, num_workers = 4)
 
     video_encoder = VideoSpatioEncoder(
-        input_shape  = (3, 8, 112, 112),
-        STN_conv_channels  = [3, 16, 32], 
-        STN_conv_kernels  = [8, 4],
-        STN_conv_strides  = [1, 1],
-        STN_conv_paddings  = [0, 0],
-        STN_pool_strides  =  [2, 2],
-        STN_pool_kernels  = [2, 2],
+        input_shape  = (3, clip_len, 112, 112),
         alpha  = 0.01,
-        STN_theta_dim = 64
     )
 
+    num_features = video_encoder.get_output_size()[-1]
+
     temporal_encoder = SBERT(
-        num_features = 18432,
-        hidden = 128,
+        num_features = num_features, #18432,
+        hidden = 256,
         n_layers = 4,
-        attn_heads = 8, 
-        max_len  = 8
+        attn_heads = 16, 
+        max_len  = clip_len
     )
 
     model = SBERTDisruptionClassifier(
