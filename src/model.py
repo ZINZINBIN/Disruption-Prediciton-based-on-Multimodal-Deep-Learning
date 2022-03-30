@@ -186,63 +186,25 @@ class VideoSpatioEncoder(nn.Module):
         x = self.pooling_block3(x)
         x = self.conv_block4(x)
         x = x.view(x.size(0),self.seq_len, -1)
-
         return x
 
-class VideoSpatialEncoder(nn.Module):
+class SlowFastEncoder(nn.Module):
     def __init__(
             self, 
             input_shape : Tuple[int,int,int,int] = (3, 8, 112, 112),
             block : Optional[Bottleneck3D] = Bottleneck3D,
             layers : List[int] = [3,4,6,3],
-            #args_slownet : Optional[Dict] = None,
-            #args_fastnet : Optional[Dict] = None,
+            alpha : int = 4,
             p : float = 0.5,
-            in_channels = 3,
-            num_classes = 2,
-            alpha = 4,
-            slow = 1,
-            t2s_mul = 2
-            #tau : int = 4,
         ):
-        super(VideoSpatialEncoder, self).__init__()
+        super(SlowFastEncoder, self).__init__()
         self.input_shape = input_shape
         self.seq_len = input_shape[1]
-        # self.tau = tau
+        self.in_channels = input_shape[0]
+        self.alpha = alpha
 
-        self.resnet = ResNet3D(
-            block,
-            layers,
-            in_channels = in_channels,
-            num_classes = num_classes,
-            alpha = alpha,
-            slow = slow,
-            t2s_mul =  t2s_mul,
-        )
-
-        
-        # if args_slownet is not None:
-        #     self.slownet = resnet50_s(**args_slownet)
-        # else:
-        #     self.slownet = resnet50_s(
-        #         in_channels = 3,
-        #         num_classes = 2,
-        #         alpha = 4,
-        #         slow = 1,
-        #         t2s_mul = 2
-        #     )
-        
-        # if args_fastnet is not None:
-        #     self.fastnet = resnet50_f(**args_fastnet)
-        # else:
-        #     self.fastnet = resnet50_f(
-        #         in_channels = 3,
-        #         num_classes = 2,
-        #         alpha = 4,
-        #         slow = 0,
-        #         t2s_mul = 2
-        #     )
-
+        self.slownet = resnet50_s(block = block, layers = layers, alpha = alpha, in_channels = input_shape[0], slow = 1)
+        self.fastnet = resnet50_f(block = block, layers = layers, alpha = alpha, in_channels = input_shape[0], slow = 0)
         self.dropout = nn.Dropout(p = p)
         
     def get_output_size(self):
@@ -251,31 +213,56 @@ class VideoSpatialEncoder(nn.Module):
         sample = torch.zeros(input_shape).to(device)
         sample_output = self.forward(sample)
         return sample_output.size()
+
+    def split_slow_fast(self, x : torch.Tensor):
+        tau = int(self.seq_len / self.alpha)
+        if tau <= 0:
+            tau = 1
+        x_slow = x[:,:,::tau,:,:]
+        x_fast = x
+        return x_slow, x_fast
         
     def forward(self, x:torch.Tensor):
-
-        # x_slow = x[:,:,::self.tau, :, :]
-        # x_fast = x[:,:,::self.tau // self.fastnet.alpha,  :, :]
-        # x_fast, laterals = self.fastnet(x_fast)
-        # x_slow = self.slownet((x_slow, laterals))
-        # x  = torch.cat([x_slow, x_fast], dim = 1)
-
-        # x = self.resnet(x)
-
-        x = self.resnet.conv1(x)
-        x = self.resnet.bn1(x)
-        x = self.resnet.relu(x)
-        x = self.resnet.maxpool(x)
-        x = self.resnet.layer1(x)
-        x = self.resnet.layer2(x)
-        x = self.resnet.layer3(x)
-        x = self.resnet.layer4(x)
-
-        x = F.adaptive_avg_pool3d(x, 1)
-
+        x_slow, x_fast = self.split_slow_fast(x)
+        x_fast, laterals = self.fastnet(x_fast)
+        x_slow = self.slownet((x_slow, laterals))
+        x = torch.cat([x_slow, x_fast], dim = 1)
         x = self.dropout(x)
+        return x
 
-        x = x.view(x.size(0),self.seq_len, -1)
+    def summary(self)->None:
+        input_shape = (8, *(self.input_shape))
+        device = next(self.parameters()).device
+        sample = torch.zeros(input_shape).to(device)
+        print(summary(self, sample, max_depth = None, show_parent_layers = True, show_input = True))
+
+class SlowFastDisruptionClassifier(nn.Module):
+    def __init__(
+        self, 
+        input_shape : Tuple[int,int,int,int] = (3, 8, 112, 112),
+        block : Optional[Bottleneck3D] = Bottleneck3D,
+        layers : List[int] = [3,4,6,3],
+        alpha : int = 4,
+        p : float = 0.5,
+        mlp_hidden :int = 128,
+        num_classes : int = 2
+    ):
+        super(SlowFastDisruptionClassifier, self).__init__()
+        self.slowfast = SlowFastEncoder(input_shape, block, layers, alpha, p)
+        slowfast_output_dim = self.slowfast.get_output_size()[-1]
+        self.classifier = nn.Sequential(
+            nn.Linear(slowfast_output_dim, mlp_hidden),
+            nn.BatchNorm1d(mlp_hidden),
+            nn.ReLU(),
+            nn.Linear(mlp_hidden, mlp_hidden),
+            nn.BatchNorm1d(mlp_hidden),
+            nn.ReLU(),
+            nn.Linear(mlp_hidden, num_classes)
+        )
+
+    def forward(self, x:torch.Tensor):
+        x = self.slowfast(x)
+        x = self.classifier(x)
         return x
 
 class SBERTDisruptionClassifier(nn.Module):

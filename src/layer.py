@@ -52,9 +52,11 @@ class Conv3dBlock(nn.Module):
         x = self.relu(self.bn(self.conv(x)))
         return x
 
+'''
 class Conv3dTransposeBlock(nn.Module):
     def __init__(self, in_channels : int, out_channels : int, kernel_size = 3, stride = 1, dilation : int = 1, padding = 1, bias : bool = False, alpha : float = 0.01):
         super(Conv3dTransposeBlock, self).__init__()
+'''
 
 class Conv3dResBlock(nn.Module):
     def __init__(self, in_channels : int, out_channels : int, kernel_size : int =  3, stride : int =  1, dilation : int = 1, padding :int =  1, bias : bool = False, alpha : float = 0.01, downsample : bool = True):
@@ -357,99 +359,3 @@ class SpatialTransformer3D(nn.Module):
             x_sampled[:,:,idx,:,:] = grid
             
         return x_sampled
-
-
-'''SlowFast model From Facebook AI  Research Team
-- different seq_distance to extract different features from slow and fast model
-- codes : github()
-'''
-# From SlowFast model
-class SubBatchNorm3D(nn.Module):
-    def __init__(self, num_split, **kwargs):
-        super(SubBatchNorm3D, self).__init__()
-        self.num_split = num_split
-        self.num_features = kwargs['num_features']
-
-        if kwargs.get("affine", True):
-            self.affine = True
-            kwargs['affine'] = False
-            self.weight = nn.Parameter(torch.ones(self.num_features))
-            self.bias = nn.Parameter(torch.zeros(self.num_features))
-        
-        else:
-            self.affine = False
-
-        self.bn = nn.BatchNorm3d(**kwargs)
-        kwargs['num_features'] = self.num_features * self.num_split
-        self.split_bn = nn.BatchNorm3d(**kwargs)
-
-    def get_aggregated_mean_std(self, means, stds, n):
-        mean = means.view(n, -1).sum(0) / n
-        std = (
-            stds.view(n,-1).sum(0) / n + ((means.view(n,-1) - mean)**2).view(n, -1).sum(0) /  n
-        )
-
-        return mean.detach(), std.detach()
-
-    def aggregate_stats(self):
-        if self.split_bn.track_running_stats:
-            ( self.bn.running_mean.data, self.bn.running_var.data, ) = self.get_aggregated_mean_std(
-                self.split_bn.running_mean,
-                self.split_bn.running_var,
-                self.num_split
-            )
-    def forward(self, x):
-        if self.training:
-            n,c,t,h,w = x.shape
-            x  = x.view(n // self.num_split, c * self.num_split,  t, h, w)
-            x = self.split_bn(x)
-            x = x.view(n,c,t,h,w)
-
-        else:
-            x = self.bn(x)
-        
-        if self.affine:
-            x = x * self.weight.view((-1,1,1,1))
-            x = x + self.bias.view((-1,1,1,1))
-        return x
-
-class Swish(nn.Module):
-    def __init__(self):
-        super(Swish, self).__init__()
-
-    def forward(self, x):
-        return SwishEfficient.apply(x)
-
-class SwishEfficient(torch.autograd.Function):
-    @staticmethod
-    def forward(ctx, x):
-        result = x * torch.sigmoid(x)
-        ctx.save_for_backward(x)
-        return result
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        x = ctx.saved_variables[0]
-        sigmoid_x = torch.sigmoid(x)
-        return grad_output * (sigmoid_x * (1 + x * (1 - sigmoid_x)))
-
-class Bottleneck(nn.Module):
-    def __init__(
-        self, 
-        in_planes : int, 
-        planes : List[int], 
-        kernel_size : int = 3,
-        stride :int = 1, 
-        dilation : int = 1,
-        padding : int = 1,
-        bias : bool = False,
-        alpha : float = 0.01,
-        downsample = None, 
-        index = 0, 
-        base_bn_splits = 8
-        ):
-        super(Bottleneck, self).__init__()
-        self.index = index
-        self.base_bn_splits = base_bn_splits
-        self.conv1 = Conv3dBlock(in_planes, planes[0], kernel_size, stride, dilation, padding, bias, alpha)
-        self.bn1 = SubBatchNorm3D(num_splits = base_bn_splits, num_features = planes[0], affine = True)
