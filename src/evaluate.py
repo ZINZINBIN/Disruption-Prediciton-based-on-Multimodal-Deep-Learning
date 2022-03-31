@@ -26,15 +26,18 @@ def Corr(pred, true):
 def evaluate(
     test_loader : torch.utils.data.DataLoader, 
     model : torch.nn.Module,
-    optimizer : torch.optim.Optimizer,
+    optimizer : Optional[torch.optim.Optimizer],
     loss_fn = None,
-    device : str = "cpu",
+    device : Optional[str] = "cpu",
     save_dir : Optional[str] = None
 ):
     test_loss = 0
     test_acc = 0
     total_pred = np.array([])
     total_label = np.array([])
+
+    if device is None:
+        device = torch.device("cuda:0")
 
     model.to(device)
     model.eval()

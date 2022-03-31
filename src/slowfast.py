@@ -18,9 +18,11 @@ class SlowNet(ResNet3D):
         x, laterals = x
         x = self.layer0(x)
 
+        #print("after layer 0 x.size : ", x.size())
         x = torch.cat([x, laterals[0]], dim = 1)
         x = self.layer1(x)
 
+        #print("after layer 1 x.size : ", x.size())
         x = torch.cat([x, laterals[1]], dim = 1)
         x = self.layer2(x)
 
@@ -42,12 +44,16 @@ def resnet50_s(block = Bottleneck3D, layers = [3,4,6,3], **kwargs):
 class FastNet(ResNet3D):
     def __init__(self, blocks, layers, **kwargs):
         super(FastNet, self).__init__(blocks, layers, **kwargs)
-        kernel_size = (3,1,1)
-        stride = (1,1,1)
+        alpha = kwargs["alpha"]
+        kernel_size = (alpha+2,1,1)
+        stride = (alpha,1,1)
         padding = (1,0,0)
 
+        stride_maxpool = (alpha, 1, 1)
+        kernel_maxpool = (alpha + 2, 1, 1)
+
         self.l_maxpool = nn.Conv3d(64//self.alpha, 64//self.alpha,
-                                   kernel_size=kernel_size, stride=stride, bias=False, padding=padding)
+                                   kernel_size=kernel_maxpool, stride=stride_maxpool, bias=False, padding=padding)
         self.l_layer1 = nn.Conv3d(4*64//self.alpha, 4*64//self.alpha,
                                   kernel_size=kernel_size, stride=stride, bias=False, padding=padding)
         self.l_layer2 = nn.Conv3d(8*64//self.alpha, 8*64//self.alpha,

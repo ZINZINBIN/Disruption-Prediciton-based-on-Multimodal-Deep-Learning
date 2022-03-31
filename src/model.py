@@ -215,16 +215,32 @@ class SlowFastEncoder(nn.Module):
         return sample_output.size()
 
     def split_slow_fast(self, x : torch.Tensor):
+        tau_fast = 1
+        tau_slow = tau_fast * self.alpha
+
+        x_slow = x[:,:,::tau_slow, :, :]
+        x_fast = x[:,:,::tau_fast, :, :]
+
+        # print("x_slow : ", x_slow.size())
+        # print("x_fast : ", x_fast.size())
+
+        '''
         tau = int(self.seq_len / self.alpha)
         if tau <= 0:
             tau = 1
         x_slow = x[:,:,::tau,:,:]
         x_fast = x
+        '''
+
         return x_slow, x_fast
         
     def forward(self, x:torch.Tensor):
         x_slow, x_fast = self.split_slow_fast(x)
         x_fast, laterals = self.fastnet(x_fast)
+
+        # for lateral in laterals:
+        #     print("lateral size : ", lateral.size())
+
         x_slow = self.slownet((x_slow, laterals))
         x = torch.cat([x_slow, x_fast], dim = 1)
         x = self.dropout(x)

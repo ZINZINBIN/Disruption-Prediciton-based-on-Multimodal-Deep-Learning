@@ -100,7 +100,7 @@ class ResNet3D(nn.Module):
 
         # layer 0 parameters
         out_channels = 64//(1 if self.slow else self.alpha)
-        kernel_size = (1 if self.slow else 5, 7, 7)
+        kernel_size = (1 if self.slow else 1, 7, 7)
         stride = (1, 2, 2)
         padding = (0, 3, 3)
         
