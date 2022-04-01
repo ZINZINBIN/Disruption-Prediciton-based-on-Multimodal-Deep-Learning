@@ -252,6 +252,7 @@ class SlowFastEncoder(nn.Module):
         sample = torch.zeros(input_shape).to(device)
         print(summary(self, sample, max_depth = None, show_parent_layers = True, show_input = True))
 
+from src.preprocessing import background_removal
 class SlowFastDisruptionClassifier(nn.Module):
     def __init__(
         self, 
@@ -264,6 +265,7 @@ class SlowFastDisruptionClassifier(nn.Module):
         num_classes : int = 2
     ):
         super(SlowFastDisruptionClassifier, self).__init__()
+        self.input_shape = input_shape
         self.slowfast = SlowFastEncoder(input_shape, block, layers, alpha, p)
         slowfast_output_dim = self.slowfast.get_output_size()[-1]
         self.classifier = nn.Sequential(
@@ -277,6 +279,7 @@ class SlowFastDisruptionClassifier(nn.Module):
         )
 
     def forward(self, x:torch.Tensor):
+        #x = background_removal(x, self.input_shape[1], self.input_shape[2], self.input_shape[3], rank = 2, some  = True, compute_uv = True)
         x = self.slowfast(x)
         x = self.classifier(x)
         return x

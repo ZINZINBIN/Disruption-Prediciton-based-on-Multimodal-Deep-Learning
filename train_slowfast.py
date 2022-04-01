@@ -17,15 +17,15 @@ from tqdm import tqdm
 parser = argparse.ArgumentParser(description="training SlowFast Disruption Classifier")
 parser.add_argument("--batch_size", type = int, default = 12)
 parser.add_argument("--lr", type = float, default = 2e-4)
-parser.add_argument("--gamma", type = float, default = 0.999)
+parser.add_argument("--gamma", type = float, default = 0.995)
 parser.add_argument("--gpu_num", type = int, default = 1)
 parser.add_argument("--alpha", type = int, default = 2)
 parser.add_argument("--p", type = float, default = 0.5)
-parser.add_argument("--clip_len", type = int, default = 8)
+parser.add_argument("--clip_len", type = int, default = 10)
 parser.add_argument("--hidden", type = int, default = 128)
 parser.add_argument("--wandb_save_name", type = str, default = "slowfast-exp001")
-parser.add_argument("--num_epoch", type = int, default = 248)
-parser.add_argument("--verbose", type = int, default = 16)
+parser.add_argument("--num_epoch", type = int, default = 256)
+parser.add_argument("--verbose", type = int, default = 4)
 parser.add_argument("--save_best_dir", type = str, default = "./weights/slowfast_clip_10_best.pt")
 parser.add_argument("--save_result_dir", type = str, default = "./results/train_valid_loss_acc_slowfast_clip_10.png")
 parser.add_argument("--save_test_result", type = str, default = "./results/test_slowfast_clip_10.txt")
@@ -73,7 +73,7 @@ if __name__ == "__main__":
     model = SlowFastDisruptionClassifier(
         input_shape = (3,clip_len,112,112),
         block = Bottleneck3D,
-        layers = [1,2,2,1], #[3,4,6,3],
+        layers = [1,1,1,1], #[3,4,6,3],
         alpha = alpha,
         p = p,
         mlp_hidden = hidden,
@@ -90,7 +90,7 @@ if __name__ == "__main__":
     )
 
     if args['use_focal_loss']:
-        loss_fn = FocalLoss(alpha = 0.25, gamma=2, size_average=True)
+        loss_fn = FocalLoss(alpha = 1.0, gamma=2, size_average=True)
     else: 
         loss_fn = torch.nn.CrossEntropyLoss(reduction = "mean")
 

@@ -2,6 +2,7 @@ import os
 import sys
 import numpy as np
 import torch
+import random
 import cv2
 from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import train_test_split
@@ -78,6 +79,14 @@ class VideoDataset(Dataset):
 
         buffer = self.crop(buffer, self.clip_len, self.crop_size)
         labels = np.array(self.label_array[index])
+
+        if self.split == "train":
+            buffer = self.brightness(buffer, val = 30, p = 0.5)
+            buffer = self.contrast(buffer, 1, 1.5, p = 0.5)
+            buffer = self.blur(buffer, p = 0.5, kernel_size = 5)
+            buffer = self.randomflip(buffer, p = 0.5)
+            buffer = self.vertical_shift(buffer, ratio = 0.2, p = 0.25)
+            buffer = self.horizontal_shift(buffer, ratio = 0.2, p = 0.25)
 
         buffer = self.normalize(buffer)
         buffer = self.to_tensor(buffer)
@@ -177,22 +186,93 @@ class VideoDataset(Dataset):
         # Release the VideoCapture once it is no longer needed
         capture.release()
 
-    def randomflip(self, buffer):
+    def randomflip(self, buffer, p :float = 0.5):
         """Horizontally flip the given image and ground truth randomly with a probability of 0.5."""
 
-        if np.random.random() < 0.5:
+        if np.random.random() < p:
             for i, frame in enumerate(buffer):
                 frame = cv2.flip(buffer[i], flipCode=1)
                 buffer[i] = cv2.flip(frame, flipCode=1)
 
         return buffer
 
+    def horizontal_shift(self, buffer, ratio : float = 0.0, p : float = 0.5):
+        if np.random.random() < p:
+            ratio = random.uniform(-ratio, ratio)
+            to_shift = int(self.crop_size * ratio)
+            if ratio > 0:
+                for i, frame in enumerate(buffer):
+                    ref = np.zeros_like(frame)
+                    ref[:,:-to_shift, :] = frame[:,:-to_shift, :]
+                    buffer[i] = ref
+
+                    #frame = frame[:,:-to_shift, :]
+                    #buffer[i] = cv2.resize(frame, dsize = (self.crop_size, self.crop_size), interpolation=cv2.INTER_AREA)
+            else:
+                for i, frame in enumerate(buffer):
+                    ref = np.zeros_like(frame)
+                    ref[:,-to_shift:, :] = frame[:,-to_shift:, :]
+                    buffer[i] = ref
+
+                    #frame = frame[:,-to_shift:, :]
+                    #buffer[i] = cv2.resize(frame, dsize = (self.crop_size, self.crop_size), interpolation=cv2.INTER_AREA)
+
+        return buffer
+
+    def vertical_shift(self, buffer, ratio : float = 0.0, p : float = 0.5):
+        if np.random.random() < p:
+            ratio = random.uniform(-ratio, ratio)
+            to_shift = int(self.crop_size * ratio)
+            if ratio > 0:
+                for i, frame in enumerate(buffer):
+                    ref = np.zeros_like(frame)
+                    ref[:-to_shift, :, :] = frame[:-to_shift, :, :]
+                    buffer[i] = ref
+                    #frame = frame[:-to_shift, :, :]
+                    #buffer[i] = cv2.resize(frame, dsize = (self.crop_size, self.crop_size), interpolation=cv2.INTER_AREA)
+                    
+            else:
+                for i, frame in enumerate(buffer):
+                    ref = np.zeros_like(frame)
+                    ref[-to_shift:, :, :] = frame[-to_shift:, :, :]
+                    buffer[i] = ref
+
+                    #frame = frame[-to_shift:, :, :]
+                    #buffer[i] = cv2.resize(frame, dsize = (self.crop_size, self.crop_size), interpolation=cv2.INTER_AREA)
+        return buffer
+
+    def blur(self, buffer, p : float = 0.5, kernel_size : int = 5):
+        if np.random.random() < p:
+            for i, frame in enumerate(buffer):
+                buffer[i] = cv2.GaussianBlur(frame, (kernel_size, kernel_size), 0)
+        return buffer
 
     def normalize(self, buffer):
         for i, frame in enumerate(buffer):
             frame -= np.array([[[90.0, 98.0, 102.0]]])
             buffer[i] = frame
+        return buffer
 
+    def brightness(self, buffer, val : int = 30, p : float = 0.5):
+        bright = int(random.uniform(-val, val))
+        if np.random.random() < p:
+            if bright > 0:
+                for i, frame in enumerate(buffer):
+                    frame = buffer[i] + bright
+                    buffer[i] = np.clip(frame, 10, 255)
+            else:
+                for i, frame in enumerate(buffer):
+                    frame = buffer[i] - bright
+                    buffer[i] = cv2.flip(frame, flipCode=1)
+            return buffer
+        else:
+            return buffer
+
+    def contrast(self, buffer, min_val : float = 1.0, max_val : float = 1.5, p : float = 0.5):
+        if np.random.random() < p:
+            alpha = int(random.uniform(min_val, max_val))
+            for i, frame in enumerate(buffer):
+                buffer[i] = cv2.convertScaleAbs(frame, alpha = alpha)
         return buffer
 
     def to_tensor(self, buffer):
