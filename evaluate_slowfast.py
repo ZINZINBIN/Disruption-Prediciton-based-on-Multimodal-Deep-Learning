@@ -62,18 +62,13 @@ if __name__ == "__main__":
     save_best_dir = args['save_best_dir']
     save_result_dir = args["save_result_dir"]
 
-    train_data_dist10 = VideoDataset(dataset = "fast_model_dataset", split = "train", clip_len = clip_len, preprocess = False)
-    valid_data_dist10 = VideoDataset(dataset = "fast_model_dataset", split = "val", clip_len = clip_len, preprocess = False)
     test_data_dist10 = VideoDataset(dataset = "fast_model_dataset", split = "test", clip_len = clip_len, preprocess = False)
-
-    train_loader_dist10 = DataLoader(train_data_dist10, batch_size = batch_size, shuffle = True, num_workers = 4)
-    valid_loader_dist10 = DataLoader(valid_data_dist10, batch_size = batch_size, shuffle = True, num_workers = 4)
     test_loader_dist10 = DataLoader(test_data_dist10, batch_size = batch_size, shuffle = True, num_workers = 4)
 
     model = SlowFastDisruptionClassifier(
         input_shape = (3,clip_len,112,112),
         block = Bottleneck3D,
-        layers = [3,4,4,3], #[1,1,1,1], #[3,4,6,3],
+        layers = [1,1,1,1], #[3,4,6,3],
         alpha = alpha,
         p = p,
         mlp_hidden = hidden,
@@ -94,20 +89,6 @@ if __name__ == "__main__":
     else: 
         loss_fn = torch.nn.CrossEntropyLoss(reduction = "mean")
 
-    train_loss,  train_acc, valid_loss, valid_acc = train(
-        train_loader_dist10,
-        valid_loader_dist10,
-        model,
-        optimizer,
-        scheduler,
-        loss_fn,
-        device,
-        num_epoch,
-        verbose,
-        save_best_only=True,
-        save_best_dir = save_best_dir
-    )
-
     model.load_state_dict(torch.load(save_best_dir))
 
     test_loss, test_acc = evaluate(
@@ -118,20 +99,3 @@ if __name__ == "__main__":
         device,
         save_dir = args["save_test_result"]
     )
-    
-    x_axis = range(1, num_epoch + 1)
-    plt.figure(figsize = (16,10))
-    plt.subplot(1,2,1)
-    plt.plot(x_axis, train_loss, 'ro-', label  = "train loss")
-    plt.plot(x_axis, valid_loss, 'b^-', label = "valid loss")
-    plt.xlabel("epoch")
-    plt.ylabel("loss(CrossEntropy)")
-    plt.legend()
-
-    plt.subplot(1,2,2)
-    plt.plot(x_axis, train_acc, 'ro--', label = "train acc")
-    plt.plot(x_axis, valid_acc, 'bo--', label = 'valid acc')
-    plt.xlabel("epochs")
-    plt.ylabel("accuracy")
-    plt.legend()
-    plt.savefig(save_result_dir)
