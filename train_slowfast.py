@@ -17,7 +17,7 @@ from tqdm import tqdm
 parser = argparse.ArgumentParser(description="training SlowFast Disruption Classifier")
 parser.add_argument("--batch_size", type = int, default = 12)
 parser.add_argument("--lr", type = float, default = 5e-4)
-parser.add_argument("--gamma", type = float, default = 0.95)
+parser.add_argument("--gamma", type = float, default = 0.999)
 parser.add_argument("--gpu_num", type = int, default = 1)
 parser.add_argument("--alpha", type = int, default = 2)
 parser.add_argument("--p", type = float, default = 0.5)

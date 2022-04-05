@@ -81,10 +81,10 @@ class VideoDataset(Dataset):
         labels = np.array(self.label_array[index])
 
         if self.split == "train":
-            buffer = self.brightness(buffer, val = 30, p = 0.5)
-            buffer = self.contrast(buffer, 1, 1.5, p = 0.5)
-            buffer = self.blur(buffer, p = 0.5, kernel_size = 5)
-            buffer = self.randomflip(buffer, p = 0.5)
+            buffer = self.brightness(buffer, val = 30, p = 0.25)
+            buffer = self.contrast(buffer, 1, 1.5, p = 0.25)
+            buffer = self.blur(buffer, p = 0.25, kernel_size = 5)
+            buffer = self.randomflip(buffer, p = 0.25)
             buffer = self.vertical_shift(buffer, ratio = 0.2, p = 0.25)
             buffer = self.horizontal_shift(buffer, ratio = 0.2, p = 0.25)
 

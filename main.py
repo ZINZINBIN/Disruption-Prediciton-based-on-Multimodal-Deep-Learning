@@ -14,18 +14,18 @@ from src.loss import FocalLoss
 from tqdm import tqdm
 
 parser = argparse.ArgumentParser(description="training R2Plus1D model")
-parser.add_argument("--batch_size", type = int, default = 8)
-parser.add_argument("--lr", type = float, default = 2e-4)
+parser.add_argument("--batch_size", type = int, default = 12)
+parser.add_argument("--lr", type = float, default = 5e-4)
 parser.add_argument("--gamma", type = float, default = 0.999)
 parser.add_argument("--gpu_num", type = int, default = 0)
 parser.add_argument("--alpha", type = float, default = 0.01)
-parser.add_argument("--clip_len", type = int, default = 8)
+parser.add_argument("--clip_len", type = int, default = 10)
 parser.add_argument("--wandb_save_name", type = str, default = "R2Plus1D-exp001")
-parser.add_argument("--num_epoch", type = int, default = 248)
-parser.add_argument("--verbose", type = int, default = 16)
-parser.add_argument("--save_best_dir", type = str, default = "./weights/R2Plus1D_best.pt")
-parser.add_argument("--save_result_dir", type = str, default = "./results/train_valid_loss_acc_R2Plus1D.png")
-parser.add_argument("--save_test_result", type = str, default = "./results/test_R2Plus1D.txt")
+parser.add_argument("--num_epoch", type = int, default = 256)
+parser.add_argument("--verbose", type = int, default = 4)
+parser.add_argument("--save_best_dir", type = str, default = "./weights/R2Plus1D_clip_10_best.pt")
+parser.add_argument("--save_result_dir", type = str, default = "./results/train_valid_loss_acc_R2Plus1D_clip_10.png")
+parser.add_argument("--save_test_result", type = str, default = "./results/test_R2Plus1D_clip_10.txt")
 parser.add_argument("--use_focal_loss", type = bool, default = False)
 
 args = vars(parser.parse_args())
@@ -65,9 +65,9 @@ if __name__ == "__main__":
     test_loader_dist10 = DataLoader(test_data_dist10, batch_size = batch_size, shuffle = True, num_workers = 4)
 
     model = R2Plus1DClassifier(
-        input_size  = (3, 8, 112, 112),
+        input_size  = (3, clip_len, 112, 112),
         num_classes = 2, 
-        layer_sizes = [2,2,2,2], 
+        layer_sizes = [2,3,3,2], 
         pretrained = False, 
         alpha = alpha
     )
