@@ -27,11 +27,12 @@ class Path(object):
             raise NotImplementedError
 
 class VideoDataset(Dataset):
-    def __init__(self, dataset = "fast_model_dataset", split = "test", clip_len = 16, preprocess = False):
+    def __init__(self, dataset = "fast_model_dataset", split = "test", clip_len = 16, preprocess = False, augmentation : bool = True):
         self.root_dir, self.output_dir = Path.db_dir(dataset)
         folder = os.path.join(self.output_dir, split)
         self.clip_len = clip_len
         self.split = split
+        self.augmentation = augmentation
 
         # The following three parameters are chosen as described in the paper section 4.1
         self.resize_height = 128
@@ -80,7 +81,7 @@ class VideoDataset(Dataset):
         buffer = self.crop(buffer, self.clip_len, self.crop_size)
         labels = np.array(self.label_array[index])
 
-        if self.split == "train":
+        if self.split == "train" and self.augmentation:
             buffer = self.brightness(buffer, val = 30, p = 0.25)
             buffer = self.contrast(buffer, 1, 1.5, p = 0.25)
             buffer = self.blur(buffer, p = 0.25, kernel_size = 5)
