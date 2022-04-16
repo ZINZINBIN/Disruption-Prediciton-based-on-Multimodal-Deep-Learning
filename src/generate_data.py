@@ -10,9 +10,9 @@ from multiprocessing import Pool
 
 parser = argparse.ArgumentParser(description="generate dataset from raw_video data")
 parser.add_argument("--fps", type = int, default = 210)
-parser.add_argument("--duration", type = float, default = 0.1)
-parser.add_argument("--distance", type = int, default = 15)
-parser.add_argument("--raw_video_path", type = str, default = "./dataset/raw_videos/")
+parser.add_argument("--duration", type = float, default = 0.2)
+parser.add_argument("--distance", type = int, default = 100)
+parser.add_argument("--raw_video_path", type = str, default = "./dataset/raw_videos/raw_videos/")
 parser.add_argument("--save_path", type = str, default = "./dataset/")
 parser.add_argument("--shot_list_path", type = str, default = "./dataset/KSTAR_Disruption_Shot_List.csv")
 parser.add_argument("--gap", type = int, default = 0)
@@ -22,7 +22,7 @@ args = vars(parser.parse_args())
 fps = args["fps"]
 duration = args["duration"]
 distance = args["distance"]
-raw_videos_path = args["raw_videos_path"]
+raw_video_path = args["raw_video_path"]
 save_path = args["save_path"]
 gap = args["gap"]
 shot_list_path = args["shot_list_path"]
@@ -45,7 +45,7 @@ def new_make_dataset(shot_num, fps, duration, distance, dataset_idx, raw_videos_
 
     dis_path = save_path + "disruption/"
     border_path = save_path + "borderline/"
-    nom_path = save_path + "nomal/"
+    nom_path = save_path + "normal/"
 
     if os.path.isdir(dis_path) == False :
         os.mkdir(dis_path)
@@ -53,7 +53,9 @@ def new_make_dataset(shot_num, fps, duration, distance, dataset_idx, raw_videos_
         os.mkdir(border_path)
     if os.path.isdir(nom_path) == False :
         os.mkdir(nom_path)
-
+    
+    print("############# ", shot_num)
+    
     if os.path.isfile(video_path) :
         # load video
         cap = cv2.VideoCapture(video_path)
@@ -71,6 +73,9 @@ def new_make_dataset(shot_num, fps, duration, distance, dataset_idx, raw_videos_
         disruption_bool = False
         save_start = True
 
+        print("info - tTQend_frame : {} / duration : {}s({}fps) / distance : {}".format(shot, duration, duration_frame , distance))
+        print("dataset_idx : ",dataset_idx[shot])
+
         while cap.isOpened():
             ret, frame = cap.read()
             if not ret:
@@ -82,6 +87,8 @@ def new_make_dataset(shot_num, fps, duration, distance, dataset_idx, raw_videos_
                     save_start = False
                 
                 if (frame_num + duration_frame) ==dataset_idx[shot_num][0]:
+
+                    print("disruption idx: ", frame_num)
                     
                     out.release()
                     save_video = "{}_{}~{}.".format(shot_num,frame_num, frame_num+duration_frame) +exe
@@ -97,6 +104,8 @@ def new_make_dataset(shot_num, fps, duration, distance, dataset_idx, raw_videos_
                 elif (frame_num - dataset_idx[shot_num][1])%duration_frame == 0 :
                     if disruption_bool :
                         break
+
+                    print("nomal = idx: ", frame_num)
                     
                     out.release()
                     save_video = "{}_{}~{}.".format(shot_num,frame_num, frame_num+duration_frame) +exe
@@ -134,25 +143,9 @@ if __name__ == "__main__":
                             duration=duration, 
                             distance=distance, 
                             dataset_idx=dataset_idx,
-                            raw_videos_path=raw_videos_path, 
+                            raw_videos_path=raw_video_path, 
                             save_path=save_path)
     for i in tqdm.tqdm(pool.imap_unordered(new_make_data_part, pre_shot_df['shot']), total=len(pre_shot_df['shot'])):
         pass
     pool.close()
     pool.join()
-    dir_name = "dur{}_dis{}/".format(duration, distance)
-
-    import shutil
-
-    shutil.move(os.path.join(save_path, dir_name, 'nomal'), os.path.join(save_path,'nomal', dir_name,) )
-    shutil.move(os.path.join(save_path, dir_name, 'borderline'), os.path.join(save_path, 'borderline', dir_name) )
-
-    min_len = len(os.listdir(os.path.join(save_path, dir_name, 'disruption')))
-
-    nom_list = os.listdir(os.path.join(save_path,'nomal',dir_name))
-    nom_train_list = np.random.choice(nom_list, min_len, replace=False)
-
-    os.mkdir(os.path.join(save_path,dir_name, 'nomal'))
-    for train_name in nom_train_list :
-        shutil.copy(os.path.join(save_path,'nomal',dir_name, train_name)
-                    , os.path.join(save_path,dir_name, 'nomal'))

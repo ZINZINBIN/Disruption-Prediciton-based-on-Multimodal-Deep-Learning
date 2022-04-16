@@ -24,12 +24,13 @@ parser.add_argument("--p", type = float, default = 0.5)
 parser.add_argument("--clip_len", type = int, default = 10)
 parser.add_argument("--hidden", type = int, default = 128)
 parser.add_argument("--wandb_save_name", type = str, default = "slowfast-exp001")
-parser.add_argument("--num_epoch", type = int, default = 256)
+parser.add_argument("--num_epoch", type = int, default = 16)
 parser.add_argument("--verbose", type = int, default = 4)
-parser.add_argument("--save_best_dir", type = str, default = "./weights/slowfast_clip_10_best.pt")
-parser.add_argument("--save_result_dir", type = str, default = "./results/train_valid_loss_acc_slowfast_clip_10.png")
-parser.add_argument("--save_test_result", type = str, default = "./results/test_slowfast_clip_10.txt")
+parser.add_argument("--save_best_dir", type = str, default = "./weights/slowfast_clip_42_dist_100_best.pt")
+parser.add_argument("--save_result_dir", type = str, default = "./results/train_valid_loss_acc_slowfast_clip_42_dist_100.png")
+parser.add_argument("--save_test_result", type = str, default = "./results/test_slowfast_clip_42_dist_100.txt")
 parser.add_argument("--use_focal_loss", type = bool, default = False)
+parser.add_argument("--dataset", type = str, default = "dur0.2_dis100") # fast_model_dataset, dur0.2_dis100
 
 args = vars(parser.parse_args())
 
@@ -61,14 +62,15 @@ if __name__ == "__main__":
     gamma = args['gamma']
     save_best_dir = args['save_best_dir']
     save_result_dir = args["save_result_dir"]
+    dataset = args["dataset"]
 
-    train_data_dist10 = VideoDataset(dataset = "fast_model_dataset", split = "train", clip_len = clip_len, preprocess = False)
-    valid_data_dist10 = VideoDataset(dataset = "fast_model_dataset", split = "val", clip_len = clip_len, preprocess = False)
-    test_data_dist10 = VideoDataset(dataset = "fast_model_dataset", split = "test", clip_len = clip_len, preprocess = False)
+    train_data_dist = VideoDataset(dataset = dataset, split = "train", clip_len = clip_len, preprocess = False)
+    valid_data_dist = VideoDataset(dataset = dataset, split = "val", clip_len = clip_len, preprocess = False)
+    test_data_dist = VideoDataset(dataset = dataset, split = "test", clip_len = clip_len, preprocess = False)
 
-    train_loader_dist10 = DataLoader(train_data_dist10, batch_size = batch_size, shuffle = True, num_workers = 4)
-    valid_loader_dist10 = DataLoader(valid_data_dist10, batch_size = batch_size, shuffle = True, num_workers = 4)
-    test_loader_dist10 = DataLoader(test_data_dist10, batch_size = batch_size, shuffle = True, num_workers = 4)
+    train_loader_dist = DataLoader(train_data_dist, batch_size = batch_size, shuffle = True, num_workers = 4)
+    valid_loader_dist = DataLoader(valid_data_dist, batch_size = batch_size, shuffle = True, num_workers = 4)
+    test_loader_dist = DataLoader(test_data_dist, batch_size = batch_size, shuffle = True, num_workers = 4)
 
     model = SlowFastDisruptionClassifier(
         input_shape = (3,clip_len,112,112),
@@ -95,8 +97,8 @@ if __name__ == "__main__":
         loss_fn = torch.nn.CrossEntropyLoss(reduction = "mean")
 
     train_loss,  train_acc, valid_loss, valid_acc = train(
-        train_loader_dist10,
-        valid_loader_dist10,
+        train_loader_dist,
+        valid_loader_dist,
         model,
         optimizer,
         scheduler,
@@ -111,7 +113,7 @@ if __name__ == "__main__":
     model.load_state_dict(torch.load(save_best_dir))
 
     test_loss, test_acc = evaluate(
-        test_loader_dist10,
+        test_loader_dist,
         model,
         optimizer,
         loss_fn,

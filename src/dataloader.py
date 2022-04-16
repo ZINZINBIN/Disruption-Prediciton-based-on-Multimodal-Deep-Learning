@@ -21,6 +21,11 @@ class Path(object):
             output_dir = "./dataset/dur0.1_dis10"
 
             return root_dir, output_dir
+
+        elif database == "dur0.2_dis100":
+            root_dir = "./dataset/dur0.2_dis100"
+            output_dir = "./dataset/dur0.2_dis100"
+            return root_dir, output_dir
         
         else:
             print("Database {} not available".format(database))
@@ -64,10 +69,12 @@ class VideoDataset(Dataset):
         self.label_array = np.array([self.label2index[label] for label in labels], dtype=int)
 
         if preprocess:
-            with open('dataloaders/{}.txt'.format(dataset), 'w') as f:
+            if not os.path.exists(os.path.join("./dataset/", 'dataloaders')):
+                os.mkdir(os.path.join("./dataset/", 'dataloaders'))
+                
+            with open('./dataset/dataloaders/{}.txt'.format(dataset), 'w') as f:
                 for id, label in enumerate(sorted(self.label2index)):
                     f.writelines(str(id+1) + ' ' + label + '\n')
-
 
     def __len__(self):
         return len(self.fnames)
@@ -129,11 +136,24 @@ class VideoDataset(Dataset):
             os.mkdir(os.path.join(self.output_dir, 'val'))
             os.mkdir(os.path.join(self.output_dir, 'test'))
 
+        if not os.path.exists(os.path.join(self.output_dir, 'train')):
+            os.mkdir(os.path.join(self.output_dir, 'train'))
+
+        if not os.path.exists(os.path.join(self.output_dir, 'val')):
+            os.mkdir(os.path.join(self.output_dir, 'val'))
+
+        if not os.path.exists(os.path.join(self.output_dir, 'test')):
+            os.mkdir(os.path.join(self.output_dir, 'test'))
+
         # Split train/val/test sets
         for file in os.listdir(self.root_dir):
+            
+            if file not in ["borderline", "disruption", "normal"]:
+                continue
+
             file_path = os.path.join(self.root_dir, file)
             video_files = [name for name in os.listdir(file_path)]
-
+            
             train_and_valid, test = train_test_split(video_files, test_size=0.2, random_state=42)
             train, val = train_test_split(train_and_valid, test_size=0.2, random_state=42)
 
