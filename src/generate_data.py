@@ -11,7 +11,7 @@ from multiprocessing import Pool
 parser = argparse.ArgumentParser(description="generate dataset from raw_video data")
 parser.add_argument("--fps", type = int, default = 210)
 parser.add_argument("--duration", type = float, default = 0.2)
-parser.add_argument("--distance", type = int, default = 100)
+parser.add_argument("--distance", type = int, default = 21)
 parser.add_argument("--raw_video_path", type = str, default = "./dataset/raw_videos/raw_videos/")
 parser.add_argument("--save_path", type = str, default = "./dataset/")
 parser.add_argument("--shot_list_path", type = str, default = "./dataset/KSTAR_Disruption_Shot_List.csv")

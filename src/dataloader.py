@@ -22,9 +22,9 @@ class Path(object):
 
             return root_dir, output_dir
 
-        elif database == "dur0.2_dis100":
-            root_dir = "./dataset/dur0.2_dis100"
-            output_dir = "./dataset/dur0.2_dis100"
+        elif database == "dur0.2_dis21":
+            root_dir = "./dataset/dur0.2_dis21"
+            output_dir = "./dataset/dur0.2_dis21"
             return root_dir, output_dir
         
         else:
