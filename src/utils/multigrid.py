@@ -1,5 +1,7 @@
 import numpy as np
 import logging
+import torch
+from torch.utils.data import sampler
 
 logger = logging.getLogger(__name__)
 
@@ -177,3 +179,250 @@ class MultigridScheduler(object):
             return cfg, True
         else:
             return cfg, False
+
+
+class RandomEpochSampler(sampler.RandomSampler):
+    def __init__(self, data_source, replacement : bool = False, num_samples = None, epochs : int = 1):
+        super(RandomEpochSampler, self).__init__(data_source, replacement, num_samples)
+        self.epochs = epochs
+
+    @property
+    def num_samples(self):
+        if self._num_samples is None:
+            return len(self.data_source) * self.epochs
+        
+        return self._num_samples * self.epochs
+    
+    def __len__(self):
+        return self.num_samples
+    
+    def __iter__(self):
+        n = len(self.data_source)
+
+        while True:
+            x =  torch.randperm(n).tolist()
+            for v in x:
+                yield v
+        
+    
+class CycleBatchSampler(sampler.BatchSampler):
+    def __init__(self, sampler, batch_size, drop_last, schedule, cur_iterations, long_cycle_bs_scale):
+        super(CycleBatchSampler, self).__init__(sampler, batch_size, drop_last)
+        self.schedule = schedule
+        self.long_cycle_bs_scale = long_cycle_bs_scale
+
+        self.iteration_counter = cur_iterations 
+        self.short_iteration_counter = 0
+        self.phase = 1
+        self.phase_steps = ((self.schedule[self.phase] - self.schedule[self.phase - 1]) / len(self.long_cycle_bs_scale))
+        self.long_cycle_index = 0
+        self.iter_offset = 0
+
+    def __iter__(self):
+        batch_size = self.batch_size * self.long_cycle_bs_scale[self.long_cycle_index]
+        self.short_iteration_counter = 0
+        batch = []
+        for _ in range(5):
+            batch_size = self.adjust_long_cycle(batch_size)
+
+        short_cycle_batch = self.adjust_short_cycle(batch_size)
+
+        for idx in self.sampler:
+
+            batch.append((idx, self.long_cycle_index))
+
+            if len(batch) == short_cycle_batch:
+                yield batch
+            
+            batch = []
+            
+            self.iteration_counter += 1
+            self.short_iteration_counter += 1
+            batch_size = self.adjust_long_cycle(batch_size)
+            short_cycle_batch = self.adjust_short_cycle(batch_size)
+
+        if len(batch) > 0 and not self.drop_last:
+            yield batch
+
+    def adjust_long_cycle(self, batch_size):
+
+        if self.iteration_counter > self.schedule[self.phase]:
+            self.iter_offset = self.schedule[self.phase]
+            self.phase += 1
+            self.phase_steps = ((self.schedule[self.phase] - self.schedule[self.phase - 1]) / len(self.long_cycle_bs_scale))
+            self.long_cycle_index = 0
+
+            if self.phase == len(self.schedule) - 1:
+                self.long_cycle_index = -1
+            
+            batch_size = (self.batch_size * self.long_cycle_bs_scale[self.long_cycle_index])
+        
+        elif self.iteration_counter >= self.phase_steps + self.iter_offset:
+            self.iter_offset += self.phase_steps
+            self.long_cycle_index += 1
+
+            if self.phase == len(self.schedule) - 1:
+                self.long_cycle_index = -1
+            
+            self.long_cycle_index = min(self.long_cycle_index, len(self.long_cycle_bs_scale) - 1)
+            batch_size = (self.batch_size * self.long_cycle_bs_scale[self.long_cycle_index])
+
+        return batch_size
+
+    def adjust_short_cycle(self, batch_size):
+
+        if self.long_cycle_index in [0,1]:
+            if self.short_iteration_counter % 2 == 0:
+                short_cycle_batch = batch_size * 2
+            if self.short_iteration_counter % 2 == 1:
+                short_cycle_batch = batch_size
+        else:
+            if self.short_iteration_counter % 3 == 0:
+                short_cycle_batch = batch_size * 4
+            if self.short_iteration_counter % 3 == 1:
+                short_cycle_batch = batch_size * 2
+            if self.short_iteration_counter % 3 == 2:
+                short_cycle_batch = batch_size
+
+        return short_cycle_batch
+
+from torch.utils.data import Dataset
+from torch.utils.data.sampler import SequentialSampler
+from torch.utils.data.dataloader import DataLoader
+# default value
+BS = 8
+BS_UPSCALE = 16 
+INIT_LR = (1.6/1024)*(BS*BS_UPSCALE)
+SCHEDULE_SCALE = 4
+EPOCHS = (60000 * 1024 * 1.5)/220000 #(~420)
+
+LONG_CYCLE = [8, 4, 2, 1]
+LONG_CYCLE_LR_SCALE = [8, 0.5, 0.5, 0.5]
+GPUS = 4
+BASE_BS_PER_GPU = BS * BS_UPSCALE // GPUS 
+CONST_BN_SIZE = 8
+
+def setup_data(
+    dataset : Dataset,
+    batch_size : int, 
+    num_steps_per_update : int, 
+    epochs : int, 
+    iterations_per_epochs :int, 
+    cur_iterations : int,
+    crop_size : int,
+    resize : int,
+    num_frames : int,
+    gamma_tau : float
+    ):
+    
+    num_iterations = int(epochs * iterations_per_epochs)
+    schedule = [int(i*num_iterations) for i in [0, 0.4, 0.65, 0.85, 1]]
+
+    # transform function needed to change T,C,H,W -> T1,C1,H1,W1
+
+    drop_last = False
+    shuffle = True
+    
+    if shuffle:
+        sampler = RandomEpochSampler(dataset, epochs = epochs)
+    else:
+        sampler = SequentialSampler(dataset)
+
+    batch_sampler = CycleBatchSampler(sampler, batch_size, drop_last, schedule=schedule, cur_iterations=cur_iterations, long_cycle_bs_scale=LONG_CYCLE)
+
+    dataloader = DataLoader(dataset, num_workers = 4, batch_sampler=batch_sampler, pin_memory=True)
+
+    schedule[-2] = (schedule[-2] + schedule[-1]) // 2
+
+    return dataloader, dataset, schedule[1:]
+
+def lr_warmup(init_lr : float, cur_steps : int, warmup_steps : int, opt = None):
+
+    start_after = 1
+    if cur_steps < warmup_steps and cur_steps > start_after:
+        lr_scale = min(1., float(cur_steps +1) / warmup_steps)
+
+        for pg in opt.param_groups:
+            pg['lr'] = lr_scale * init_lr
+
+def print_stats(long_ind, batch_size, stats, gamma_tau, bn_splits, lr):
+    bs = batch_size * LONG_CYCLE[long_ind]
+
+    if long_ind in [0,1]:
+        bs = [bs * j for j in [2,1]]
+        print(' ***** LR {} Frames {}/{} BS ({},{}) W/H ({},{}) BN_splits {} long_ind {} *****'.format(lr, stats[0][0], gamma_tau, bs[0], bs[1], stats[2][0], stats[3][0], bn_splits, long_ind))
+    else:
+        bs = [bs*j for j in [4,2,1]]
+        print(' ***** LR {} Frames {}/{} BS ({},{},{}) W/H ({},{},{}) BN_splits {} long_ind {} *****'.format(lr, stats[0][0], gamma_tau, bs[0], bs[1], bs[2], stats[1][0], stats[2][0], stats[3][0], bn_splits, long_ind))
+
+
+def train_multigrid(
+    train_dataset : Dataset,
+    valid_dataset : Dataset,
+    model : torch.nn.Module,
+    optimizer : torch.optim.Optimizer,
+    loss_fn = None,
+    init_lr : float = 0.001,
+    warmup_steps : int = 8000,
+    batch_size : int = BS * BS_UPSCALE,
+    device : str = "cpu",
+    num_epoch : int = 64,
+    save_best_only : bool = False,
+    save_best_dir : str = "./weights/best.pt"
+):
+
+    train_loss_list = []
+    valid_loss_list = []
+    
+    train_acc_list = []
+    valid_acc_list = []
+
+    best_acc = 0
+    best_epoch = 0
+    best_loss = torch.inf
+
+    for epoch in tqdm(range(num_epoch), desc = "training process"):
+
+        train_loss, train_acc = train_per_epoch(
+            train_loader, 
+            model,
+            optimizer,
+            scheduler,
+            loss_fn,
+            device 
+        )
+
+        valid_loss, valid_acc = valid_per_epoch(
+            valid_loader, 
+            model,
+            optimizer,
+            scheduler,
+            loss_fn,
+            device 
+        )
+
+        train_loss_list.append(train_loss)
+        valid_loss_list.append(valid_loss)
+
+        train_acc_list.append(train_acc)
+        valid_acc_list.append(valid_acc)
+
+        if verbose:
+            if epoch % verbose == 0:
+                print("epoch : {}, train loss : {:.3f}, valid loss : {:.3f}, train acc : {:.3f}, valid acc : {:.3f}".format(
+                    epoch+1, train_loss, valid_loss, train_acc, valid_acc
+                ))
+
+        if save_best_only:
+            if best_acc < valid_acc:
+                best_acc = valid_acc
+                best_loss = valid_loss
+                best_epoch  = epoch
+                torch.save(model.state_dict(), save_best_dir)
+
+    # print("\n============ Report ==============\n")
+    print("training process finished, best loss : {:.3f} and best acc : {:.3f}, best epoch : {}".format(
+        best_loss, best_acc, best_epoch
+    ))
+
+    return  train_loss_list, train_acc_list,  valid_loss_list,  valid_acc_list

@@ -7,8 +7,8 @@ import argparse
 import matplotlib.pyplot as plt
 from src.dataloader import VideoDataset
 from torch.utils.data import DataLoader
-from src.model import SlowFastDisruptionClassifier
-from src.resnet import Bottleneck3D
+from src.models.model import SlowFastDisruptionClassifier
+from src.models.resnet import Bottleneck3D
 from src.train import train
 from src.evaluate import evaluate
 from src.loss import FocalLoss

@@ -82,8 +82,12 @@ class VideoDataset(Dataset):
     def __getitem__(self, index):
         # Loading and preprocessing.
         buffer = self.load_frames(self.fnames[index])
+
         if buffer.shape[0] < self.clip_len :
             buffer = self.load_frames(self.fnames[index-(self.clip_len - buffer.shape[0])])
+
+        if buffer.shape[0] < self.clip_len:
+            buffer = self.refill_temporal_slide(buffer)
 
         buffer = self.crop(buffer, self.clip_len, self.crop_size)
         labels = np.array(self.label_array[index])
@@ -100,6 +104,16 @@ class VideoDataset(Dataset):
         buffer = self.to_tensor(buffer)
 
         return torch.from_numpy(buffer), torch.from_numpy(labels)
+
+    def refill_temporal_slide(self, buffer):
+        # if temporal length of buffer is not enought to clip len due to data leakage
+        # copy some nearby data 
+
+        for _ in range(self.clip_len - buffer.shape[0]):
+            frame_new = buffer[-1].reshape(1, self.resize_height, self.resize_width, 3)
+            buffer = np.concatenate((buffer, frame_new))
+            
+        return buffer
 
     def check_integrity(self):
         if not os.path.exists(self.root_dir):
@@ -148,7 +162,7 @@ class VideoDataset(Dataset):
         # Split train/val/test sets
         for file in os.listdir(self.root_dir):
             
-            if file not in ["borderline", "disruption", "normal"]:
+            if file not in ["disruption", "normal"]:
                 continue
 
             file_path = os.path.join(self.root_dir, file)
@@ -197,7 +211,7 @@ class VideoDataset(Dataset):
         while (count < frame_count and retaining):
             retaining, frame = capture.read()
             if frame is None:
-                continue
+                frame = np.zeros((self.resize_width, self.resize_height))
 
             if (frame_height != self.resize_height) or (frame_width != self.resize_width):
                 frame = cv2.resize(frame, (self.resize_width, self.resize_height))

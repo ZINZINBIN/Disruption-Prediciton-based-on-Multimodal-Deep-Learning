@@ -9,10 +9,10 @@ from torch import unsqueeze
 import torch 
 import torch.nn as nn
 from typing import Tuple, List, Dict
-from src.layer import *
-from src.transformer import *
-from src.resnet import *
-from src.slowfast import *
+from src.models.layer import *
+from src.models.transformer import *
+from src.models.resnet import *
+from src.models.slowfast import *
 from pytorch_model_summary import summary
 
 # For Test
@@ -252,7 +252,8 @@ class SlowFastEncoder(nn.Module):
         sample = torch.zeros(input_shape).to(device)
         print(summary(self, sample, max_depth = None, show_parent_layers = True, show_input = True))
 
-from src.preprocessing import background_removal
+from src.utils.preprocessing import background_removal
+
 class SlowFastDisruptionClassifier(nn.Module):
     def __init__(
         self, 
