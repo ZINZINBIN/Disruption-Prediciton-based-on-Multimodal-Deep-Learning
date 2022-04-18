@@ -302,6 +302,10 @@ GPUS = 4
 BASE_BS_PER_GPU = BS * BS_UPSCALE // GPUS 
 CONST_BN_SIZE = 8
 
+CROP_SIZE = {'S':112, 'M':224, 'XL':336}
+RESIZE_SIZE = {'S':[128, 171], 'M':[256, 312], 'XL':[360, 420]}
+GAMMA_TAU = {'S':6, 'M':5*2, 'XL':5}
+
 def setup_data(
     dataset : Dataset,
     batch_size : int, 
@@ -365,11 +369,15 @@ def train_multigrid(
     init_lr : float = 0.001,
     warmup_steps : int = 8000,
     batch_size : int = BS * BS_UPSCALE,
+    frames : int = 80,
     device : str = "cpu",
     num_epoch : int = 64,
     save_best_only : bool = False,
     save_best_dir : str = "./weights/best.pt"
-):
+    ):
+
+
+
 
     train_loss_list = []
     valid_loss_list = []
