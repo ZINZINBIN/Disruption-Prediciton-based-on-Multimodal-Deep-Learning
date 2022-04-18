@@ -12,19 +12,20 @@ from src.models.resnet import Bottleneck3D
 from src.train import train
 from src.evaluate import evaluate
 from src.loss import FocalLoss
+from src.utils.sampler import ImbalancedDatasetSampler
 from tqdm import tqdm
 
 parser = argparse.ArgumentParser(description="training SlowFast Disruption Classifier")
-parser.add_argument("--batch_size", type = int, default = 8)
+parser.add_argument("--batch_size", type = int, default = 24)
 parser.add_argument("--lr", type = float, default = 5e-4)
 parser.add_argument("--gamma", type = float, default = 0.999)
-parser.add_argument("--gpu_num", type = int, default = 1)
+parser.add_argument("--gpu_num", type = int, default = 0)
 parser.add_argument("--alpha", type = int, default = 2)
 parser.add_argument("--p", type = float, default = 0.5)
 parser.add_argument("--clip_len", type = int, default = 42)
-parser.add_argument("--hidden", type = int, default = 128)
+parser.add_argument("--hidden", type = int, default = 256)
 parser.add_argument("--wandb_save_name", type = str, default = "slowfast-exp001")
-parser.add_argument("--num_epoch", type = int, default = 24)
+parser.add_argument("--num_epoch", type = int, default = 256)
 parser.add_argument("--verbose", type = int, default = 4)
 parser.add_argument("--save_best_dir", type = str, default = "./weights/slowfast_clip_42_dist_21_best.pt")
 parser.add_argument("--save_result_dir", type = str, default = "./results/train_valid_loss_acc_slowfast_clip_42_dist_21.png")
@@ -48,6 +49,24 @@ if(torch.cuda.device_count() >= 1):
     device = "cuda:" + str(args["gpu_num"])
 else:
     device = 'cpu'
+    
+# dataset composition
+import os
+try:
+    path = "./dataset/" + args["dataset"] + "/"
+    path_disruption = path + "disruption/"
+    path_borderline = path + "borderline/"
+    path_normal = path + "normal/"
+
+    dir_disruption_list = os.listdir(path_disruption)
+    dir_borderline_list = os.listdir(path_borderline)
+    dir_normal_list = os.listdir(path_normal)
+
+    print("disruption : ", len(dir_disruption_list))
+    print("normal : ", len(dir_normal_list))
+    print("borderline : ", len(dir_borderline_list))
+except:
+    print("video dataset directory is not valid")
 
 if __name__ == "__main__":
 
@@ -67,10 +86,14 @@ if __name__ == "__main__":
     train_data_dist = VideoDataset(dataset = dataset, split = "train", clip_len = clip_len, preprocess = False)
     valid_data_dist = VideoDataset(dataset = dataset, split = "val", clip_len = clip_len, preprocess = False)
     test_data_dist = VideoDataset(dataset = dataset, split = "test", clip_len = clip_len, preprocess = False)
-
-    train_loader_dist = DataLoader(train_data_dist, batch_size = batch_size, shuffle = True, num_workers = 4)
-    valid_loader_dist = DataLoader(valid_data_dist, batch_size = batch_size, shuffle = True, num_workers = 4)
-    test_loader_dist = DataLoader(test_data_dist, batch_size = batch_size, shuffle = True, num_workers = 4)
+    
+    train_sampler = ImbalancedDatasetSampler(train_data_dist)
+    valid_sampler = ImbalancedDatasetSampler(valid_data_dist)
+    test_sampler = ImbalancedDatasetSampler(test_data_dist)
+    
+    train_loader_dist = DataLoader(train_data_dist, batch_size = batch_size, sampler=train_sampler, num_workers = 8)
+    valid_loader_dist = DataLoader(valid_data_dist, batch_size = batch_size, sampler=valid_sampler, num_workers = 8)
+    test_loader_dist = DataLoader(test_data_dist, batch_size = batch_size, sampler=test_sampler, num_workers = 8)
 
     model = SlowFastDisruptionClassifier(
         input_shape = (3,clip_len,112,112),

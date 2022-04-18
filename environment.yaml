@@ -198,5 +198,5 @@ dependencies:
   - pip:
     - mypath==0.1
     - pytorch-model-summary==0.1.2
-prefix: /home/zinzinbin/.conda/envs/research-env
+prefix: ./anaconda3/envs/research-env
 

@@ -16,7 +16,7 @@ class Path(object):
             output_dir = "./dataset/dur0.1_dis0"
             return root_dir, output_dir
         
-        elif database == "fast_model_dataset":
+        elif database == "dur0.1_dis10":
             root_dir = "./dataset/dur0.1_dis10"
             output_dir = "./dataset/dur0.1_dis10"
 
@@ -65,6 +65,8 @@ class VideoDataset(Dataset):
 
         # Prepare a mapping between the label names (strings) and indices (ints)
         self.label2index = {label: index for index, label in enumerate(sorted(set(labels)))}
+        self.index2label = {index: label for index, label in enumerate(sorted(set(labels)))}
+        
         # Convert the list of label names into an array of label indices
         self.label_array = np.array([self.label2index[label] for label in labels], dtype=int)
 
@@ -162,9 +164,12 @@ class VideoDataset(Dataset):
         # Split train/val/test sets
         for file in os.listdir(self.root_dir):
             
-            if file not in ["disruption", "normal"]:
+            if file not in ["disruption", "normal", "borderline"]:
                 continue
 
+            # 22.04.18 : add borderline data as disruption data
+            # due to the shortage of disruption dataset
+            
             file_path = os.path.join(self.root_dir, file)
             video_files = [name for name in os.listdir(file_path)]
             
@@ -174,6 +179,18 @@ class VideoDataset(Dataset):
             train_dir = os.path.join(self.output_dir, 'train', file)
             val_dir = os.path.join(self.output_dir, 'val', file)
             test_dir = os.path.join(self.output_dir, 'test', file)
+            
+            if file == "borderline":
+                
+                train_dir = os.path.join(self.output_dir, 'train', "disruption")
+                val_dir = os.path.join(self.output_dir, 'val', "disruption")
+                test_dir = os.path.join(self.output_dir, 'test', "disruption")
+                
+            else:
+                
+                train_dir = os.path.join(self.output_dir, 'train', file)
+                val_dir = os.path.join(self.output_dir, 'val', file)
+                test_dir = os.path.join(self.output_dir, 'test', file)
 
             if not os.path.exists(train_dir):
                 os.mkdir(train_dir)
