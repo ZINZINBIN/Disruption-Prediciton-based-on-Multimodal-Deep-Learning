@@ -1,9 +1,8 @@
 # Plasma Disruption Predictive model using Plasma Image dataset
 ## Introduction
 
-<img src="/image/연구_소개_01.PNG"  width="700" height="224">
-- 2차원 플라즈마 이미지 분석을 통한 토카막 플라즈마 붕괴 실시간 예측 연구
-- Duration(video 구간 길이) 및 distance(붕괴 예측 시간)에 따른 플라즈마 붕괴 예측 모델 구현
+<img src="/image/연구_소개_01.PNG"  width="900" height="224">
+<p>2차원 플라즈마 이미지 분석을 통한 토카막 플라즈마 붕괴 실시간 예측 연구</p>
 
 ## How to Run(Test)
 ```
