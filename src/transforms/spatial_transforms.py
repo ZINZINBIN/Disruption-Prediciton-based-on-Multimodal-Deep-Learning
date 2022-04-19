@@ -6,6 +6,7 @@ import torch
 import cv2
 from PIL import Image, ImageOps
 import accimage
+import numbers
 
 class Compose(object):
     """Composes several transforms together.

@@ -1,11 +1,13 @@
 import numpy as np
 import os
+import glob
 import logging
 import random
 import torch
 from tqdm import tqdm
 from torch.utils.data import sampler
 from src.dataloader import VideoDataset
+from src.utils.sampler import ImbalancedDatasetSampler
 from src.transforms.spatial_transforms import *
 from src.transforms.temporal_transforms import *
 from src.transforms.target_transforms import *
@@ -48,8 +50,8 @@ def get_current_long_cycle_shape(schedule, epoch):
 # iteration(epoch 포함)마다 index를 통해 (B, T, C, H, W) 의 형태를 결정
 class RandomEpochSampler(sampler.RandomSampler):
     def __init__(self, data_source, replacement : bool = False, num_samples = None, epochs : int = 1):
-        super(RandomEpochSampler, self).__init__(data_source, replacement, num_samples)
         self.epochs = epochs
+        super(RandomEpochSampler, self).__init__(data_source, replacement, num_samples)
 
     @property
     def num_samples(self):
@@ -85,7 +87,7 @@ class CycleBatchSampler(sampler.BatchSampler):
         batch_size = self.batch_size * self.long_cycle_bs_scale[self.long_cycle_index]
         self.short_iteration_counter = 0
         batch = []
-        for _ in range(5):
+        for _ in range(2):
             batch_size = self.adjust_long_cycle(batch_size)
 
         short_cycle_batch = self.adjust_short_cycle(batch_size)
@@ -109,6 +111,9 @@ class CycleBatchSampler(sampler.BatchSampler):
     def adjust_long_cycle(self, batch_size):
 
         if self.iteration_counter > self.schedule[self.phase]:
+            print("phase : ", self.phase)
+            print("iter_offset : ", self.schedule[self.phase])
+
             self.iter_offset = self.schedule[self.phase]
             self.phase += 1
             self.phase_steps = ((self.schedule[self.phase] - self.schedule[self.phase - 1]) / len(self.long_cycle_bs_scale))
@@ -244,21 +249,26 @@ def get_dataset(
 # step 3.
 # train code
 # sampler에 index를 순서대로 호출하여 그에 맞는 입력값을 model에 집어넣어 학습 진행
-from typing import List
+from typing import List, Optional
 
 def setup_data(
-    dataset : Dataset,
-    batch_size : int, 
-    num_steps_per_update : int, 
-    epochs : int, 
-    iterations_per_epochs :int, 
-    cur_iterations : int,
-    crop_size : int,
-    resize : List[int],
-    num_frames : int,
-    gamma_tau : float
+    dataset : str = "dur0.2_dis21",
+    clip_len : int = 42,
+    preprocess : bool = False,
+    augmentation : bool = False,
+    multigrid : bool = True,
+    sample_duration : int = 16, 
+    crop_size : int = 224,
+    batch_size : int = 16, 
+    num_steps_per_update : int = 1, 
+    epochs : int = 112, 
+    iterations_per_epochs :Optional[int] = None, 
+    cur_iterations : Optional[int] = None,
+    resize : Optional[List[int]] = None,
+    num_frames : Optional[int] = None,
+    gamma_tau : Optional[float] = 6
     ):
-    
+
     num_iterations = int(epochs * iterations_per_epochs)
     schedule = [int(i*num_iterations) for i in [0, 0.4, 0.65, 0.85, 1]]
 
@@ -271,26 +281,65 @@ def setup_data(
         "temporal": TemporalRandomCrop(num_frames, gamma_tau),
         "target":ClassLabel()
     }
-    
+
+    valid_transforms = {
+        "spatial":Compose([
+            CenterCropScaled(crop_size)
+        ]),
+        "temporal":TemporalRandomCrop(num_frames, gamma_tau),
+        "target":ClassLabel()
+    }
+
+    train_dataset = MultigridDataset(
+        dataset, "train", clip_len, preprocess, augmentation, multigrid, 
+        temporal_transform=train_transforms["temporal"], 
+        spatial_transform=train_transforms["spatial"], 
+        target_transform=train_transforms["target"], 
+        sample_duration=sample_duration, crop_size = crop_size
+    )
+
+    valid_dataset = MultigridDataset(
+        dataset, "val", clip_len, preprocess, augmentation, multigrid, 
+        temporal_transform=valid_transforms["temporal"], 
+        spatial_transform=valid_transforms["spatial"], 
+        target_transform=valid_transforms["target"], 
+        sample_duration=sample_duration, crop_size = crop_size
+    )
+
+    test_dataset = VideoDataset(dataset = dataset, split = "test", clip_len = clip_len, preprocess = False)
+
     drop_last = False
     shuffle = True
     
     if shuffle:
-        sampler = RandomEpochSampler(dataset, epochs = epochs)
+        train_sampler = RandomEpochSampler(train_dataset, epochs = epochs)
     else:
-        sampler = SequentialSampler(dataset)
+        train_sampler = SequentialSampler(train_dataset)
 
-    batch_sampler = CycleBatchSampler(sampler, batch_size, drop_last, schedule=schedule, cur_iterations=cur_iterations, long_cycle_bs_scale=LONG_CYCLE)
-    dataloader = DataLoader(dataset, num_workers = 4, batch_sampler=batch_sampler, pin_memory=True)
+    train_sampler = CycleBatchSampler(train_sampler, batch_size, drop_last, schedule=schedule, cur_iterations=cur_iterations, long_cycle_bs_scale=LONG_CYCLE) 
+    valid_sampler = ImbalancedDatasetSampler(valid_dataset)
+    test_sampler = ImbalancedDatasetSampler(test_dataset)
+    
+    train_dataloader = DataLoader(train_dataset, batch_size = batch_size, sampler=train_sampler, num_workers = 8, pin_memory=True)
+    valid_dataloader = DataLoader(valid_dataset, batch_size = batch_size, sampler=valid_sampler, num_workers = 8, pin_memory=True)
+    test_dataloader = DataLoader(test_dataset, batch_size = batch_size, sampler=test_sampler, num_workers = 8, pin_memory=True)
 
     schedule[-2] = (schedule[-2] + schedule[-1]) // 2
 
-    return dataloader, dataset, schedule[1:]
+    return train_dataloader, train_dataset, valid_dataloader, valid_dataset, test_dataloader, test_dataset, schedule[1:]
+
+def save_checkpoint(epoch : int, model : torch.nn.Module, optimizer : torch.optim.Optimizer, scheduler:torch.optim.lr_scheduler._LRScheduler, filename : str):
+    state = {
+        "Epoch":epoch,
+        "model":model.state_dict(),
+        "optimizer":optimizer.state_dict(),
+        "scheduler":scheduler.state_dict(),
+    }
+    torch.save(state, filename)
 
 def train_multigrid(
-    train_dataset : Dataset,
-    valid_dataset : Dataset,
     model : torch.nn.Module,
+    dataset : str = "dur0.2_dis21",
     init_lr : float = 0.001,
     warmup_steps : int = 8000,
     batch_size : int = BS * BS_UPSCALE,
@@ -305,32 +354,35 @@ def train_multigrid(
     save_best_dir : str = "./weights/best.pt"
     ):
     
+    # dataset setting
+    dataset = "dur0.2_dis21"
+    clip_len = 42
+    preprocess = False
+    augmentation = True
+    multigrid = True
+
+    # multigrid setting
+    sample_duration = 16
+    iterations_per_epochs = len(glob.glob("./dataset/" + dataset + "/train/*/*")) // batch_size
+    val_iterations_per_epochs = len(glob.glob("./dataset/" + dataset + "/val/*/*")) // batch_size
     st_steps = 204000
     load_steps = 204000
     steps = 204000
     num_steps_per_update = 1
-    iterations_per_epochs = train_dataset.__len__() // batch_size
-    val_iterations_per_epochs = valid_dataset.__len__() // batch_size
     cur_iterations = steps * num_steps_per_update
     max_steps = iterations_per_epochs * num_epoch
     num_frames = 0
     
-    train_dataloader, train_dataset, lr_schedule = setup_data(train_dataset, batch_size, num_steps_per_update, num_epoch, iterations_per_epochs, cur_iterations, crop_size, resize, num_frames, gamma_tau)
-    
+    # generate dataloader, dataset and lr_schedule
+    train_dataloader, train_dataset, valid_dataloader, valid_dataset, test_dataloader, test_dataset, lr_schedule = setup_data(
+        dataset, clip_len, preprocess, augmentation, multigrid, sample_duration, crop_size, batch_size, num_steps_per_update,num_epoch,
+        iterations_per_epochs, cur_iterations, resize, num_frames, gamma_tau
+    )
+
     lr_schedule = [i // num_steps_per_update for i in lr_schedule]
     
-
     RESTART = False
-    
-    if steps > 0:
-        load_ckpt = torch.load(save_best_dir)
-        cur_long_ind = load_ckpt['long_ind']
-        bn_splits = model.update_bn_splits_long_cycle(LONG_CYCLE[cur_long_ind])
-        model.load_state_dict(load_ckpt['model_state_dict'])
-        last_long = cur_long_ind
-        RESTART = True
-        
-    
+
     lr = init_lr
     print("Initial learning rate : {}".format(lr))
     
@@ -338,8 +390,23 @@ def train_multigrid(
     lr_sched = torch.optim.lr_scheduler.MultiStepLR(optimizer, lr_schedule)
     
     if steps > 0:
-        optimizer.load_state_dict(load_ckpt['optimizer_state_dict'])
-        lr_sched.load_state_dict(load_ckpt['scheduler_state_dict'])    
+        if not os.path.isfile(save_best_dir):
+            save_checkpoint(0, model, optimizer, lr_sched, save_best_dir)
+            load_ckpt = torch.load(save_best_dir)
+        else:
+            load_ckpt = torch.load(save_best_dir)
+
+        #cur_long_ind = load_ckpt['long_ind']
+        cur_long_ind = 0
+        model.load_state_dict(load_ckpt['model'], strict = False)
+
+        bn_splits = model.update_bn_splits_long_cycle(LONG_CYCLE[cur_long_ind])
+        last_long = cur_long_ind
+        RESTART = True
+        
+    if steps > 0:
+        optimizer.load_state_dict(load_ckpt['optimizer'])
+        lr_sched.load_state_dict(load_ckpt['scheduler'])    
     
     loss_fn = torch.nn.CrossEntropyLoss(reduction="mean")
     
@@ -353,12 +420,15 @@ def train_multigrid(
     best_epoch = 0
     best_loss = torch.inf
 
+    model.to(device)
+
     for epoch in tqdm(range(num_epoch), desc = "training process"):
         # train process
         train_loss = 0
         train_acc = 0
         
         model.train()
+        
         for batch_idx, (data, target, long_ind, stats) in enumerate(train_dataloader):
             optimizer.zero_grad()
             long_ind = long_ind[0].item()
@@ -462,3 +532,25 @@ def print_stats(long_ind, batch_size, stats, gamma_tau, bn_splits, lr):
     else:
         bs = [bs*j for j in [4,2,1]]
         print(' ***** LR {} Frames {}/{} BS ({},{},{}) W/H ({},{},{}) BN_splits {} long_ind {} *****'.format(lr, stats[0][0], gamma_tau, bs[0], bs[1], bs[2], stats[1][0], stats[2][0], stats[3][0], bn_splits, long_ind))
+
+
+if __name__ == "__main__":
+
+    from src.models.model import SlowFastDisruptionClassifier
+    from src.models.resnet import Bottleneck3D
+
+    alpha = 2
+    hidden = 128
+    p = 0.5
+
+    model = SlowFastDisruptionClassifier(
+        input_shape = (3,42,112,112),
+        block = Bottleneck3D,
+        layers = [3,4,4,3], #[1,1,1,1], #[3,4,6,3],
+        alpha = alpha,
+        p = p,
+        mlp_hidden = hidden,
+        num_classes  = 2
+    )
+
+    train_multigrid(model, "dur0.2_dis21", init_lr = 0.001, warmup_steps=8000, num_epoch=64, save_best_only=True, save_best_dir = "./weights/multigrid_best.pt")

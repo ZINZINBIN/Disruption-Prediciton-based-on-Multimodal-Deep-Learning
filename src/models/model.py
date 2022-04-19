@@ -208,7 +208,7 @@ class SlowFastEncoder(nn.Module):
         self.dropout = nn.Dropout(p = p)
         
     def get_output_size(self):
-        input_shape = (1, *(self.input_shape))
+        input_shape = (8, *(self.input_shape))
         device = next(self.parameters()).device
         sample = torch.zeros(input_shape).to(device)
         sample_output = self.forward(sample)
@@ -263,10 +263,12 @@ class SlowFastDisruptionClassifier(nn.Module):
         alpha : int = 4,
         p : float = 0.5,
         mlp_hidden :int = 128,
-        num_classes : int = 2
+        num_classes : int = 2,
+        base_bn_splits : int = 4,
     ):
         super(SlowFastDisruptionClassifier, self).__init__()
         self.input_shape = input_shape
+        self.base_bn_splits = base_bn_splits
         self.slowfast = SlowFastEncoder(input_shape, block, layers, alpha, p)
         slowfast_output_dim = self.slowfast.get_output_size()[-1]
         self.classifier = nn.Sequential(
@@ -284,6 +286,14 @@ class SlowFastDisruptionClassifier(nn.Module):
         x = self.slowfast(x)
         x = self.classifier(x)
         return x
+
+    def update_bn_splits_long_cycle(self, long_cycle_bn_scale):
+        for m in self.modules():
+            if isinstance(m, SubBatchNorm3d):
+                m.num_splits = self.base_bn_splits * long_cycle_bn_scale
+                m.split_bn = nn.BatchNorm3d(num_features = m.num_features * m.num_splits, affine = False).to(m.weight.device)
+        
+        return self.base_bn_splits * long_cycle_bn_scale
 
 class SBERTDisruptionClassifier(nn.Module):
     def __init__(self, spatio_encoder : VideoSpatioEncoder, sbert : SBERT, mlp_hidden : int, num_classes : int = 2, alpha : float = 0.01):
