@@ -8,9 +8,9 @@ from tqdm import tqdm
 from torch.utils.data import sampler
 from src.dataloader import VideoDataset
 from src.utils.sampler import ImbalancedDatasetSampler
-from src.transforms.spatial_transforms import *
-from src.transforms.temporal_transforms import *
-from src.transforms.target_transforms import *
+from src.transforms.spatial_transforms import Compose, MultiScaleRandomCropMultigrid, CenterCropScaled
+from src.transforms.temporal_transforms import TemporalRandomCrop
+from src.transforms.target_transforms import ClassLabel
 from torch.utils.data import Dataset
 from torch.utils.data.sampler import SequentialSampler
 from torch.utils.data.dataloader import DataLoader
@@ -76,7 +76,8 @@ class CycleBatchSampler(sampler.BatchSampler):
         self.schedule = schedule
         self.long_cycle_bs_scale = long_cycle_bs_scale
 
-        self.iteration_counter = cur_iterations 
+        #self.iteration_counter = cur_iterations 
+        self.iteration_counter = 0
         self.short_iteration_counter = 0
         self.phase = 1
         self.phase_steps = ((self.schedule[self.phase] - self.schedule[self.phase - 1]) / len(self.long_cycle_bs_scale))
@@ -87,7 +88,7 @@ class CycleBatchSampler(sampler.BatchSampler):
         batch_size = self.batch_size * self.long_cycle_bs_scale[self.long_cycle_index]
         self.short_iteration_counter = 0
         batch = []
-        for _ in range(2):
+        for _ in range(5):
             batch_size = self.adjust_long_cycle(batch_size)
 
         short_cycle_batch = self.adjust_short_cycle(batch_size)
@@ -111,16 +112,16 @@ class CycleBatchSampler(sampler.BatchSampler):
     def adjust_long_cycle(self, batch_size):
 
         if self.iteration_counter > self.schedule[self.phase]:
-            print("phase : ", self.phase)
-            print("iter_offset : ", self.schedule[self.phase])
-
+            
             self.iter_offset = self.schedule[self.phase]
+            
             self.phase += 1
             self.phase_steps = ((self.schedule[self.phase] - self.schedule[self.phase - 1]) / len(self.long_cycle_bs_scale))
             self.long_cycle_index = 0
 
             if self.phase == len(self.schedule) - 1:
                 self.long_cycle_index = -1
+                self.phase = -1
             
             batch_size = (self.batch_size * self.long_cycle_bs_scale[self.long_cycle_index])
         
@@ -177,22 +178,27 @@ class MultigridDataset(VideoDataset):
             (self.sample_duration, self.crop_size)
         ]
         
+        
     def __getitem__(self, index):
         
         iteration = index[0]
         index, long_cycle_state = index[1]
         
+        # print("iteration : ", iteration)
+        # print("index : ", index)
+        # print("long cycle state : ", long_cycle_state)
+        
         sample_duration, crop_size = self.long_cycles[long_cycle_state]
         stats = (sample_duration, crop_size //2, int(np.floor(crop_size / np.sqrt(2))), crop_size)
         
         if long_cycle_state in [0,1]:
-            short_cycle_state = iteration % 2
+            short_cycle_state = index % 2
             
             if short_cycle_state == 0:
                 crop_size = int(np.floor(crop_size / np.sqrt(2)))
             
         else:
-            short_cycle_state = iteration % 3
+            short_cycle_state = index % 3
             if short_cycle_state == 0:
                 crop_size = crop_size // 2
             elif short_cycle_state ==1:
@@ -220,13 +226,13 @@ class MultigridDataset(VideoDataset):
         buffer = self.normalize(buffer)
         buffer = self.to_tensor(buffer)
         
-        frame_indices = [idx for idx in range(len(buffer))]
-        
+        frame_indices = [idx for idx in range(buffer.shape[1])]
+      
         if self.temporal_transform is not None:
             t_stride = random.randint(1, max(1, self.sample_duration // sample_duration))
             frame_indices = self.temporal_transform(frame_indices, t_stride, sample_duration)
-
-        buffer = buffer[frame_indices]
+ 
+        buffer = buffer[:, frame_indices, :, :]
         
         if self.spatial_transform is not None:
             self.spatial_transform.randomize_parameters(crop_size)
@@ -344,9 +350,9 @@ def train_multigrid(
     warmup_steps : int = 8000,
     batch_size : int = BS * BS_UPSCALE,
     frames : int = 80,
-    crop_size : int = 128,
+    crop_size : int = 112,
     resize : List[int] = [180, 224],
-    gamma_tau : float = 6,
+    gamma_tau : float = 2,
     verbose : int = 4,
     device : str = "cpu",
     num_epoch : int = 64,
@@ -365,9 +371,10 @@ def train_multigrid(
     sample_duration = 16
     iterations_per_epochs = len(glob.glob("./dataset/" + dataset + "/train/*/*")) // batch_size
     val_iterations_per_epochs = len(glob.glob("./dataset/" + dataset + "/val/*/*")) // batch_size
-    st_steps = 204000
-    load_steps = 204000
-    steps = 204000
+    st_steps = int(iterations_per_epochs * num_epoch * 0.5)
+    load_steps = int(iterations_per_epochs * num_epoch * 0.5)
+    steps = int(iterations_per_epochs * num_epoch * 0.5)
+    
     num_steps_per_update = 1
     cur_iterations = steps * num_steps_per_update
     max_steps = iterations_per_epochs * num_epoch
@@ -532,25 +539,5 @@ def print_stats(long_ind, batch_size, stats, gamma_tau, bn_splits, lr):
     else:
         bs = [bs*j for j in [4,2,1]]
         print(' ***** LR {} Frames {}/{} BS ({},{},{}) W/H ({},{},{}) BN_splits {} long_ind {} *****'.format(lr, stats[0][0], gamma_tau, bs[0], bs[1], bs[2], stats[1][0], stats[2][0], stats[3][0], bn_splits, long_ind))
-
-
-if __name__ == "__main__":
-
-    from src.models.model import SlowFastDisruptionClassifier
-    from src.models.resnet import Bottleneck3D
-
-    alpha = 2
-    hidden = 128
-    p = 0.5
-
-    model = SlowFastDisruptionClassifier(
-        input_shape = (3,42,112,112),
-        block = Bottleneck3D,
-        layers = [3,4,4,3], #[1,1,1,1], #[3,4,6,3],
-        alpha = alpha,
-        p = p,
-        mlp_hidden = hidden,
-        num_classes  = 2
-    )
-
-    train_multigrid(model, "dur0.2_dis21", init_lr = 0.001, warmup_steps=8000, num_epoch=64, save_best_only=True, save_best_dir = "./weights/multigrid_best.pt")
+        
+        

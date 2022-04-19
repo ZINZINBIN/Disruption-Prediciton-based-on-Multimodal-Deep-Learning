@@ -15,45 +15,6 @@ from src.models.resnet import *
 from src.models.slowfast import *
 from pytorch_model_summary import summary
 
-# For Test
-class MNIST_Net(nn.Module):
-    def __init__(
-        self,
-        input_shape : Tuple[int, int, int] = (28, 28, 1),
-        conv_channels : List[int] = [1, 8, 16], 
-        conv_kernels : List[int] = [8, 4],
-        pool_strides : List[int] =  [2, 2],
-        pool_kernels : List[int] = [2, 2],
-        theta_dim : int = 64
-        ):
-        super(MNIST_Net, self).__init__()
-        self.STN = SpatialTransformer(
-            input_shape,
-            conv_channels,
-            conv_kernels,
-            pool_strides,
-            pool_kernels,
-            theta_dim
-        )
-        
-        self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
-        self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
-        self.conv2_drop = nn.Dropout2d()
-        self.fc1 = nn.Linear(320, 50)
-        self.fc2 = nn.Linear(50, 10)
-
-    def forward(self, x:torch.Tensor):
-        #x = x.permute(0,2,3,1)
-        batch = x.size(0)
-        x = self.STN(x)
-        x = F.relu(F.max_pool2d(self.conv1(x), 2))
-        x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), 2))
-        x = x.view(batch, -1)
-        x = F.relu(self.fc1(x))
-        x = F.dropout(x, training=self.training)
-        x = self.fc2(x)
-        return F.log_softmax(x, dim=1)
-
 class R2Plus1DNet(nn.Module):
     def __init__(self, layer_sizes : List[int] = [4,4,4,4], alpha : float = 0.01):
         super(R2Plus1DNet, self).__init__()
@@ -187,6 +148,44 @@ class VideoSpatioEncoder(nn.Module):
         x = self.conv_block4(x)
         x = x.view(x.size(0),self.seq_len, -1)
         return x
+    
+class ResNet50(ResNet2DPlus1D):
+    def __init__(self, block, layers, **kwargs):
+        super(ResNet50, self).__init__(block, layers, **kwargs)
+        self.init_params()
+        
+    def forward(self, x: torch.Tensor)->None:
+        x = self.layer0(x)
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.layer3(x)
+        x = self.layer4(x)
+        return x
+
+class SITSBertSpatialEncoder(nn.Module):
+    def __init__(
+        self, 
+        input_shape : Tuple[int,int,int,int] = (3, 8, 112, 112),
+        alpha : int = 1,
+        layers : List[int] = [3,4,6,3],
+        block : Optional[Bottleneck2DPlus1D] = Bottleneck2DPlus1D,
+        ):
+        super(SITSBertSpatialEncoder, self).__init__()
+        self.input_shape = input_shape
+        self.seq_len = input_shape[1]
+        self.resnet = ResNet50(block = block, layers = layers, alpha = alpha, in_channels = input_shape[0])
+
+    def get_output_size(self):
+        input_shape = (4, *(self.input_shape))
+        device = next(self.resnet.parameters()).device
+        sample = torch.zeros(input_shape).to(device)
+        sample_output = self.forward(sample)
+        return sample_output.size()
+        
+    def forward(self, x:torch.Tensor):
+        x = self.resnet(x)
+        x = x.view(x.size(0), self.seq_len, -1)
+        return x
 
 class SlowFastEncoder(nn.Module):
     def __init__(
@@ -196,12 +195,14 @@ class SlowFastEncoder(nn.Module):
             layers : List[int] = [3,4,6,3],
             alpha : int = 4,
             p : float = 0.5,
+            tau_fast : int = 1
         ):
         super(SlowFastEncoder, self).__init__()
         self.input_shape = input_shape
         self.seq_len = input_shape[1]
         self.in_channels = input_shape[0]
         self.alpha = alpha
+        self.tau_fast = tau_fast
 
         self.slownet = resnet50_s(block = block, layers = layers, alpha = alpha, in_channels = input_shape[0], slow = 1)
         self.fastnet = resnet50_f(block = block, layers = layers, alpha = alpha, in_channels = input_shape[0], slow = 0)
@@ -215,7 +216,7 @@ class SlowFastEncoder(nn.Module):
         return sample_output.size()
 
     def split_slow_fast(self, x : torch.Tensor):
-        tau_fast = 1
+        tau_fast = self.tau_fast
         tau_slow = tau_fast * self.alpha
 
         x_slow = x[:,:,::tau_slow, :, :]

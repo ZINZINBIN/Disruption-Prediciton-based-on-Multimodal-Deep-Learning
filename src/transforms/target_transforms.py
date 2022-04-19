@@ -13,8 +13,4 @@ class Compose(object):
     
 class ClassLabel(object):
     def __call__(self, target):
-        return target['label']
-    
-class VideoID(object):
-    def __call__(self, target):
-        return target['video_id']
+        return target

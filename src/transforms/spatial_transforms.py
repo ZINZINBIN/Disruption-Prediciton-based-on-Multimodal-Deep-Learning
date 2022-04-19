@@ -9,11 +9,6 @@ import accimage
 import numbers
 
 class Compose(object):
-    """Composes several transforms together.
-    Args:
-        transforms (list of ``Transform`` objects): list of transforms to compose.
-    """
-
     def __init__(self, transforms):
         self.transforms = transforms
 
@@ -467,24 +462,29 @@ class MultiScaleRandomCropMultigrid(object):
         self.init_size = size
         self.size = self.init_size
         self.interpolation = interpolation
-
-    def __call__(self, img):
-
-        min_length = min(img.size[0], img.size[1])
+ 
+    def __call__(self, buffer):
+    
+        min_length = min(buffer.shape[2], buffer.shape[3])
         crop_size = int(min_length * self.scale)
 
-        image_width = img.size[0]
-        image_height = img.size[1]
+        image_width = buffer.shape[2]
+        image_height = buffer.shape[3]
 
         x1 = int(self.tl_x * (image_width - crop_size))
         y1 = int(self.tl_y * (image_height - crop_size))
         x2 = x1 + crop_size
         y2 = y1 + crop_size
-
-        img = img.crop((x1, y1, x2, y2))
-
-        return img.resize((self.size, self.size), self.interpolation)
-
+        
+        buffer = buffer[:,:,y1:y2,x1:x2]
+        reference = np.zeros((buffer.shape[0], buffer.shape[1], self.size, self.size))
+            
+        for t in range(buffer.shape[1]):
+            img = cv2.resize(np.transpose(buffer[:,t,:,:], (1,2,0)), dsize = (self.size, self.size), interpolation = self.interpolation)
+            reference[:,t,:,:] = np.transpose(img, (2,0,1))
+        
+        return reference
+    
     def randomize_parameters(self, c_size):
         self.size = c_size
         self.scale = self.scales[random.randint(0, len(self.scales) - 1)]

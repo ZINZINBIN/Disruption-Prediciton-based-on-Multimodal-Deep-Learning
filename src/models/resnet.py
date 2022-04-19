@@ -247,7 +247,7 @@ class ResNet3D(nn.Module):
     def _make_layer(self, block : Bottleneck3D, planes : int, blocks:int = 3, stride:int=1, head_conv:int =1):
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
-                    nn.Conv3d(self.inplanes, planes * block.expansion, kernel_size=1, stride=(1, stride, stride),bias=False), 
+                    nn.Conv3d(self.inplanes, planes * block.expansion, kernel_size=1, stride=(1, stride, stride), bias=False), 
                     nn.BatchNorm3d(planes * block.expansion)
                 )
         else:
@@ -271,3 +271,140 @@ class ResNet3D(nn.Module):
                 m.split_bn = nn.BatchNorm3d(num_features = m.num_features * m.num_splits, affine = False).to(m.weight.device)
         
         return self.base_bn_splits * long_cycle_bn_scale
+
+
+class Bottleneck2DPlus1D(nn.Module):
+    expansion = 4
+    def __init__(self, in_planes : int, planes : int, stride:int=1, downsample: Optional[nn.Module]=None, bias:bool=False, head_conv:int=1, index : int = 0):
+        super(Bottleneck2DPlus1D, self).__init__()
+        self.index = index
+
+        if head_conv == 1:
+            self.conv1 = nn.Conv3d(in_planes, planes, kernel_size=1, bias=False)
+            self.bn1 = nn.BatchNorm3d(planes)
+        elif head_conv == 3:
+            self.conv1 = nn.Conv3d(in_planes, planes, kernel_size=(3, 1, 1), bias=False, padding=(1, 0, 0))
+            self.bn1 = nn.BatchNorm3d(planes)
+        else:
+            raise ValueError("Unsupported head_conv!")
+
+        self.conv2 = nn.Conv3d(planes, planes,
+                               kernel_size=(1, 3, 3), stride=(1, stride, stride), padding=(0, 1, 1), bias=bias)
+        self.bn2 = nn.BatchNorm3d(planes)
+
+        self.conv3 = nn.Conv3d(planes, planes * 4, kernel_size=1, bias=bias)
+        self.bn3 = nn.BatchNorm3d(planes * 4)
+        self.swish = Swish()
+        self.relu = nn.ReLU(inplace=True)
+
+        if self.index % 2 == 0:
+            width = self.round_width(planes)
+            self.global_pool = nn.AdaptiveAvgPool3d((1,1,1))
+            self.fc1 = nn.Conv3d(planes, width, kernel_size = 1, stride = 1)
+            self.fc2 = nn.Conv3d(width, planes, kernel_size = 1, stride = 1)
+            self.sigmoid = nn.Sigmoid()
+
+        self.downsample = downsample
+        self.stride = stride
+
+    def round_width(self, width : int, multiplier = 0.0625, min_width = 8, divisor = 8):
+
+        if not multiplier:
+            return width
+        
+        width *= multiplier
+        min_width = min_width or divisor
+
+        width_out = max(
+            min_width, int(width + divisor / 2) // divisor * divisor
+        )
+
+        if width_out < 0.9 * width:
+            width_out += divisor
+        
+        return int(width_out)
+
+    def forward(self, x):
+        residual = x
+
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(out)
+
+        out = self.conv2(out)
+        out = self.bn2(out)
+        out = self.relu(out)
+
+        if self.index % 2 == 0:
+            se_w = self.global_pool(out)
+            se_w = self.fc1(se_w)
+            se_w = self.relu(se_w)
+            se_w = self.fc2(se_w)
+            se_w = self.sigmoid(se_w)
+            out = out * se_w
+
+        out = self.swish(out)
+        out = self.conv3(out)
+        out = self.bn3(out)
+
+        if self.downsample is not None:
+            residual = self.downsample(x)
+
+        out += residual
+        out = self.relu(out)
+        return out
+
+class ResNet2DPlus1D(nn.Module):
+    def __init__(self, block, layers, **kwargs):
+        super(ResNet2DPlus1D, self).__init__()
+        in_channels = kwargs['in_channels']
+        self.alpha = kwargs['alpha']
+
+        self.inplanes = 64//self.alpha
+
+        # layer 0 parameters
+        out_channels = 64 // self.alpha
+        kernel_size = (1, 7, 7)
+        stride = (1, 2, 2)
+        padding = (0, 3, 3)
+        
+        self.layer0 = nn.Sequential(
+            nn.Conv3d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding),
+            nn.BatchNorm3d(out_channels),
+            nn.ReLU(inplace=True),
+            nn.MaxPool3d(kernel_size=(1, 3, 3), stride=(1, 2, 2), padding=(0, 1, 1))
+        )
+
+        # layer 1 to layer 4
+        self.layer1 = self._make_layer(block, 64 //self.alpha, layers[0], head_conv=1)
+        self.layer2 = self._make_layer(block, 128 // self.alpha, layers[1], stride=2,head_conv=1)
+        self.layer3 = self._make_layer(block, 256 // self.alpha, layers[2], stride=2,head_conv=3)
+        self.layer4 = self._make_layer(block, 512 // self.alpha, layers[3], stride=2,head_conv=3)
+
+    def init_params(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv3d):
+                nn_init.xavier_normal_(m.weight)
+            elif isinstance(m, nn.BatchNorm3d) and m.weight is not None:
+                nn_init.constant_(m.weight, 1)
+
+    def forward(self, x):
+        raise NotImplementedError('use each pathway network\' forward function')
+
+    def _make_layer(self, block : Bottleneck3D, planes : int, blocks:int = 3, stride:int=1, head_conv:int =1):
+        if stride != 1 or self.inplanes != planes * block.expansion:
+            downsample = nn.Sequential(
+                    nn.Conv3d(self.inplanes, planes * block.expansion, kernel_size=1, stride=(1, stride, stride), bias=False), 
+                    nn.BatchNorm3d(planes * block.expansion)
+                )
+        else:
+            downsample = None
+
+        layers = list()
+        layers.append(block(self.inplanes, planes, stride, downsample, head_conv=head_conv))
+        self.inplanes = planes * block.expansion
+
+        for i in range(1, blocks):
+            layers.append(block(self.inplanes, planes, head_conv=head_conv))
+
+        return nn.Sequential(*layers)

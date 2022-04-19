@@ -53,11 +53,12 @@ class TemporalRandomCrop(object):
         
     def __call__(self, frame_indices, t_stride = 1, size = None):
         trunc = size if size is not None else self.size
+        size = size if size is not None else self.size
         
-        rand_end = max(0, len(frame_indices) - self.size - 1)
+        rand_end = max(0, len(frame_indices) - size - 1)
         begin_index = random.randint(0, rand_end)
         
-        end_index = min(begin_index + self.size, len(frame_indices))
+        end_index = min(begin_index + size, len(frame_indices))
         
         out = frame_indices[begin_index : end_index:t_stride * self.gamma_tau]
         out = out[:trunc//self.gamma_tau]
@@ -66,5 +67,5 @@ class TemporalRandomCrop(object):
             if len(out) >= trunc // self.gamma_tau:
                 break
             out.append(idx)
-            
+    
         return out
