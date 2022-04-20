@@ -23,7 +23,7 @@ parser.add_argument("--gpu_num", type = int, default = 0)
 parser.add_argument("--alpha", type = int, default = 2)
 parser.add_argument("--p", type = float, default = 0.5)
 parser.add_argument("--clip_len", type = int, default = 42)
-parser.add_argument("--hidden", type = int, default = 256)
+parser.add_argument("--hidden", type = int, default = 128)
 parser.add_argument("--wandb_save_name", type = str, default = "slowfast-exp001")
 parser.add_argument("--num_epoch", type = int, default = 256)
 parser.add_argument("--verbose", type = int, default = 4)
@@ -98,7 +98,7 @@ if __name__ == "__main__":
     model = SlowFastDisruptionClassifier(
         input_shape = (3,clip_len,112,112),
         block = Bottleneck3D,
-        layers = [3,4,4,3], #[1,1,1,1], #[3,4,6,3],
+        layers = [1,2,2,1], #[1,1,1,1], #[3,4,6,3],
         alpha = alpha,
         p = p,
         mlp_hidden = hidden,

@@ -16,8 +16,8 @@ from src.loss import FocalLoss
 from tqdm import tqdm
 
 parser = argparse.ArgumentParser(description="training SBERT Disruption Classifier")
-parser.add_argument("--batch_size", type = int, default = 24)
-parser.add_argument("--lr", type = float, default = 5e-4)
+parser.add_argument("--batch_size", type = int, default = 48)
+parser.add_argument("--lr", type = float, default = 1e-3)
 parser.add_argument("--gamma", type = float, default = 0.999)
 parser.add_argument("--gpu_num", type = int, default = 0)
 parser.add_argument("--alpha", type = float, default = 0.01)
@@ -74,17 +74,17 @@ if __name__ == "__main__":
 
     video_encoder = SITSBertSpatialEncoder(
         input_shape  = (3, clip_len, 112, 112),
-        alpha  = 1,
-        layers = [2,2,2,2]
+        alpha  = 2,
+        layers = [1,2,2,1]
     )
     
     num_features = video_encoder.get_output_size()[-1]
 
     temporal_encoder = SBERT(
         num_features = num_features, #18432,
-        hidden = 256,
+        hidden = 128,
         n_layers = 4,
-        attn_heads = 16, 
+        attn_heads = 8, 
         max_len  = clip_len
     )
 
@@ -94,6 +94,8 @@ if __name__ == "__main__":
         mlp_hidden = 128, 
         num_classes = 2
     )
+    
+    model.summary()
 
     model.to(device)
 
@@ -122,6 +124,8 @@ if __name__ == "__main__":
         save_best_only=True,
         save_best_dir = save_best_dir
     )
+    
+    model.load_state_dict(torch.load(save_best_dir))
 
     test_loss, test_acc = evaluate(
         test_loader_dist,
