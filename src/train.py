@@ -4,6 +4,7 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 from src.dataloader import VideoDataset
+from src.utils.mixup import mixup_criterion, video_mixup_data
 from tqdm import tqdm
 from sklearn.metrics import confusion_matrix, classification_report
 
@@ -13,7 +14,8 @@ def train_per_epoch(
     optimizer : torch.optim.Optimizer,
     scheduler : Optional[torch.optim.lr_scheduler._LRScheduler],
     loss_fn = None,
-    device : str = "cpu"
+    device : str = "cpu",
+    use_video_mixup_algorithm : bool = False,
     ):
 
     model.train()
@@ -28,15 +30,32 @@ def train_per_epoch(
         optimizer.zero_grad()
         data = data.to(device)
         target = target.to(device)
+        target_ = None
+        lam = None
+
+        if use_video_mixup_algorithm:
+            data, target, target_, lam = video_mixup_data(data, target, device, "spatial-temporal", alpha = 1.0)
+            data, target, target_ = map(torch.autograd.Variable, (data, target, target_))
+
         output = model(data)
 
-        loss = loss_fn(output, target)
+        if use_video_mixup_algorithm:
+            loss = mixup_criterion(loss_fn, output, target, target_, lam)
+        else:
+            loss = loss_fn(output, target)
+
         loss.backward()
         optimizer.step()
 
         train_loss += loss.item()
-        pred = torch.nn.functional.softmax(output, dim = 1).max(1, keepdim = True)[1]
-        train_acc += pred.eq(target.view_as(pred)).sum().item() / data.size(0) 
+
+        if use_video_mixup_algorithm:
+            pred = torch.nn.functional.softmax(output, dim = 1).max(1, keepdim = True)[1]
+            train_acc += (lam * pred.eq(target.view_as(pred)).sum().item() + (1-lam) * pred.eq(target_.view_as(pred)).sum().item()) / data.size(0) 
+            
+        else:
+            pred = torch.nn.functional.softmax(output, dim = 1).max(1, keepdim = True)[1]
+            train_acc += pred.eq(target.view_as(pred)).sum().item() / data.size(0) 
 
     if scheduler:
         scheduler.step()
@@ -91,7 +110,8 @@ def train(
     num_epoch : int = 64,
     verbose : Optional[int] = 8,
     save_best_only : bool = False,
-    save_best_dir : str = "./weights/best.pt"
+    save_best_dir : str = "./weights/best.pt",
+    use_video_mixup_algorithm : bool = False
 ):
 
     train_loss_list = []
@@ -112,7 +132,8 @@ def train(
             optimizer,
             scheduler,
             loss_fn,
-            device 
+            device,
+            use_video_mixup_algorithm 
         )
 
         valid_loss, valid_acc = valid_per_epoch(
