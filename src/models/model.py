@@ -195,7 +195,8 @@ class SlowFastEncoder(nn.Module):
             layers : List[int] = [3,4,6,3],
             alpha : int = 4,
             p : float = 0.5,
-            tau_fast : int = 1
+            tau_fast : int = 1,
+            base_bn_splits : Optional[int] = None
         ):
         super(SlowFastEncoder, self).__init__()
         self.input_shape = input_shape
@@ -204,8 +205,8 @@ class SlowFastEncoder(nn.Module):
         self.alpha = alpha
         self.tau_fast = tau_fast
 
-        self.slownet = resnet50_s(block = block, layers = layers, alpha = alpha, in_channels = input_shape[0], slow = 1)
-        self.fastnet = resnet50_f(block = block, layers = layers, alpha = alpha, in_channels = input_shape[0], slow = 0)
+        self.slownet = resnet50_s(block = block, layers = layers, alpha = alpha, in_channels = input_shape[0], slow = 1, base_bn_splits = base_bn_splits)
+        self.fastnet = resnet50_f(block = block, layers = layers, alpha = alpha, in_channels = input_shape[0], slow = 0, base_bn_splits = base_bn_splits)
         self.dropout = nn.Dropout(p = p)
         
     def get_output_size(self):
@@ -265,12 +266,13 @@ class SlowFastDisruptionClassifier(nn.Module):
         p : float = 0.5,
         mlp_hidden :int = 128,
         num_classes : int = 2,
-        base_bn_splits : int = 4,
+        tau_fast : int = 1,
+        base_bn_splits : Optional[int] = None,
     ):
         super(SlowFastDisruptionClassifier, self).__init__()
         self.input_shape = input_shape
         self.base_bn_splits = base_bn_splits
-        self.slowfast = SlowFastEncoder(input_shape, block, layers, alpha, p)
+        self.slowfast = SlowFastEncoder(input_shape, block, layers, alpha, p, tau_fast = tau_fast, base_bn_splits = base_bn_splits)
         slowfast_output_dim = self.slowfast.get_output_size()[-1]
         self.classifier = nn.Sequential(
             nn.Linear(slowfast_output_dim, mlp_hidden),
@@ -295,6 +297,11 @@ class SlowFastDisruptionClassifier(nn.Module):
                 m.split_bn = nn.BatchNorm3d(num_features = m.num_features * m.num_splits, affine = False).to(m.weight.device)
         
         return self.base_bn_splits * long_cycle_bn_scale
+    
+    def summary(self)->None:
+        input_size = (8, *self.input_shape)
+        sample = torch.zeros(input_size)
+        print(summary(self, sample, max_depth = None, show_parent_layers = True, show_input = True))
 
 class SBERTDisruptionClassifier(nn.Module):
     def __init__(self, spatio_encoder : VideoSpatioEncoder, sbert : SBERT, mlp_hidden : int, num_classes : int = 2, alpha : float = 0.01):

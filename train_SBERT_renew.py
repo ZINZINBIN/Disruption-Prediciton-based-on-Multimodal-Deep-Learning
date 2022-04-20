@@ -47,6 +47,26 @@ if(torch.cuda.device_count() >= 1):
     device = "cuda:" + str(args["gpu_num"])
 else:
     device = 'cpu'
+    
+# dataset composition
+import os
+
+try:
+    path = "./dataset/" + args["dataset"] + "/"
+    path_disruption = path + "disruption/"
+    path_borderline = path + "borderline/"
+    path_normal = path + "normal/"
+
+    dir_disruption_list = os.listdir(path_disruption)
+    dir_borderline_list = os.listdir(path_borderline)
+    dir_normal_list = os.listdir(path_normal)
+
+    print("disruption : ", len(dir_disruption_list))
+    print("normal : ", len(dir_normal_list))
+    print("borderline : ", len(dir_borderline_list))
+    
+except:
+    print("video dataset directory is not valid")
 
 if __name__ == "__main__":
 

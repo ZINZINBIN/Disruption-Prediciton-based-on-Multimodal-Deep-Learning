@@ -118,29 +118,25 @@ class BasicBlock3D(nn.Module):
 
 class Bottleneck3D(nn.Module):
     expansion = 4
-    def __init__(self, in_planes : int, planes : int, stride:int=1, downsample: Optional[nn.Module]=None, bias:bool=False, head_conv:int=1, base_bn_splits : int = 4, index : int = 0):
+    def __init__(self, in_planes : int, planes : int, stride:int=1, downsample: Optional[nn.Module]=None, bias:bool=False, head_conv:int=1, base_bn_splits : Optional[int] = None, index : int = 0):
         super(Bottleneck3D, self).__init__()
         self.index = index
 
         if head_conv == 1:
             self.conv1 = nn.Conv3d(in_planes, planes, kernel_size=1, bias=False)
-            # self.bn1 = nn.BatchNorm3d(planes)
-            self.bn1 = SubBatchNorm3d(num_splits = base_bn_splits, num_features = planes, affine = True)
+            self.bn1 = nn.BatchNorm3d(planes) if base_bn_splits is None else SubBatchNorm3d(num_splits = base_bn_splits, num_features = planes, affine = True)
         elif head_conv == 3:
             self.conv1 = nn.Conv3d(in_planes, planes, kernel_size=(3, 1, 1), bias=False, padding=(1, 0, 0))
-            # self.bn1 = nn.BatchNorm3d(planes)
-            self.bn1 = SubBatchNorm3d(num_splits = base_bn_splits, num_features = planes, affine = True)
+            self.bn1 = nn.BatchNorm3d(planes) if base_bn_splits is None else SubBatchNorm3d(num_splits = base_bn_splits, num_features = planes, affine = True)
         else:
             raise ValueError("Unsupported head_conv!")
 
         self.conv2 = nn.Conv3d(planes, planes,
                                kernel_size=(1, 3, 3), stride=(1, stride, stride), padding=(0, 1, 1), bias=bias)
-        #self.bn2 = nn.BatchNorm3d(planes)
-        self.bn2 = SubBatchNorm3d(num_splits = base_bn_splits, num_features = planes, affine = True)
+        self.bn2 = nn.BatchNorm3d(planes) if base_bn_splits is None else SubBatchNorm3d(num_splits = base_bn_splits, num_features = planes, affine = True)
 
         self.conv3 = nn.Conv3d(planes, planes * 4, kernel_size=1, bias=bias)
-        # self.bn3 = nn.BatchNorm3d(planes * 4)
-        self.bn3 = SubBatchNorm3d(num_splits = base_bn_splits, num_features = planes * 4, affine = True)
+        self.bn3 = nn.BatchNorm3d(planes * 4) if base_bn_splits is None else SubBatchNorm3d(num_splits = base_bn_splits, num_features = planes * 4, affine = True)
         self.swish = Swish()
         self.relu = nn.ReLU(inplace=True)
 
@@ -209,7 +205,7 @@ class ResNet3D(nn.Module):
         self.slow = kwargs['slow']  # slow->1 else fast->0
 
         self.inplanes = (64 + 64//self.alpha) if self.slow else 64//self.alpha
-        self.base_bn_splits = 4
+        self.base_bn_splits = kwargs["base_bn_splits"]
 
         # layer 0 parameters
         out_channels = 64//(1 if self.slow else self.alpha)
@@ -226,13 +222,13 @@ class ResNet3D(nn.Module):
 
         # layer 1 to layer 4
         self.layer1 = self._make_layer(block, 64//(1 if self.slow else self.alpha), layers[0],
-                                       head_conv=1 if self.slow else 3)
+                                       head_conv=1 if self.slow else 3, base_bn_splits=self.base_bn_splits)
         self.layer2 = self._make_layer(block, 128//(1 if self.slow else self.alpha), layers[1], stride=2,
-                                       head_conv=1 if self.slow else 3)
+                                       head_conv=1 if self.slow else 3, base_bn_splits=self.base_bn_splits)
         self.layer3 = self._make_layer(block, 256//(1 if self.slow else self.alpha), layers[2], stride=2,
-                                       head_conv=3)
+                                       head_conv=3, base_bn_splits=self.base_bn_splits)
         self.layer4 = self._make_layer(block, 512//(1 if self.slow else self.alpha), layers[3], stride=2,
-                                       head_conv=3)
+                                       head_conv=3, base_bn_splits=self.base_bn_splits)
 
     def init_params(self):
         for m in self.modules():
@@ -244,7 +240,7 @@ class ResNet3D(nn.Module):
     def forward(self, x):
         raise NotImplementedError('use each pathway network\' forward function')
 
-    def _make_layer(self, block : Bottleneck3D, planes : int, blocks:int = 3, stride:int=1, head_conv:int =1):
+    def _make_layer(self, block : Bottleneck3D, planes : int, blocks:int = 3, stride:int=1, head_conv:int =1, base_bn_splits : Optional[int] = None):
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
                     nn.Conv3d(self.inplanes, planes * block.expansion, kernel_size=1, stride=(1, stride, stride), bias=False), 
@@ -254,11 +250,11 @@ class ResNet3D(nn.Module):
             downsample = None
 
         layers = list()
-        layers.append(block(self.inplanes, planes, stride, downsample, head_conv=head_conv))
+        layers.append(block(self.inplanes, planes, stride, downsample, head_conv=head_conv, base_bn_splits = base_bn_splits))
         self.inplanes = planes * block.expansion
 
         for i in range(1, blocks):
-            layers.append(block(self.inplanes, planes, head_conv=head_conv))
+            layers.append(block(self.inplanes, planes, head_conv=head_conv, base_bn_splits = base_bn_splits))
 
         self.inplanes += self.slow * block.expansion * planes // self.alpha
 
