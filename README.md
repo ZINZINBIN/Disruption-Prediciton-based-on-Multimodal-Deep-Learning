@@ -15,14 +15,16 @@ python3 {filename.py} # (ex : python3 train_slowfast.py)
 ```
 
 ## Detail
-### model
+### model for use
 1. SITS-BERT 
 2. R2Plus1D
 3. Slowfast
+4. UTAE
+5. R3D
 ### algorithm
 1. Multigrid training algorithm(proceeding)
 2. Multi-GPU distributed Learning(done)
-3. Video Mixup Algorithm for Data augmentation(not yet)
+3. Video Mixup Algorithm for Data augmentation(done)
 ### Dataset
 1. Disruption : disrupted after tfQ-end reached
 2. Borderline : inter-plane region 
@@ -32,3 +34,5 @@ python3 {filename.py} # (ex : python3 train_slowfast.py)
 - Slowfast : SlowFast Networks for Video Recognition
 - Multigrid : A Multigrid Method for Efficiently Training Video Models, Chao-Yuan Wu et al, 2020
 - Video Data Augmentation : VideoMix: Rethinking Data Augmentation for Video Classification
+- SITS-BERT : Self-Supervised pretraining of Transformers for Satellite Image Time Series Classification
+- UTAE : Panoptic Segmentation of Satellite Image Time Series with Convolutional Temporal Attention Networks

@@ -13,6 +13,7 @@ from src.models.layer import *
 from src.models.transformer import *
 from src.models.resnet import *
 from src.models.slowfast import *
+from src.models.unet3d import UNet3D
 from pytorch_model_summary import summary
 
 class R2Plus1DNet(nn.Module):
@@ -340,3 +341,54 @@ class SBERTDisruptionClassifier(nn.Module):
         device = next(self.parameters()).device
         sample = torch.zeros(input_shape).to(device)
         print(summary(self, sample, max_depth = None, show_parent_layers = True, show_input = True))
+        
+class Unet3DClassifier(nn.Module):
+    def __init__(
+        self, 
+        input_shape : Tuple[int,int,int,int] = (3, 8, 112, 112), 
+        Unet3D_class : int = 3, feats : int = 8, 
+        mlp_hidden : int = 128, 
+        num_classes : int = 2, 
+        alpha : int = 4,
+        resnet_layers : List[int] = [1,2,2,1]
+        ):
+        super(Unet3DClassifier, self).__init__()
+        self.spatio_encoder = UNet3D(in_channel = 3, n_classes=Unet3D_class, feats = feats, pad_value = None)
+        self.input_shape = input_shape
+        enc_output = self.get_encoder_output()
+        
+        self.resnet = ResNet50(block = Bottleneck2DPlus1D, layers = resnet_layers, alpha = alpha, in_channels = enc_output[1])
+        
+        classifier_dims = self.get_resnet_output()[-1]
+        
+        self.classifier = nn.Sequential(
+            nn.Linear(classifier_dims, mlp_hidden),
+            nn.BatchNorm1d(mlp_hidden),
+            nn.ReLU(),
+            nn.Linear(mlp_hidden, num_classes)
+        )
+
+    def get_encoder_output(self):
+        sample_input = torch.zeros((4, *self.input_shape))
+        sample_output = self.spatio_encoder(sample_input)
+        return sample_output.size()
+    
+    def get_resnet_output(self):
+        sample_input = torch.zeros((4, *self.input_shape))
+        sample_output = self.spatio_encoder(sample_input)
+        sample_output = self.resnet(sample_output)
+        sample_output = torch.flatten(sample_output, start_dim = 1)
+        return sample_output.size() 
+
+    def forward(self, x : torch.Tensor):
+        x = self.spatio_encoder(x)
+        x = self.resnet(x)
+        x = torch.flatten(x, start_dim = 1)
+        x = self.classifier(x)
+        
+        return x
+
+    def summary(self)->None:
+        device = next(self.parameters()).device
+        sample_input = torch.zeros((4, *self.input_shape)).to(device)
+        print(summary(self, sample_input, max_depth = None, show_parent_layers = True, show_input = True))

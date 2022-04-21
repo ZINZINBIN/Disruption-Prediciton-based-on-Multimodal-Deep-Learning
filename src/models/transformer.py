@@ -62,7 +62,6 @@ class SubLayerConnection(nn.Module):
     def forward(self, x:torch.Tensor, sublayer:nn.Module)->torch.Tensor:
         return x + self.dropout(sublayer(self.norm(x)))
 
-
 class Attention(nn.Module):
 
     def forward(self, query : torch.Tensor, key : torch.Tensor, value : torch.Tensor, mask = None, dropout = None):
@@ -97,8 +96,6 @@ class MultiHeadAttention(nn.Module):
 
     def forward(self, query : torch.Tensor, key : torch.Tensor, value : torch.Tensor, mask = None):
         batch_size = query.size(0)
-        # print("self.h : ", self.h)
-        # print("self.d_k : ", self.d_k)
 
         query, key, value = [
             l(x).view(batch_size, -1, self.h, self.d_k).transpose(1,2) for l, x in zip(self.linear_layers, (query, key, value))
