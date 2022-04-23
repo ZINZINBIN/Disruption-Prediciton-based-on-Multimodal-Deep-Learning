@@ -232,6 +232,7 @@ class VideoDataset(Dataset):
 
             if (frame_height != self.resize_height) or (frame_width != self.resize_width):
                 frame = cv2.resize(frame, (self.resize_width, self.resize_height))
+                
             cv2.imwrite(filename=os.path.join(save_dir, video_filename, '0000{}.jpg'.format(str(count))), img=frame)
             count += 1
 

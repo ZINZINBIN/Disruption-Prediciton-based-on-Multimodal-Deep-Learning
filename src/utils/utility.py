@@ -122,29 +122,19 @@ def normalize(buffer:np.ndarray):
         buffer[i] = frame
     return buffer
 
-def time_split(buffer:np.ndarray, clip_len : int, drop_last : bool = True):
+def time_split(buffer:np.ndarray, clip_len : int):
     frame_count = buffer.shape[0]
     h = buffer.shape[1]
     w = buffer.shape[2]
     c = buffer.shape[3]
 
-    batch_size = int(frame_count / clip_len)
-    res_size = frame_count % clip_len
+    batch_size = frame_count - clip_len + 1
+    dataset = np.zeros((batch_size, clip_len, h, w, c), dtype = np.float32)
 
-    if drop_last:
-        dataset = np.zeros((batch_size, clip_len, h, w, c), dtype = np.float32)
-    else:
-        dataset = np.zeros((batch_size + 1, clip_len, h, w, c), dtype = np.float32)
-
-    for idx in range(batch_size):
-        t_start = idx * clip_len
-        t_end = idx * clip_len + clip_len
+    for idx in range(0, batch_size):
+        t_start = idx
+        t_end = idx + clip_len
         dataset[idx, :, :, :, :] = buffer[t_start : t_end, :, :, :]
-        
-    if drop_last:
-        t_start = t_end
-        t_end += res_size
-        dataset[-1, t_start : t_end, :, :, :] = buffer[t_start : t_end, :,:,:]
     
     return dataset.transpose((0, 4, 1, 2, 3))
 
@@ -156,7 +146,7 @@ def video2tensor(
     crop_size : int = 112,
     resize_width : int = 171,
     resize_height : int = 128,
-    drop_last : int = True):
+    ):
 
     capture = cv2.VideoCapture(dir)
     frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -171,6 +161,11 @@ def video2tensor(
 
     while (count < frame_count and retaining):
         retaining, frame = capture.read()
+        
+        if count == 0:
+            print(frame[:,:,0])
+            print(frame[:,:,1])
+            print(frame[:,:,2])
 
         if frame is None:
             frame = np.zeros((resize_width, resize_height, channels))
@@ -184,14 +179,15 @@ def video2tensor(
 
     buffer = crop(buffer, resize_height, resize_width, crop_size)
     buffer = normalize(buffer)
-    dataset = time_split(buffer, clip_len, drop_last)
+    dataset = time_split(buffer, clip_len)
     dataset = torch.from_numpy(dataset)
 
     return dataset
     
 # generate distribution probability curve(t vs prob)
-def generate_prob_curve(dataset : torch.Tensor, model : torch.nn.Module, batch_size : int = 32, device : str = "cpu"):
+def generate_prob_curve(dataset : torch.Tensor, model : torch.nn.Module, batch_size : int = 32, device : str = "cpu", save_dir : Optional[str] = "./results/disruption_probs_curve.png"):
     prob_list = []
+    is_disruption = []
     video_len = dataset.size(0)
 
     model.to(device)
@@ -205,10 +201,13 @@ def generate_prob_curve(dataset : torch.Tensor, model : torch.nn.Module, batch_s
 
                 frames = dataset[idx_start : idx_end, :, :, :, :]
                 frames = frames.to(device)
-                probs = model(frames)
-                probs = torch.nn.functional.softmax(probs, dim = 1)[:,0]
+                output = model(frames)
+                probs = torch.nn.functional.softmax(output, dim = 1)[:,1]
                 prob_list.extend(
                     probs.cpu().detach().numpy().tolist()
+                )
+                is_disruption.extend(
+                    torch.nn.functional.softmax(output, dim = 1).max(1, keepdim = True)[1].cpu().detach().numpy().tolist()
                 )
 
     else:
@@ -220,5 +219,21 @@ def generate_prob_curve(dataset : torch.Tensor, model : torch.nn.Module, batch_s
             prob_list.extend(
                 probs.cpu().detach().numpy().tolist()
             )
+            
+    if save_dir:
+        fps = 210
+        time_x = np.arange(1, len(prob_list) + 1) * (1/fps)
+        threshold_line = [0.5] * len(time_x)
+
+        plt.figure(figsize = (8,5))
+        plt.plot(time_x, threshold_line, 'k', label = "threshold(p = 0.5)")
+        plt.plot(time_x, prob_list, 'b-', label = "disruption probs")
+        plt.plot(time_x, is_disruption, "r", label = "disruption line(predict)")
+        plt.ylabel("probability")
+        plt.xlabel("time(unit : s)")
+        plt.ylim([0,1])
+        plt.xlim([0,max(time_x)])
+        plt.legend()
+        plt.savefig(save_dir)
 
     return prob_list
