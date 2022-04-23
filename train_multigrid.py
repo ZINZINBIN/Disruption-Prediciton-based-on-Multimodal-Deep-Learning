@@ -27,11 +27,12 @@ if __name__ == "__main__":
     model = SlowFastDisruptionClassifier(
         input_shape = (3,42,112,112),
         block = Bottleneck3D,
-        layers = [3,4,4,3], #[1,1,1,1], #[3,4,6,3],
+        layers = [1,2,2,1], 
         alpha = alpha,
         p = p,
         mlp_hidden = hidden,
-        num_classes  = 2
+        num_classes  = 2,
+        base_bn_splits=8
     )
 
     train_multigrid(

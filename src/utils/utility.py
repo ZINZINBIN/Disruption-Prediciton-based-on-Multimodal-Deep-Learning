@@ -108,3 +108,117 @@ def show_frame(frame):
     
     plt.imshow(frame_img)
     plt.show()
+
+def crop(buffer, original_height, original_width, crop_size):
+    height_index = np.random.randint(original_height - crop_size)
+    width_index = np.random.randint(original_width - crop_size)
+
+    buffer = buffer[:, height_index:height_index + crop_size, width_index:width_index + crop_size, :]
+    return buffer
+
+def normalize(buffer:np.ndarray):
+    for i, frame in enumerate(buffer):
+        frame -= np.array([[[90.0, 98.0, 102.0]]])
+        buffer[i] = frame
+    return buffer
+
+def time_split(buffer:np.ndarray, clip_len : int, drop_last : bool = True):
+    frame_count = buffer.shape[0]
+    h = buffer.shape[1]
+    w = buffer.shape[2]
+    c = buffer.shape[3]
+
+    batch_size = int(frame_count / clip_len)
+    res_size = frame_count % clip_len
+
+    if drop_last:
+        dataset = np.zeros((batch_size, clip_len, h, w, c), dtype = np.float32)
+    else:
+        dataset = np.zeros((batch_size + 1, clip_len, h, w, c), dtype = np.float32)
+
+    for idx in range(batch_size):
+        t_start = idx * clip_len
+        t_end = idx * clip_len + clip_len
+        dataset[idx, :, :, :, :] = buffer[t_start : t_end, :, :, :]
+        
+    if drop_last:
+        t_start = t_end
+        t_end += res_size
+        dataset[-1, t_start : t_end, :, :, :] = buffer[t_start : t_end, :,:,:]
+    
+    return dataset.transpose((0, 4, 1, 2, 3))
+
+# generate video to input data
+def video2tensor(
+    dir : str, 
+    channels : int = 3, 
+    clip_len : int = 42, 
+    crop_size : int = 112,
+    resize_width : int = 171,
+    resize_height : int = 128,
+    drop_last : int = True):
+
+    capture = cv2.VideoCapture(dir)
+    frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
+    frame_width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+    frame_height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+    count = 0
+    retaining = True
+
+    # build buffer with (frame_count, resize_width, resize_height, c)
+    buffer = np.empty((frame_count, resize_height, resize_width, channels), np.dtype('float32'))
+
+    while (count < frame_count and retaining):
+        retaining, frame = capture.read()
+
+        if frame is None:
+            frame = np.zeros((resize_width, resize_height, channels))
+
+        if (frame_height != resize_height) or (frame_width != resize_width):
+            frame = cv2.resize(frame, (resize_width, resize_height))
+
+        buffer[count] = frame
+        count += 1
+        capture.release()
+
+    buffer = crop(buffer, resize_height, resize_width, crop_size)
+    buffer = normalize(buffer)
+    dataset = time_split(buffer, clip_len, drop_last)
+    dataset = torch.from_numpy(dataset)
+
+    return dataset
+    
+# generate distribution probability curve(t vs prob)
+def generate_prob_curve(dataset : torch.Tensor, model : torch.nn.Module, batch_size : int = 32, device : str = "cpu"):
+    prob_list = []
+    video_len = dataset.size(0)
+
+    model.to(device)
+    model.eval()
+
+    if video_len >= batch_size:
+        for idx in range(int(video_len / batch_size)):
+            with torch.no_grad():
+                idx_start = batch_size * idx
+                idx_end = batch_size * (idx + 1)
+
+                frames = dataset[idx_start : idx_end, :, :, :, :]
+                frames = frames.to(device)
+                probs = model(frames)
+                probs = torch.nn.functional.softmax(probs, dim = 1)[:,0]
+                prob_list.extend(
+                    probs.cpu().detach().numpy().tolist()
+                )
+
+    else:
+        with torch.no_grad():
+            frames = dataset[:, :, :, :, :]
+            frames = frames.to(device)
+            probs = model(frames)
+            probs = torch.nn.functional.softmax(probs, dim = 1)[:,0]
+            prob_list.extend(
+                probs.cpu().detach().numpy().tolist()
+            )
+
+    return prob_list

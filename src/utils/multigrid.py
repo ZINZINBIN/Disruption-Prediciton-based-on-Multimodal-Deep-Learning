@@ -17,7 +17,7 @@ from torch.utils.data.dataloader import DataLoader
 
 # default value
 BS = 8
-BS_UPSCALE = 16 
+BS_UPSCALE = 4
 INIT_LR = (1.6/1024)*(BS*BS_UPSCALE)
 SCHEDULE_SCALE = 4
 EPOCHS = (60000 * 1024 * 1.5)/220000 #(~420)
