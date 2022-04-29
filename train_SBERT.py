@@ -7,27 +7,30 @@ import argparse
 import matplotlib.pyplot as plt
 from src.dataloader import VideoDataset
 from torch.utils.data import DataLoader
-from src.model import SBERTDisruptionClassifier, VideoSpatioEncoder
-from src.transformer import SBERT
+from src.models.model import SBERTDisruptionClassifier, SITSBertSpatialEncoder
+from src.utils.sampler import ImbalancedDatasetSampler
+from src.models.transformer import SBERT
 from src.train import train
 from src.evaluate import evaluate
 from src.loss import FocalLoss
 from tqdm import tqdm
 
 parser = argparse.ArgumentParser(description="training SBERT Disruption Classifier")
-parser.add_argument("--batch_size", type = int, default = 12)
+parser.add_argument("--batch_size", type = int, default = 48)
 parser.add_argument("--lr", type = float, default = 2e-4)
 parser.add_argument("--gamma", type = float, default = 0.999)
 parser.add_argument("--gpu_num", type = int, default = 1)
 parser.add_argument("--alpha", type = float, default = 0.01)
-parser.add_argument("--clip_len", type = int, default = 10)
+parser.add_argument("--clip_len", type = int, default = 11)
 parser.add_argument("--wandb_save_name", type = str, default = "SBERT-exp001")
-parser.add_argument("--num_epoch", type = int, default = 248)
-parser.add_argument("--verbose", type = int, default = 16)
-parser.add_argument("--save_best_dir", type = str, default = "./weights/sbert_clip_10_best.pt")
-parser.add_argument("--save_result_dir", type = str, default = "./results/train_valid_loss_acc_sbert_clip_10.png")
-parser.add_argument("--save_test_result", type = str, default = "./results/test_SBERT_clip_10.txt")
+parser.add_argument("--num_epoch", type = int, default = 256)
+parser.add_argument("--verbose", type = int, default = 1)
+parser.add_argument("--save_best_dir", type = str, default = "./weights/sbert_clip_21_dis_10_best.pt")
+parser.add_argument("--save_result_dir", type = str, default = "./results/train_valid_loss_acc_sbert_clip_21_dis_10.png")
+parser.add_argument("--save_test_result", type = str, default = "./results/test_SBERT_clip_21_dis_10_.txt")
 parser.add_argument("--use_focal_loss", type = bool, default = False)
+parser.add_argument("--dataset", type = str, default = "dur0.1_dis10")
+parser.add_argument("--use_video_mixup_algorithm", type = bool, default = False)
 
 args = vars(parser.parse_args())
 
@@ -45,6 +48,26 @@ if(torch.cuda.device_count() >= 1):
     device = "cuda:" + str(args["gpu_num"])
 else:
     device = 'cpu'
+    
+# dataset composition
+import os
+
+try:
+    path = "./dataset/" + args["dataset"] + "/"
+    path_disruption = path + "disruption/"
+    path_borderline = path + "borderline/"
+    path_normal = path + "normal/"
+
+    dir_disruption_list = os.listdir(path_disruption)
+    dir_borderline_list = os.listdir(path_borderline)
+    dir_normal_list = os.listdir(path_normal)
+
+    print("disruption : ", len(dir_disruption_list))
+    print("normal : ", len(dir_normal_list))
+    print("borderline : ", len(dir_borderline_list))
+    
+except:
+    print("video dataset directory is not valid")
 
 if __name__ == "__main__":
 
@@ -56,27 +79,36 @@ if __name__ == "__main__":
     verbose = args['verbose']
     save_best_dir = args['save_best_dir']
     save_result_dir = args["save_result_dir"]
+    dataset = args["dataset"]
+    use_video_mixup_algorithm = args["use_video_mixup_algorithm"]
 
-    train_data_dist10 = VideoDataset(dataset = "fast_model_dataset", split = "train", clip_len = clip_len, preprocess = False)
-    valid_data_dist10 = VideoDataset(dataset = "fast_model_dataset", split = "val", clip_len = clip_len, preprocess = False)
-    test_data_dist10 = VideoDataset(dataset = "fast_model_dataset", split = "test", clip_len = clip_len, preprocess = False)
+    train_data_dist = VideoDataset(dataset = dataset, split = "train", clip_len = clip_len, preprocess = False)
+    valid_data_dist = VideoDataset(dataset = dataset, split = "val", clip_len = clip_len, preprocess = False)
+    test_data_dist = VideoDataset(dataset = dataset, split = "test", clip_len = clip_len, preprocess = False)
+    
+    train_sampler = ImbalancedDatasetSampler(train_data_dist)
+    valid_sampler = ImbalancedDatasetSampler(valid_data_dist)
 
-    train_loader_dist10 = DataLoader(train_data_dist10, batch_size = batch_size, shuffle = True, num_workers = 4)
-    valid_loader_dist10 = DataLoader(valid_data_dist10, batch_size = batch_size, shuffle = True, num_workers = 4)
-    test_loader_dist10 = DataLoader(test_data_dist10, batch_size = batch_size, shuffle = True, num_workers = 4)
+    # test_sampler = ImbalancedDatasetSampler(test_data_dist)
+    test_sampler = None
+    
+    train_loader_dist = DataLoader(train_data_dist, batch_size = batch_size, sampler=train_sampler, num_workers = 8)
+    valid_loader_dist = DataLoader(valid_data_dist, batch_size = batch_size, sampler=valid_sampler, num_workers = 8)
+    test_loader_dist = DataLoader(test_data_dist, batch_size = batch_size, sampler=test_sampler, num_workers = 8)
 
-    video_encoder = VideoSpatioEncoder(
+    video_encoder = SITSBertSpatialEncoder(
         input_shape  = (3, clip_len, 112, 112),
-        alpha  = 0.01,
+        alpha  = 2,
+        layers = [1,2,2,1]
     )
-
+    
     num_features = video_encoder.get_output_size()[-1]
 
     temporal_encoder = SBERT(
         num_features = num_features, #18432,
-        hidden = 256,
+        hidden = 128,
         n_layers = 4,
-        attn_heads = 16, 
+        attn_heads = 8, 
         max_len  = clip_len
     )
 
@@ -86,6 +118,8 @@ if __name__ == "__main__":
         mlp_hidden = 128, 
         num_classes = 2
     )
+    
+    model.summary()
 
     model.to(device)
 
@@ -102,8 +136,8 @@ if __name__ == "__main__":
         loss_fn = torch.nn.CrossEntropyLoss(reduction = "mean")
 
     train_loss,  train_acc, valid_loss, valid_acc = train(
-        train_loader_dist10,
-        valid_loader_dist10,
+        train_loader_dist,
+        valid_loader_dist,
         model,
         optimizer,
         scheduler,
@@ -112,11 +146,14 @@ if __name__ == "__main__":
         num_epoch,
         verbose,
         save_best_only=True,
-        save_best_dir = save_best_dir
+        save_best_dir = save_best_dir,
+        use_video_mixup_algorithm=use_video_mixup_algorithm
     )
+    
+    model.load_state_dict(torch.load(save_best_dir))
 
     test_loss, test_acc = evaluate(
-        test_loader_dist10,
+        test_loader_dist,
         model,
         optimizer,
         loss_fn,

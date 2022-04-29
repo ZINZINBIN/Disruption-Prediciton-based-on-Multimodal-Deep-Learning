@@ -1,6 +1,7 @@
 import torch
 import cv2
 import os
+import pandas as pd
 import numpy as np
 from typing import Optional
 import matplotlib.pyplot as plt
@@ -145,7 +146,7 @@ def video2tensor(
     clip_len : int = 42, 
     crop_size : int = 112,
     resize_width : int = 171,
-    resize_height : int = 128,
+    resize_height : int = 128
     ):
 
     capture = cv2.VideoCapture(dir)
@@ -181,7 +182,17 @@ def video2tensor(
     return dataset
     
 # generate distribution probability curve(t vs prob)
-def generate_prob_curve(dataset : torch.Tensor, model : torch.nn.Module, batch_size : int = 32, device : str = "cpu", save_dir : Optional[str] = "./results/disruption_probs_curve.png"):
+def generate_prob_curve(
+    dataset : torch.Tensor, 
+    model : torch.nn.Module, 
+    batch_size : int = 32, 
+    device : str = "cpu", 
+    save_dir : Optional[str] = "./results/disruption_probs_curve.png",
+    shot_list_dir : Optional[str] = "./dataset/KSTAR_Disruption_Shot_List.csv",
+    shot_number : Optional[int] = None,
+    clip_len : Optional[int] = None,
+    dist_frame : Optional[int] = None,
+    ):
     prob_list = []
     is_disruption = []
     video_len = dataset.size(0)
@@ -215,7 +226,26 @@ def generate_prob_curve(dataset : torch.Tensor, model : torch.nn.Module, batch_s
             prob_list.extend(
                 probs.cpu().detach().numpy().tolist()
             )
-            
+            is_disruption.extend(
+                    torch.nn.functional.softmax(output, dim = 1).max(1, keepdim = True)[1].cpu().detach().numpy().tolist()
+                )
+
+
+    if shot_list_dir and shot_number:
+        shot_list = pd.read_csv(shot_list_dir)
+        shot_info = shot_list[shot_list["shot"] == shot_number]
+    else:
+        shot_list = None
+        shot_info = None
+
+    if shot_info is not None:
+        t_disrupt = shot_info["tTQend"].values[0]
+    else:
+        t_disrupt = None
+
+    # clip_len + distance만큼 외삽 진행
+    prob_list = [0] * (clip_len + dist_frame) + prob_list
+
     if save_dir:
         fps = 210
         time_x = np.arange(1, len(prob_list) + 1) * (1/fps)
@@ -225,6 +255,10 @@ def generate_prob_curve(dataset : torch.Tensor, model : torch.nn.Module, batch_s
         plt.plot(time_x, threshold_line, 'k', label = "threshold(p = 0.5)")
         plt.plot(time_x, prob_list, 'b-', label = "disruption probs")
         # plt.plot(time_x, is_disruption, "r", label = "disruption line(predict)")
+
+        if t_disrupt is not None:
+            plt.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
+
         plt.ylabel("probability")
         plt.xlabel("time(unit : s)")
         plt.ylim([0,1])

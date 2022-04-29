@@ -73,8 +73,7 @@ def new_make_dataset(shot_num, fps, duration, distance, dataset_idx, raw_videos_
         disruption_bool = False
         save_start = True
 
-        print("info - tTQend_frame : {} / duration : {}s({}fps) / distance : {}".format(shot, duration, duration_frame , distance))
-        print("dataset_idx : ",dataset_idx[shot])
+        print("(info) dataset_idx : {} - tTQend_frame : {} / duration : {}s({}fps) / distance : {}".format(dataset_idx[shot_num], shot_num, duration, duration_frame , distance))
 
         while cap.isOpened():
             ret, frame = cap.read()
@@ -82,22 +81,25 @@ def new_make_dataset(shot_num, fps, duration, distance, dataset_idx, raw_videos_
                 break
             if dataset_idx[shot_num][1] < frame_num :
                 if save_start :
-                    save_video = "{}_{}~{}.".format(shot_num,frame_num, frame_num+duration_frame) +exe
+                    save_video = "{}_{}~{}.".format(shot_num, frame_num, frame_num+duration_frame) + exe
                     out = cv2.VideoWriter(nom_path+save_video, fourcc, fps, (w, h))
                     save_start = False
                 
                 if (frame_num + duration_frame) ==dataset_idx[shot_num][0]:
 
                     print("disruption idx: ", frame_num)
-                    
+
                     out.release()
-                    save_video = "{}_{}~{}.".format(shot_num,frame_num, frame_num+duration_frame) +exe
+                    save_video = "{}_{}~{}.".format(shot_num,frame_num, frame_num+duration_frame) + exe
                     out = cv2.VideoWriter(dis_path+save_video, fourcc, fps, (w, h))
                     disruption_bool= True
                     
-                elif (frame_num + duration_frame*border_num) == dataset_idx[shot_num][0] and border_num != 1:
+                elif (frame_num + duration_frame * border_num) == dataset_idx[shot_num][0] and border_num != 1:
+
+                    print("borderline idx : ", frame_num)
+
                     out.release()
-                    save_video = "{}_{}~{}.".format(shot_num,frame_num, frame_num+duration_frame) +exe
+                    save_video = "{}_{}~{}.".format(shot_num, frame_num, frame_num+duration_frame) + exe
                     out = cv2.VideoWriter(border_path+save_video, fourcc, fps, (w, h))
                     border_num -= 1
                     
@@ -105,15 +107,17 @@ def new_make_dataset(shot_num, fps, duration, distance, dataset_idx, raw_videos_
                     if disruption_bool :
                         break
 
-                    print("nomal = idx: ", frame_num)
+                    print("nomal idx: ", frame_num)
                     
                     out.release()
                     save_video = "{}_{}~{}.".format(shot_num,frame_num, frame_num+duration_frame) +exe
                     out = cv2.VideoWriter(nom_path+save_video, fourcc, fps, (w, h))
+
                 
                 out.write(frame)
-                
+            
             frame_num+=1
+
         try :
             cap.release()
             out.release()
@@ -127,7 +131,7 @@ if __name__ == "__main__":
     N_index = shot_df["Isdata"][shot_df["Isdata"] == 'N'].index
     shot_df = shot_df.drop(N_index)
     shot_df.reset_index(drop=True, inplace=True)
-    shot_df["tTQend_frame"] = shot_df["tTQend"].apply(frame_calculator, gab=5.4)
+    shot_df["tTQend_frame"] = shot_df["tTQend"].apply(frame_calculator, gab=gap)
     pre_shot_df = shot_df[["shot", "tTQend_frame"]]
 
     duration_frame = round(fps*duration)
@@ -135,7 +139,7 @@ if __name__ == "__main__":
 
     for shot, end_frame in pre_shot_df.iloc:
         dis_frame = end_frame - distance
-        dataset_idx[shot] = [dis_frame,dis_frame%duration_frame]
+        dataset_idx[shot] = [dis_frame, dis_frame%duration_frame]
 
     pool = Pool(processes=12)
     new_make_data_part = partial(new_make_dataset, 

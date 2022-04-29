@@ -32,12 +32,13 @@ class Path(object):
             raise NotImplementedError
 
 class VideoDataset(Dataset):
-    def __init__(self, dataset = "fast_model_dataset", split = "test", clip_len = 16, preprocess = False, augmentation : bool = True):
+    def __init__(self, dataset = "fast_model_dataset", split = "test", clip_len = 16, preprocess = False, augmentation : bool = True, ignore_border:bool = True):
         self.root_dir, self.output_dir = Path.db_dir(dataset)
         folder = os.path.join(self.output_dir, split)
         self.clip_len = clip_len
         self.split = split
         self.augmentation = augmentation
+        self.ignore_border = ignore_border
 
         # The following three parameters are chosen as described in the paper section 4.1
         self.resize_height = 128
@@ -180,14 +181,17 @@ class VideoDataset(Dataset):
             val_dir = os.path.join(self.output_dir, 'val', file)
             test_dir = os.path.join(self.output_dir, 'test', file)
             
-            if file == "borderline":
-                
+            if file == "borderline" and self.ignore_border:
                 train_dir = os.path.join(self.output_dir, 'train', "disruption")
                 val_dir = os.path.join(self.output_dir, 'val', "disruption")
                 test_dir = os.path.join(self.output_dir, 'test', "disruption")
+            
+            elif file == "borderline" and not self.ignore_border:
+                train_dir = os.path.join(self.output_dir, 'train', "normal")
+                val_dir = os.path.join(self.output_dir, 'val', "normal")
+                test_dir = os.path.join(self.output_dir, 'test', "normal")
                 
             else:
-                
                 train_dir = os.path.join(self.output_dir, 'train', file)
                 val_dir = os.path.join(self.output_dir, 'val', file)
                 test_dir = os.path.join(self.output_dir, 'test', file)

@@ -16,6 +16,7 @@ def train_per_epoch(
     loss_fn = None,
     device : str = "cpu",
     use_video_mixup_algorithm : bool = False,
+    use_acc_per_class : bool = False
     ):
 
     model.train()
