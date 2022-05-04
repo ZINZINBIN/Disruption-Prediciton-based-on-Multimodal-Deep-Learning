@@ -31,6 +31,7 @@ parser.add_argument("--save_test_result", type = str, default = "./results/test_
 parser.add_argument("--use_focal_loss", type = bool, default = False)
 parser.add_argument("--dataset", type = str, default = "dur0.1_dis10")
 parser.add_argument("--use_video_mixup_algorithm", type = bool, default = False)
+parser.add_argument("--use_sampler", type = bool, default = True)
 
 args = vars(parser.parse_args())
 
@@ -81,16 +82,21 @@ if __name__ == "__main__":
     save_result_dir = args["save_result_dir"]
     dataset = args["dataset"]
     use_video_mixup_algorithm = args["use_video_mixup_algorithm"]
+    use_sampler = args["use_sampler"]
 
     train_data_dist = VideoDataset(dataset = dataset, split = "train", clip_len = clip_len, preprocess = False)
     valid_data_dist = VideoDataset(dataset = dataset, split = "val", clip_len = clip_len, preprocess = False)
     test_data_dist = VideoDataset(dataset = dataset, split = "test", clip_len = clip_len, preprocess = False)
     
-    train_sampler = ImbalancedDatasetSampler(train_data_dist)
-    valid_sampler = ImbalancedDatasetSampler(valid_data_dist)
 
-    # test_sampler = ImbalancedDatasetSampler(test_data_dist)
-    test_sampler = None
+    if use_sampler:
+        train_sampler = ImbalancedDatasetSampler(train_data_dist)
+        valid_sampler = ImbalancedDatasetSampler(valid_data_dist)
+        test_sampler = ImbalancedDatasetSampler(test_data_dist)
+    else:
+        train_sampler = None
+        valid_sampler = None
+        test_sampler = None
     
     train_loader_dist = DataLoader(train_data_dist, batch_size = batch_size, sampler=train_sampler, num_workers = 8)
     valid_loader_dist = DataLoader(valid_data_dist, batch_size = batch_size, sampler=valid_sampler, num_workers = 8)

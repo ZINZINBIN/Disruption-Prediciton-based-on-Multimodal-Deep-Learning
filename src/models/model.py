@@ -313,6 +313,13 @@ class SBERTDisruptionClassifier(nn.Module):
         self.classifier = MulticlassClassifier(enc_dims, mlp_hidden, seq_len = sbert.max_len, num_classes = num_classes, alpha = alpha)
         self.device = next(self.sbert.parameters()).device
 
+    def get_spatio_encoding(self, inputs : torch.Tensor):
+
+        with torch.no_grad():
+            spatio = self.spatio_encoder(inputs)
+
+        return spatio
+
     def get_sbert_output(self):
         seq_len = self.sbert.max_len
         num_features = self.sbert.num_features
@@ -321,7 +328,6 @@ class SBERTDisruptionClassifier(nn.Module):
         sample_x = torch.zeros((1, seq_len, num_features))
         sample_doy = torch.IntTensor(list(map(int, range(1, doy_dims + 1)))).repeat(1, 1)
         sample_mask = torch.IntTensor(list(map(int, range(1, doy_dims + 1)))).repeat(1, 1)
-
         sample_output = self.sbert.forward(sample_x, sample_doy, sample_mask)
 
         return sample_output.size(2)

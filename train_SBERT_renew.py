@@ -16,7 +16,7 @@ from src.loss import FocalLoss
 from tqdm import tqdm
 
 parser = argparse.ArgumentParser(description="training SBERT Disruption Classifier")
-parser.add_argument("--batch_size", type = int, default = 48)
+parser.add_argument("--batch_size", type = int, default = 24)
 parser.add_argument("--lr", type = float, default = 2e-4)
 parser.add_argument("--gamma", type = float, default = 0.999)
 parser.add_argument("--gpu_num", type = int, default = 0)
@@ -25,12 +25,13 @@ parser.add_argument("--clip_len", type = int, default = 42)
 parser.add_argument("--wandb_save_name", type = str, default = "SBERT-exp001")
 parser.add_argument("--num_epoch", type = int, default = 256)
 parser.add_argument("--verbose", type = int, default = 1)
-parser.add_argument("--save_best_dir", type = str, default = "./weights/sbert_clip_42_dis_21_mixup_best.pt")
-parser.add_argument("--save_result_dir", type = str, default = "./results/train_valid_loss_acc_sbert_clip_42_dis_21_mixup.png")
-parser.add_argument("--save_test_result", type = str, default = "./results/test_SBERT_clip_42_dis_21_mixup.txt")
+parser.add_argument("--save_best_dir", type = str, default = "./weights/sbert_clip_42_dis_21_no_sampler_best.pt")
+parser.add_argument("--save_result_dir", type = str, default = "./results/train_valid_loss_acc_sbert_clip_42_dis_21_no_sampler.png")
+parser.add_argument("--save_test_result", type = str, default = "./results/test_SBERT_clip_42_dis_21_no_sampler.txt")
 parser.add_argument("--use_focal_loss", type = bool, default = False)
 parser.add_argument("--dataset", type = str, default = "dur0.2_dis21")
-parser.add_argument("--use_video_mixup_algorithm", type = bool, default = True)
+parser.add_argument("--use_video_mixup_algorithm", type = bool, default = False)
+parser.add_argument("--use_sampler", type = bool, default = False)
 
 args = vars(parser.parse_args())
 
@@ -81,14 +82,20 @@ if __name__ == "__main__":
     save_result_dir = args["save_result_dir"]
     dataset = args["dataset"]
     use_video_mixup_algorithm = args["use_video_mixup_algorithm"]
+    use_sampler = args["use_sampler"]
 
     train_data_dist = VideoDataset(dataset = dataset, split = "train", clip_len = clip_len, preprocess = False)
     valid_data_dist = VideoDataset(dataset = dataset, split = "val", clip_len = clip_len, preprocess = False)
     test_data_dist = VideoDataset(dataset = dataset, split = "test", clip_len = clip_len, preprocess = False)
     
-    train_sampler = ImbalancedDatasetSampler(train_data_dist)
-    valid_sampler = ImbalancedDatasetSampler(valid_data_dist)
-    test_sampler = ImbalancedDatasetSampler(test_data_dist)
+    if use_sampler:
+        train_sampler = ImbalancedDatasetSampler(train_data_dist)
+        valid_sampler = ImbalancedDatasetSampler(valid_data_dist)
+        test_sampler = ImbalancedDatasetSampler(test_data_dist)
+    else:
+        train_sampler = None
+        valid_sampler = None
+        test_sampler = None
     
     train_loader_dist = DataLoader(train_data_dist, batch_size = batch_size, sampler=train_sampler, num_workers = 8)
     valid_loader_dist = DataLoader(valid_data_dist, batch_size = batch_size, sampler=valid_sampler, num_workers = 8)
