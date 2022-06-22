@@ -6,7 +6,7 @@ import argparse
 from itertools import repeat
 from functools import partial
 import tqdm
-from multiprocessing import Pool
+from multiprocessing import Pool, cpu_count
 
 parser = argparse.ArgumentParser(description="generate dataset from raw_video data")
 parser.add_argument("--fps", type = int, default = 210)
@@ -87,7 +87,7 @@ def new_make_dataset(shot_num, fps, duration, distance, dataset_idx, raw_videos_
                 
                 if (frame_num + duration_frame) ==dataset_idx[shot_num][0]:
 
-                    print("disruption idx: ", frame_num)
+                    # print("disruption idx: ", frame_num)
 
                     out.release()
                     save_video = "{}_{}~{}.".format(shot_num,frame_num, frame_num+duration_frame) + exe
@@ -96,7 +96,7 @@ def new_make_dataset(shot_num, fps, duration, distance, dataset_idx, raw_videos_
                     
                 elif (frame_num + duration_frame * border_num) == dataset_idx[shot_num][0] and border_num != 1:
 
-                    print("borderline idx : ", frame_num)
+                    # print("borderline idx : ", frame_num)
 
                     out.release()
                     save_video = "{}_{}~{}.".format(shot_num, frame_num, frame_num+duration_frame) + exe
@@ -107,7 +107,7 @@ def new_make_dataset(shot_num, fps, duration, distance, dataset_idx, raw_videos_
                     if disruption_bool :
                         break
 
-                    print("nomal idx: ", frame_num)
+                    # print("nomal idx: ", frame_num)
                     
                     out.release()
                     save_video = "{}_{}~{}.".format(shot_num,frame_num, frame_num+duration_frame) +exe
@@ -127,6 +127,8 @@ def new_make_dataset(shot_num, fps, duration, distance, dataset_idx, raw_videos_
 
 if __name__ == "__main__":
 
+    n_procs = cpu_count()
+
     shot_df = pd.read_csv(shot_list_path, encoding="euc-kr")
     N_index = shot_df["Isdata"][shot_df["Isdata"] == 'N'].index
     shot_df = shot_df.drop(N_index)
@@ -141,7 +143,7 @@ if __name__ == "__main__":
         dis_frame = end_frame - distance
         dataset_idx[shot] = [dis_frame, dis_frame%duration_frame]
 
-    pool = Pool(processes=12)
+    pool = Pool(processes=n_procs)
     new_make_data_part = partial(new_make_dataset, 
                             fps=fps, 
                             duration=duration, 

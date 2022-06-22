@@ -2,7 +2,7 @@
 ## Introduction
 
 <img src="/image/연구_소개_01.PNG"  width="900" height="224">
-<p>2차원 플라즈마 이미지 분석을 통한 토카막 플라즈마 붕괴 실시간 예측 연구</p>
+<p>Research for tokamak plasma disruption prediction from 2D images via Deep Learning</p>
 
 ## How to Run(Test)
 ```

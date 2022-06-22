@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
@@ -51,3 +52,49 @@ class FocalLoss(nn.Module):
             return loss.mean()
         else:
             return loss.sum()
+
+# This code is based on LDAM
+# reference : https://github.com/kaidic/LDAM-DRW/blob/master/losses.py
+
+# compute focal loss
+def compute_focal_loss(inputs:torch.Tensor, gamma:float):
+    p = torch.exp(-inputs)
+    loss = (1-p) ** gamma * inputs
+    return loss.mean()
+
+# focal loss object
+class FocalLossLDAM(nn.Module):
+    def __init__(self, weight : Optional[torch.Tensor] = None, gamma : float = 0.1):
+        super(FocalLossLDAM, self).__init__()
+        assert gamma >= 0, "gamma should be positive"
+        self.gamma = gamma
+        self.weight = weight
+
+    def forward(self, input : torch.Tensor, target : torch.Tensor)->torch.Tensor:
+        return compute_focal_loss(F.cross_entropy(input, target, reduction = 'none', weight = self.weight), self.gamma)
+
+# Label-Distribution-Aware Margin loss
+class LDAMLoss(nn.Module):
+    def __init__(self, cls_num_list : Optional[List], max_m : float = 0.5, weight : Optional[torch.Tensor] = None, s : int = 30):
+        super(LDAMLoss, self).__init__()
+        assert s > 0, "s should be positive"
+        self.s = s
+        self.weight = weight
+        
+        m_list = 1.0 / np.sqrt(np.sqrt(cls_num_list))
+        m_list = m_list * (max_m / np.max(m_list))
+        m_list = torch.FloatTensor(m_list)
+        self.m_list = m_list
+
+    def forward(self, x : torch.Tensor, target : torch.Tensor)->torch.Tensor:
+        idx = torch.zeros_like(x, dtype = torch.uint8)
+        idx.scatter_(1, target.data.view(-1,1), 1)
+
+        idx_float = idx.type(torch.FloatTensor)
+        batch_m = torch.matmul(self.m_list[None, :], idx_float.transpose(0,1))
+        batch_m = batch_m.view((-1,1))
+        x_m = x - batch_m
+
+        output = torch.where(idx, x_m, x)
+
+        return F.cross_entropy(self.s * output, target, weight = self.weight)

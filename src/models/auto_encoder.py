@@ -1,3 +1,4 @@
+from cv2 import _OUTPUT_ARRAY_DEPTH_MASK_16F
 import numpy as np
 import torch 
 import torch.nn as nn
@@ -39,22 +40,37 @@ class Video2ImageEncoder(nn.Module):
         hiddens = 128
         out_channels = 64
 
+        self.out_channels = out_channels
+        self.hiddens = hiddens
+        self.in_channels = in_channels
+
         self.conv1 = nn.Conv2d(in_channels, hiddens, kernel_size = (11,11))
         self.bn1 = nn.BatchNorm2d(hiddens)
         self.conv2 = nn.Conv2d(hiddens, out_channels, kernel_size = (5,5))
         self.bn2 = nn.BatchNorm2d(out_channels)
+
+        self.container = nn.Sequential(
+            self.conv1,
+            self.bn1,
+            self.conv2,
+            self.bn2
+        )
         
     def get_output_size(self):
         input_shape = (4, *(self.input_shape))
-        device = next(self.resnet.parameters()).device
+        device = next(self.container.parameters()).device
         sample = torch.zeros(input_shape).to(device)
         sample_output = self.forward(sample)
         return sample_output.size()
         
     def forward(self, x:torch.Tensor):
-        outputs = torch.zeros()
+        outputs = torch.zeros(x.size(0), self.out_channels, self.seq_len, self.height, self.width, device = next(self.container.parameters()).device)
+
+        for timestep in range(self.seq_len):
+            inputs = x[:,:, timestep, :, :]
+            outputs[:,:,timestep,:,:] = self.container(inputs)
         
-        return x
+        return outputs
 
 class ConvLSTMCell(nn.Module):
     def __init__(self, input_dims : int, hidden_dims : int, kernel_size : List[int], bias = None):
@@ -112,13 +128,7 @@ class AutoEncoder(nn.Module):
     def __init__(
         self, 
         input_shape : Tuple[int,int,int,int] = (3, 8, 112, 112),
-        alpha : int = 1,
-        layers : List[int] = [3,4,6,3],
-        block : Optional[Bottleneck2DPlus1D] = Bottleneck2DPlus1D,
         ):
         super(AutoEncoder, self).__init__()
-        self.input_shape = input_shape
-        self.alpha = alpha
-        self.layers = layers
-        self.block = block
+        
         
