@@ -1,7 +1,5 @@
-from dataclasses import replace
 import torch
 from torch.utils.data.sampler import Sampler
-import torchvision
 from torch.utils.data import Dataset
 
 class ImbalancedDatasetSampler(Sampler):

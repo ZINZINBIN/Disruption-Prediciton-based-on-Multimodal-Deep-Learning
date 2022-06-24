@@ -1,9 +1,3 @@
-# ======================================================================
-# Image - Tabular time series encoder model
-# data structure : time series image data + plasma parameter(beta, kappa, ...)
-# Image Encoder Model : ResNet, utae
-# Tabular data Encoder Model : TabNet or Transformer model
-# ======================================================================
 import numpy as np
 from torch import unsqueeze
 import torch 

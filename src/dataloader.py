@@ -7,6 +7,22 @@ import cv2
 from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
+from typing import Optional, Dict, List, Union
+
+DEFAULT_AUGMENTATION_ARGS = {
+    "bright_val" : 30,
+    "bright_p" : 0.25,
+    "contrast_min" : 1,
+    "contrast_max" : 1.5,
+    "contrast_p" : 0.25,
+    "blur_k" : 5,
+    "blur_p" : 0.25,
+    "flip_p" : 0.25,
+    "vertical_ratio" : 0.2,
+    "vertical_p" : 0.25,
+    "horizontal_ratio" : 0.2,
+    "horizontal_p" : 0.25
+}
 
 class Path(object):
     @staticmethod
@@ -32,18 +48,38 @@ class Path(object):
             raise NotImplementedError
 
 class VideoDataset(Dataset):
-    def __init__(self, dataset = "fast_model_dataset", split = "test", clip_len = 16, preprocess = False, augmentation : bool = True, ignore_border:bool = True):
+    def __init__(
+        self, 
+        dataset = "fast_model_dataset", 
+        split : str = "test", 
+        clip_len:int= 16, 
+        preprocess:bool = False, 
+        augmentation : bool = True, 
+        ignore_border:bool = True,
+        augmentation_args : Optional[Dict] = None
+        ):
+
         self.root_dir, self.output_dir = Path.db_dir(dataset)
         folder = os.path.join(self.output_dir, split)
         self.clip_len = clip_len
         self.split = split
         self.augmentation = augmentation
         self.ignore_border = ignore_border
+        self.cls_num = 2
 
         # The following three parameters are chosen as described in the paper section 4.1
         self.resize_height = 128
         self.resize_width = 171
         self.crop_size = 112
+
+        # data augmentation setup
+        if augmentation_args is None:
+            if self.augmentation is True:  
+                self.augmentation_args = DEFAULT_AUGMENTATION_ARGS
+            else:
+                self.augmentation_args = None
+        else:
+            self.augmentation_args = augmentation_args
 
         if not self.check_integrity():
             raise RuntimeError('Dataset not found or corrupted.' +
@@ -96,12 +132,12 @@ class VideoDataset(Dataset):
         labels = np.array(self.label_array[index])
 
         if self.split == "train" and self.augmentation:
-            buffer = self.brightness(buffer, val = 30, p = 0.25)
-            buffer = self.contrast(buffer, 1, 1.5, p = 0.25)
-            buffer = self.blur(buffer, p = 0.25, kernel_size = 5)
-            buffer = self.randomflip(buffer, p = 0.25)
-            buffer = self.vertical_shift(buffer, ratio = 0.2, p = 0.25)
-            buffer = self.horizontal_shift(buffer, ratio = 0.2, p = 0.25)
+            buffer = self.brightness(buffer, val = self.augmentation_args["bright_val"], p = self.augmentation_args["bright_p"])
+            buffer = self.contrast(buffer, self.augmentation_args["contrast_min"], self.augmentation_args["contrast_max"], p = self.augmentation_args["contrast_p"])
+            buffer = self.blur(buffer, p = self.augmentation_args["blur_p"], kernel_size = self.augmentation_args["blur_k"])
+            buffer = self.randomflip(buffer, p = self.augmentation_args["flip_p"])
+            buffer = self.vertical_shift(buffer, ratio = self.augmentation_args["vertical_ratio"], p = self.augmentation_args["vertical_p"])
+            buffer = self.horizontal_shift(buffer, ratio = self.augmentation_args["horizontal_ratio"], p = self.augmentation_args["horizontal_p"])
 
         buffer = self.normalize(buffer)
         buffer = self.to_tensor(buffer)
@@ -332,10 +368,10 @@ class VideoDataset(Dataset):
                 buffer[i] = cv2.convertScaleAbs(frame, alpha = alpha)
         return buffer
 
-    def to_tensor(self, buffer):
+    def to_tensor(self, buffer:Union[np.ndarray, torch.Tensor]):
         return buffer.transpose((3, 0, 1, 2))
 
-    def load_frames(self, file_dir):
+    def load_frames(self, file_dir : str):
         frames = sorted([os.path.join(file_dir, img) for img in os.listdir(file_dir)])
         frame_count = len(frames)
         buffer = np.empty((frame_count, self.resize_height, self.resize_width, 3), np.dtype('float32'))
@@ -345,7 +381,7 @@ class VideoDataset(Dataset):
 
         return buffer
 
-    def crop(self, buffer, clip_len, crop_size):
+    def crop(self, buffer : Union[np.ndarray, torch.Tensor], clip_len : int, crop_size : int):
         # randomly select time index for temporal jittering
         if buffer.shape[0] < clip_len :
             time_index = np.random.randint(abs(buffer.shape[0] - clip_len))
@@ -368,6 +404,23 @@ class VideoDataset(Dataset):
 
         return buffer
 
+    # function for imbalanced dataset
+    # used for LDAM loss and re-weighting
+    def get_img_num_per_cls(self):
+        classes = np.unique(self.label_array)
+        self.num_per_cls_dict = dict()
+
+        for cls_idx in range(self.cls_num):
+            num = np.sum(np.where(self.label_array == classes[cls_idx], 1, 0))
+            self.num_per_cls_dict[cls_idx] = num
+         
+    def get_cls_num_list(self):
+        cls_num_list = []
+
+        for i in range(self.cls_num):
+            cls_num_list.append(self.num_per_cls_dict[i])
+
+        return cls_num_list
 
 if __name__ == "__main__":
     # dataset = 'best_model_dataset'

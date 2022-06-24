@@ -3,8 +3,8 @@ from torch import unsqueeze
 import torch 
 import torch.nn as nn
 from typing import Tuple, List
-from src.layer import *
-from src.transformer import *
+from src.models.layer import *
+from src.models.transformer import *
 from pytorch_model_summary import summary
 
 class R2P1DwithSTN(nn.Module):
