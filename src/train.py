@@ -69,7 +69,7 @@ def valid_per_epoch(
     valid_loader : torch.utils.data.DataLoader, 
     model : torch.nn.Module,
     optimizer : torch.optim.Optimizer,
-    loss_fn = torch.nn.Module,
+    loss_fn : torch.nn.Module,
     device : str = "cpu",
     use_acc_per_class : Optional[bool] = False
     ):
