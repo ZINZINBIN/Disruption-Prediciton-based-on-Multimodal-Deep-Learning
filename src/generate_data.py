@@ -133,6 +133,8 @@ if __name__ == "__main__":
     N_index = shot_df["Isdata"][shot_df["Isdata"] == 'N'].index
     shot_df = shot_df.drop(N_index)
     shot_df.reset_index(drop=True, inplace=True)
+
+    # thermal quench를 기준으로 disruption 시점을 정의
     shot_df["tTQend_frame"] = shot_df["tTQend"].apply(frame_calculator, gab=gap)
     pre_shot_df = shot_df[["shot", "tTQend_frame"]]
 

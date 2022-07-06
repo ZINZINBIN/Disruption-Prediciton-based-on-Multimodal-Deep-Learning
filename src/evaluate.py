@@ -5,9 +5,7 @@ import torch
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
-from src.dataloader import VideoDataset
-from tqdm import tqdm
-from sklearn.metrics import confusion_matrix, classification_report
+from sklearn.metrics import confusion_matrix, classification_report, f1_score
 
 def MAE(pred, true):
     return np.mean(np.abs(pred - true))
@@ -60,7 +58,8 @@ def evaluate(
 
     test_loss /= (idx + 1)
     test_acc /= (idx + 1)
-
+    
+    test_f1 = f1_score(total_label, total_pred, average = "macro")
     conf_mat = confusion_matrix(total_label,  total_pred)
 
     plt.figure()
@@ -69,21 +68,21 @@ def evaluate(
         annot = True,
         fmt = '.2f',
         cmap = 'Blues',
-        xticklabels=[0,1],
-        yticklabels=[0,1]
+        xticklabels=["normal","disruption"],
+        yticklabels=["normal","disruption"]
     )
 
     plt.savefig("./results/confusion_matrix.png")
 
     print("############### Classification Report ####################")
     print(classification_report(total_label, total_pred, labels = [0,1]))
-    print("\n# total test score : {:.2f} and test loss : {:.3f}".format(test_acc, test_loss))
+    print("\n# test acc : {:.2f}, test f1 : {:.2f}, test loss : {:.3f}".format(test_acc, test_f1, test_loss))
     print(conf_mat)
 
     if save_dir:
         with open(save_dir, 'w') as f:
             f.write(classification_report(total_label, total_pred, labels = [0,1]))
-            summary = "\n# total test score : {:.2f} and test loss : {:.3f}".format(test_acc, test_loss)
+            summary = "\n# test score : {:.2f}, test loss : {:.3f}, test f1 : {:.3f}".format(test_acc, test_loss, test_f1)
             f.write(summary)
 
-    return test_loss, test_acc
+    return test_loss, test_acc, test_f1
