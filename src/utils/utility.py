@@ -123,30 +123,50 @@ def normalize(buffer:np.ndarray):
         buffer[i] = frame
     return buffer
 
-def time_split(buffer:np.ndarray, clip_len : int):
+def time_split(buffer:np.ndarray, clip_len : int, use_continuous_frame : bool = True):
     frame_count = buffer.shape[0]
     h = buffer.shape[1]
     w = buffer.shape[2]
     c = buffer.shape[3]
 
-    batch_size = frame_count - clip_len + 1
-    dataset = np.empty((batch_size, clip_len, h, w, c), dtype = np.float32)
+    if use_continuous_frame:
+        batch_size = frame_count - clip_len + 1
+        dataset = np.empty((batch_size, clip_len, h, w, c), dtype = np.float32)
 
-    for idx in range(0, batch_size):
-        t_start = idx
-        t_end = idx + clip_len
-        dataset[idx, :, :, :, :] = buffer[t_start : t_end, :, :, :]
+        for idx in range(0, batch_size):
+            t_start = idx
+            t_end = idx + clip_len
+            dataset[idx, :, :, :, :] = buffer[t_start : t_end, :, :, :]
+    else:
+        batch_size = frame_count // clip_len
+        batch_rest = frame_count % clip_len
+        if batch_rest != 0:
+            dataset = np.zeros((batch_size+1, clip_len, h, w, c), dtype = np.float32)
+        else:
+            dataset = np.zeros((batch_size, clip_len, h, w, c), dtype = np.float32)
+
+        for idx in range(0, dataset.shape[0]):
+            t_start = idx * clip_len
+            t_end = t_start + clip_len
+
+            if idx == dataset.shape[0] - 1 and batch_rest != 0:
+                t_end = t_start + batch_rest
+                dataset[idx, 0:batch_rest, :, :, :] = buffer[t_start : t_end, :, :, :]
+            else:
+                dataset[idx, :, :, :, :] = buffer[t_start : t_end, :, :, :]
     
     return dataset.transpose((0, 4, 1, 2, 3))
 
 # generate video to input data
+from typing import Optional
 def video2tensor(
     dir : str, 
     channels : int = 3, 
     clip_len : int = 42, 
     crop_size : int = 112,
     resize_width : int = 171,
-    resize_height : int = 128
+    resize_height : int = 128,
+    use_continuous_frame : bool = True
     ):
 
     capture = cv2.VideoCapture(dir)
@@ -176,7 +196,7 @@ def video2tensor(
 
     buffer = crop(buffer, resize_height, resize_width, crop_size)
     buffer = normalize(buffer)
-    dataset = time_split(buffer, clip_len)
+    dataset = time_split(buffer, clip_len, use_continuous_frame)
     dataset = torch.from_numpy(dataset)
 
     return dataset
@@ -192,6 +212,7 @@ def generate_prob_curve(
     shot_number : Optional[int] = None,
     clip_len : Optional[int] = None,
     dist_frame : Optional[int] = None,
+    use_continuous_frame : bool = True
     ):
     prob_list = []
     is_disruption = []
@@ -210,11 +231,14 @@ def generate_prob_curve(
                 frames = frames.to(device)
                 output = model(frames)
                 probs = torch.nn.functional.softmax(output, dim = 1)[:,0]
+                # probs = torch.sigmoid(output)[:,0]
+
                 prob_list.extend(
                     probs.cpu().detach().numpy().tolist()
                 )
                 is_disruption.extend(
                     torch.nn.functional.softmax(output, dim = 1).max(1, keepdim = True)[1].cpu().detach().numpy().tolist()
+                    # torch.sigmoid(output)[:,0].cpu().detach().numpy().tolist()
                 )
 
     else:
@@ -223,11 +247,13 @@ def generate_prob_curve(
             frames = frames.to(device)
             probs = model(frames)
             probs = torch.nn.functional.softmax(probs, dim = 1)[:,0]
+            # probs = torch.sigmoid(output)[:,0]
             prob_list.extend(
                 probs.cpu().detach().numpy().tolist()
             )
             is_disruption.extend(
                     torch.nn.functional.softmax(output, dim = 1).max(1, keepdim = True)[1].cpu().detach().numpy().tolist()
+                    # torch.sigmoid(output)[:,0].cpu().detach().numpy().tolist()
                 )
 
 
@@ -240,15 +266,23 @@ def generate_prob_curve(
 
     if shot_info is not None:
         t_disrupt = shot_info["tTQend"].values[0]
+        t_current = shot_info["tipminf"].values[0]
     else:
         t_disrupt = None
+        t_current = None
 
-    # clip_len + distance만큼 외삽 진행
-    prob_list = [0] * (clip_len + dist_frame) + prob_list
+    if use_continuous_frame:
+        interval = 1
+        # clip_len + distance만큼 외삽 진행
+        prob_list = [0] * (clip_len + dist_frame) + prob_list
+    else:
+        interval = clip_len
+        prob_list = [0] * (1 + int(dist_frame / clip_len)) + prob_list
 
     if save_dir:
         fps = 210
-        time_x = np.arange(1, len(prob_list) + 1) * (1/fps)
+
+        time_x = np.arange(1, len(prob_list) + 1) * (1/fps) * interval
         threshold_line = [0.5] * len(time_x)
 
         plt.figure(figsize = (8,5))
@@ -257,7 +291,10 @@ def generate_prob_curve(
         # plt.plot(time_x, is_disruption, "r", label = "disruption line(predict)")
 
         if t_disrupt is not None:
-            plt.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
+            plt.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed", label = "thermal quench")
+        
+        if t_current is not None:
+            plt.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed", label = "current quench")
 
         plt.ylabel("probability")
         plt.xlabel("time(unit : s)")

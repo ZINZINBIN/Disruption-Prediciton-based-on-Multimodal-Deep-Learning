@@ -73,6 +73,8 @@ class FocalLossLDAM(nn.Module):
     def forward(self, input : torch.Tensor, target : torch.Tensor)->torch.Tensor:
         return compute_focal_loss(F.cross_entropy(input, target, reduction = 'none', weight = self.weight), self.gamma)
 
+        #return compute_focal_loss(F.binary_cross_entropy(torch.sigmoid(input), target, reduction = 'none', weight = self.weight), self.gamma)
+
 # Label-Distribution-Aware Margin loss
 class LDAMLoss(nn.Module):
     def __init__(self, cls_num_list : Optional[List], max_m : float = 0.5, weight : Optional[torch.Tensor] = None, s : int = 30):

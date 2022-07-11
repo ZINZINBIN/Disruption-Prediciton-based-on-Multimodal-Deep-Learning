@@ -10,8 +10,8 @@ from multiprocessing import Pool, cpu_count
 
 parser = argparse.ArgumentParser(description="generate dataset from raw_video data")
 parser.add_argument("--fps", type = int, default = 210)
-parser.add_argument("--duration", type = float, default = 0.2)
-parser.add_argument("--distance", type = int, default = 21)
+parser.add_argument("--duration", type = float, default = 0.2) # duration * fps(=210) = seq_len(or frame length)
+parser.add_argument("--distance", type = int, default = 21) # prediction length
 parser.add_argument("--raw_video_path", type = str, default = "./dataset/raw_videos/raw_videos/")
 parser.add_argument("--save_path", type = str, default = "./dataset/")
 parser.add_argument("--shot_list_path", type = str, default = "./dataset/KSTAR_Disruption_Shot_List.csv")
@@ -87,16 +87,12 @@ def new_make_dataset(shot_num, fps, duration, distance, dataset_idx, raw_videos_
                 
                 if (frame_num + duration_frame) ==dataset_idx[shot_num][0]:
 
-                    # print("disruption idx: ", frame_num)
-
                     out.release()
                     save_video = "{}_{}~{}.".format(shot_num,frame_num, frame_num+duration_frame) + exe
                     out = cv2.VideoWriter(dis_path+save_video, fourcc, fps, (w, h))
                     disruption_bool= True
                     
                 elif (frame_num + duration_frame * border_num) == dataset_idx[shot_num][0] and border_num != 1:
-
-                    # print("borderline idx : ", frame_num)
 
                     out.release()
                     save_video = "{}_{}~{}.".format(shot_num, frame_num, frame_num+duration_frame) + exe
@@ -107,8 +103,6 @@ def new_make_dataset(shot_num, fps, duration, distance, dataset_idx, raw_videos_
                     if disruption_bool :
                         break
 
-                    # print("nomal idx: ", frame_num)
-                    
                     out.release()
                     save_video = "{}_{}~{}.".format(shot_num,frame_num, frame_num+duration_frame) +exe
                     out = cv2.VideoWriter(nom_path+save_video, fourcc, fps, (w, h))

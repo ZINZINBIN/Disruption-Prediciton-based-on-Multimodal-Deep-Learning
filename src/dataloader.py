@@ -32,10 +32,29 @@ class Path(object):
             output_dir = "./dataset/dur0.1_dis0"
             return root_dir, output_dir
         
+        elif database == "dur0.1_dis0":
+            root_dir = "./dataset/dur0.1_dis0"
+            output_dir = "./dataset/dur0.1_dis0"
+            return root_dir, output_dir
+
+        elif database == "dur0.1_dis5":
+            root_dir = "./dataset/dur0.1_dis5"
+            output_dir = "./dataset/dur0.1_dis5"
+            return root_dir, output_dir
+        
         elif database == "dur0.1_dis10":
             root_dir = "./dataset/dur0.1_dis10"
             output_dir = "./dataset/dur0.1_dis10"
+            return root_dir, output_dir
 
+        elif database == "dur0.2_dis0":
+            root_dir = "./dataset/dur0.2_dis0"
+            output_dir = "./dataset/dur0.2_dis0"
+            return root_dir, output_dir
+
+        elif database == "dur0.2_dis10":
+            root_dir = "./dataset/dur0.2_dis10"
+            output_dir = "./dataset/dur0.2_dis10"
             return root_dir, output_dir
 
         elif database == "dur0.2_dis21":
@@ -55,7 +74,7 @@ class VideoDataset(Dataset):
         clip_len:int= 16, 
         preprocess:bool = False, 
         augmentation : bool = True, 
-        ignore_border:bool = True,
+        ignore_border:bool = False,
         augmentation_args : Optional[Dict] = None
         ):
 
@@ -68,9 +87,14 @@ class VideoDataset(Dataset):
         self.cls_num = 2
 
         # The following three parameters are chosen as described in the paper section 4.1
-        self.resize_height = 128
-        self.resize_width = 171
-        self.crop_size = 112
+        # self.resize_height = 128
+        # self.resize_width = 171
+        # self.crop_size = 112
+
+        # 2022.07.11 resize image as 224,224
+        self.resize_height = 256
+        self.resize_width = 256
+        self.crop_size = 224
 
         # data augmentation setup
         if augmentation_args is None:
@@ -172,7 +196,7 @@ class VideoDataset(Dataset):
                 video_name = os.path.join(os.path.join(self.output_dir, 'train', video_class, video),
                                     sorted(os.listdir(os.path.join(self.output_dir, 'train', video_class, video)))[0])
                 image = cv2.imread(video_name)
-                if np.shape(image)[0] != 128 or np.shape(image)[1] != 171:
+                if np.shape(image)[0] != self.resize_height or np.shape(image)[1] != self.resize_width:
                     return False
                 else:
                     break
@@ -204,8 +228,8 @@ class VideoDataset(Dataset):
             if file not in ["disruption", "normal", "borderline"]:
                 continue
 
-            # 22.04.18 : add borderline data as disruption data
-            # due to the shortage of disruption dataset
+            # 22.04.18 : add borderline data as disruption data => No... it should be included as Normal dataset
+            # due to the shortage of disruption dataset => that should be solved by LDAM, Adversarial Training or etc...
             
             file_path = os.path.join(self.root_dir, file)
             video_files = [name for name in os.listdir(file_path)]

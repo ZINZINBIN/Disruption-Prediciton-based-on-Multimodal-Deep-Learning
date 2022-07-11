@@ -1,19 +1,14 @@
-from sched import scheduler
-from typing import Optional
 import torch
-import numpy as np
-import seaborn as sns
 import argparse
 import matplotlib.pyplot as plt
 from src.dataloader import VideoDataset
 from torch.utils.data import DataLoader
 from src.models.model import SlowFastDisruptionClassifier
 from src.models.resnet import Bottleneck3D
+from src.models.slowfast import SlowFastClassifier, SlowFastEncoder
 from src.train import train
 from src.evaluate import evaluate
 from src.loss import FocalLoss
-from src.utils.sampler import ImbalancedDatasetSampler
-from tqdm import tqdm
 
 parser = argparse.ArgumentParser(description="training SlowFast Disruption Classifier")
 parser.add_argument("--batch_size", type = int, default = 24)
@@ -83,17 +78,13 @@ if __name__ == "__main__":
     save_result_dir = args["save_result_dir"]
     dataset = args["dataset"]
 
-    train_data_dist = VideoDataset(dataset = dataset, split = "train", clip_len = clip_len, preprocess = False)
-    valid_data_dist = VideoDataset(dataset = dataset, split = "val", clip_len = clip_len, preprocess = False)
-    test_data_dist = VideoDataset(dataset = dataset, split = "test", clip_len = clip_len, preprocess = False)
+    train_data_dist = VideoDataset(dataset = dataset, split = "train", clip_len = clip_len, preprocess = False, augmentation=True, ignore_border=True)
+    valid_data_dist = VideoDataset(dataset = dataset, split = "val", clip_len = clip_len, preprocess = False, augmentation=False, ignore_border=True)
+    test_data_dist = VideoDataset(dataset = dataset, split = "test", clip_len = clip_len, preprocess = False, augmentation=False, ignore_border=True)
     
-    train_sampler = ImbalancedDatasetSampler(train_data_dist)
-    valid_sampler = ImbalancedDatasetSampler(valid_data_dist)
-    test_sampler = ImbalancedDatasetSampler(test_data_dist)
-    
-    train_loader_dist = DataLoader(train_data_dist, batch_size = batch_size, sampler=train_sampler, num_workers = 8)
-    valid_loader_dist = DataLoader(valid_data_dist, batch_size = batch_size, sampler=valid_sampler, num_workers = 8)
-    test_loader_dist = DataLoader(test_data_dist, batch_size = batch_size, sampler=test_sampler, num_workers = 8)
+    train_loader_dist = DataLoader(train_data_dist, batch_size = batch_size, sampler=None, num_workers = 8)
+    valid_loader_dist = DataLoader(valid_data_dist, batch_size = batch_size, sampler=None, num_workers = 8)
+    test_loader_dist = DataLoader(test_data_dist, batch_size = batch_size, sampler=None, num_workers = 8)
 
     model = SlowFastDisruptionClassifier(
         input_shape = (3,clip_len,112,112),

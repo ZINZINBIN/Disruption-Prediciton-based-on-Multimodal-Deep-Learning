@@ -10,24 +10,28 @@ from src.evaluate import evaluate
 from src.loss import FocalLoss, LDAMLoss, FocalLossLDAM
 
 parser = argparse.ArgumentParser(description="training ViViT for disruption classifier")
-parser.add_argument("--batch_size", type = int, default = 64)
+parser.add_argument("--batch_size", type = int, default = 32)
 parser.add_argument("--lr", type = float, default = 1e-3)
 parser.add_argument("--gamma", type = float, default = 0.995)
 parser.add_argument("--gpu_num", type = int, default = 0)
 
-parser.add_argument("--num_workers", type = int, default = 8)
-parser.add_argument("--pin_memory", type = bool, default = True)
+parser.add_argument("--image_size", type = int, default = 224)
+parser.add_argument("--patch_size", type = int, default = 16)
 
+parser.add_argument("--num_workers", type = int, default = 8)
+parser.add_argument("--pin_memory", type = bool, default = False)
+
+parser.add_argument("--clip_len", type = int, default = 21)
 parser.add_argument("--use_sampler", type = bool, default = False)
 parser.add_argument("--wandb_save_name", type = str, default = "ViViT-exp001")
-parser.add_argument("--num_epoch", type = int, default = 8)
-parser.add_argument("--verbose", type = int, default = 1)
-parser.add_argument("--save_best_dir", type = str, default = "./weights/ViViT_clip_42_dist_21_best.pt")
-parser.add_argument("--save_last_dir", type = str, default = "./weights/ViViT_clip_42_dist_21_last.pt")
-parser.add_argument("--save_result_dir", type = str, default = "./results/train_valid_loss_acc_ViViT_clip_42_dist_21.png")
-parser.add_argument("--save_test_result", type = str, default = "./results/test_ViViT_clip_42_dist_21.txt")
-parser.add_argument("--use_focal_loss", type = bool, default = False)
-parser.add_argument("--dataset", type = str, default = "dur0.2_dis21") # fast_model_dataset, dur0.2_dis100
+parser.add_argument("--num_epoch", type = int, default = 128)
+parser.add_argument("--verbose", type = int, default = 4)
+parser.add_argument("--save_best_dir", type = str, default = "./weights/ViViT_clip_21_dist_10_best.pt")
+parser.add_argument("--save_last_dir", type = str, default = "./weights/ViViT_clip_21_dist_10_last.pt")
+parser.add_argument("--save_result_dir", type = str, default = "./results/train_valid_loss_acc_ViViT_clip_21_dist_10.png")
+parser.add_argument("--save_test_result", type = str, default = "./results/test_ViViT_clip_21_dist_10.txt")
+parser.add_argument("--use_focal_loss", type = bool, default = True)
+parser.add_argument("--dataset", type = str, default = "dur0.1_dis10") # fast_model_dataset, dur0.2_dis100
 
 args = vars(parser.parse_args())
 
@@ -68,7 +72,7 @@ if __name__ == "__main__":
 
     batch_size = args['batch_size']
     lr = args['lr']
-    clip_len = 42
+    clip_len = args['clip_len']
     num_epoch = args['num_epoch']
     verbose = args['verbose']
     gamma = args['gamma']
@@ -100,11 +104,11 @@ if __name__ == "__main__":
     print("sample_y : ", sample_y.size())
 
     model = ViViT(
-        image_size = 112,
-        patch_size = 16,
+        image_size = args['image_size'],
+        patch_size = args['patch_size'],
         n_classes = 2,
         n_frames = clip_len,
-        dim = 128,
+        dim = 64,
         depth = 4,
         n_heads = 4,
         pool = "cls",
@@ -127,11 +131,11 @@ if __name__ == "__main__":
     )
 
     if args['use_focal_loss']:
-        loss_fn = FocalLoss(alpha = 1.0, gamma=2, size_average=True)
+        loss_fn = FocalLossLDAM(weight = None, gamma = 0.5)
     else: 
         loss_fn = torch.nn.CrossEntropyLoss(reduction = "mean")
 
-    
+    # training process
     train_loss,  train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train(
         train_loader,
         valid_loader,
@@ -152,6 +156,7 @@ if __name__ == "__main__":
 
     model.load_state_dict(torch.load(save_best_dir))
 
+    # evaluation process
     test_loss, test_acc = evaluate(
         test_loader,
         model,
