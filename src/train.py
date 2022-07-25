@@ -1,6 +1,6 @@
 from typing import Optional, List
 import warnings
-from src.loss import LDAMLoss
+from src.loss import LDAMLoss, FocalLossLDAM
 import torch
 import numpy as np
 import seaborn as sns
@@ -220,109 +220,103 @@ def train(
 
     return  train_loss_list, train_acc_list, train_f1_list,  valid_loss_list,  valid_acc_list, valid_f1_list
 
+from typing import Union
 
-def train_(
-    train_loader : torch.utils.data.DataLoader, 
+def train_LDAM_process(
+    train_loader : torch.utils.data.DataLoader,
     valid_loader : torch.utils.data.DataLoader,
     model : torch.nn.Module,
     optimizer : torch.optim.Optimizer,
-    scheduler : Optional[torch.optim.lr_scheduler._LRScheduler],
-    loss_fn : Optional[torch.nn.Module],
+    loss_fn : Union[LDAMLoss, FocalLossLDAM],
     device : str = "cpu",
     num_epoch : int = 64,
-    verbose : Optional[int] = 8,
-    save_best : Optional[str] = "./weights/best.pt",
-    use_video_mixup : bool = False,
-    use_acc_per_class : bool = False,
-    train_rule : Optional[str] = None,
-    cls_num_list : Optional[List] = None
-):
+    verbose : int = 1,
+    save_best_only : bool = False,
+    save_best_dir : str = "./weights/best.pt",
+    save_last_dir : str = "./weights/last.pt",
+    max_norm_grad : Optional[float] = None,
+    criteria : str = "f1_score",
+    cls_num_list : Optional[List] = None,
+    gamma : float = 0.5
+    ):
 
     train_loss_list = []
     valid_loss_list = []
-    
+
+    train_f1_list = []
+    valid_f1_list = []
+
     train_acc_list = []
     valid_acc_list = []
 
-    best_acc = 0
+    best_f1 = 0
     best_epoch = 0
     best_loss = torch.inf
 
-    if loss_fn is None and train_rule is None:
-        loss_fn = torch.nn.CrossEntropyLoss(reduction = 'mean')
-    
-    if cls_num_list is None and train_rule == "DRW":
-        warnings.warn("cls_num_list should be necessay for DRW algorithm : change train rule as None")
-        loss_fn = torch.nn.CrossEntropyLoss(reduction = 'mean')
-        train_rule = None
-
     for epoch in tqdm(range(num_epoch), desc = "training process"):
+        idx = epoch // int(num_epoch / 4)
+        betas = [0, 0.25, 0.75, 0.9]
+        beta = betas[idx]
+        effective_num = 1.0 - np.power(beta, cls_num_list)
+        per_cls_weights = (1.0 - beta) / np.array(effective_num)
+        per_cls_weights = per_cls_weights / np.sum(per_cls_weights) * len(cls_num_list)
+        per_cls_weights = torch.FloatTensor(per_cls_weights).to(device)
 
-        # train rule : DRW should be updated after some epochs passed
-        if train_rule == 'DRW':
-            idx = epoch // int(num_epoch / 2)
-            betas = [0, 0.9999]
-            beta = betas[idx]
-            effective_num = 1.0 - np.power(beta, cls_num_list)
-            per_cls_weights = (1.0 - beta) / np.array(effective_num)
-            per_cls_weights = per_cls_weights / np.sum(per_cls_weights) * len(cls_num_list)
-            per_cls_weights = torch.FloatTensor(per_cls_weights).to(device)
-            loss_fn = LDAMLoss(cls_num_list, max_m = 0.5, weight = per_cls_weights, s = 30)
+        # for FocalLoss
+        loss_fn.update_weight(per_cls_weights, gamma)
 
-        # train process for 1 epoch
-        train_loss, train_acc = train_per_epoch(
+        train_loss, train_acc, train_f1 = train_per_epoch(
             train_loader, 
             model,
             optimizer,
-            scheduler,
+            None,
             loss_fn,
             device,
-            use_video_mixup
+            max_norm_grad
         )
 
-        # validation process for 1 epoch
-        if use_acc_per_class:
-            valid_loss, valid_acc, conf_mat = valid_per_epoch(
-                valid_loader, 
-                model,
-                optimizer,
-                loss_fn,
-                device,
-                use_acc_per_class
-            )
-
-        else:
-            valid_loss, valid_acc = valid_per_epoch(
-                valid_loader, 
-                model,
-                optimizer,
-                loss_fn,
-                device,
-                False
-            )
+        valid_loss, valid_acc, valid_f1 = valid_per_epoch(
+            valid_loader, 
+            model,
+            optimizer,
+            loss_fn,
+            device 
+        )
 
         train_loss_list.append(train_loss)
         valid_loss_list.append(valid_loss)
+
+        train_f1_list.append(train_f1)
+        valid_f1_list.append(valid_f1)
 
         train_acc_list.append(train_acc)
         valid_acc_list.append(valid_acc)
 
         if verbose:
             if epoch % verbose == 0:
-                print("epoch : {}, train loss : {:.3f}, valid loss : {:.3f}, train acc : {:.3f}, valid acc : {:.3f}".format(
-                    epoch+1, train_loss, valid_loss, train_acc, valid_acc
+                print("epoch : {}, train loss : {:.3f}, valid loss : {:.3f}, train f1 : {:.3f}, valid f1 : {:.3f}".format(
+                    epoch+1, train_loss, valid_loss, train_f1, valid_f1
                 ))
 
-        if save_best:
-            if best_acc < valid_acc:
-                best_acc = valid_acc
+        # save the best parameters
+        if save_best_only:
+            if criteria == "f1_score" and best_f1 < valid_f1:
+                best_f1 = valid_f1
                 best_loss = valid_loss
                 best_epoch  = epoch
-                torch.save(model.state_dict(), save_best)
+                torch.save(model.state_dict(), save_best_dir)
+            elif criteria == "loss" and best_loss > valid_loss:
+                best_f1 = valid_f1
+                best_loss = valid_loss
+                best_epoch  = epoch
+                torch.save(model.state_dict(), save_best_dir)
+
+        # save the last parameters
+        torch.save(model.state_dict(), save_last_dir)
 
     # print("\n============ Report ==============\n")
-    print("training process finished, best loss : {:.3f} and best acc : {:.3f}, best epoch : {}".format(
-        best_loss, best_acc, best_epoch
+    print("training process finished, best loss : {:.3f} and best f1 : {:.3f}, best epoch : {}".format(
+        best_loss, best_f1, best_epoch
     ))
 
-    return  train_loss_list, train_acc_list,  valid_loss_list,  valid_acc_list
+    return  train_loss_list, train_acc_list, train_f1_list,  valid_loss_list, valid_acc_list, valid_f1_list

@@ -89,7 +89,7 @@ def resnet50_f(block = Bottleneck3D, layers = [3,4,6,3], **kwargs):
     model = FastNet(block, layers, **kwargs)
     return model
 
-class SlowFastEncoder(AbstractEncoder):
+class SlowFastEncoder(nn.Module):
     sample_batch = 2
     def __init__(
             self, 
@@ -100,7 +100,7 @@ class SlowFastEncoder(AbstractEncoder):
             tau_fast : int = 1,
             device : Optional[str] = None
         ):
-
+        super(SlowFastEncoder, self).__init__()
         self.input_shape = input_shape
         self.seq_len = input_shape[1]
         self.in_channels = input_shape[0]
@@ -112,8 +112,8 @@ class SlowFastEncoder(AbstractEncoder):
         else:
             self.device = device
 
-        self.slownet = resnet50_s(block = block, layers = layers, alpha = alpha, in_channels = self.in_channels, slow = 1)
-        self.fastnet = resnet50_f(block = block, layers = layers, alpha = alpha, in_channels = self.in_channels, slow = 0)
+        self.slownet = resnet50_s(block = block, layers = layers, alpha = alpha, in_channels = self.in_channels, slow = 1, base_bn_splits = None)
+        self.fastnet = resnet50_f(block = block, layers = layers, alpha = alpha, in_channels = self.in_channels, slow = 0, base_bn_splits = None)
 
     def split_slow_fast(self, x : torch.Tensor)->Tuple[torch.Tensor, torch.Tensor]:
         tau_fast = self.tau_fast
@@ -149,11 +149,11 @@ class SlowFastEncoder(AbstractEncoder):
     
     def get_output_shape(self):
         input_shape = (self.sample_batch, *(self.input_shape))
-        sample = torch.zeros(input_shape).to(self.device)
+        sample = torch.zeros(input_shape)
         sample_output = self.forward(sample)
         return sample_output.size()
 
-class SlowFastClassifier(AbstractClassifier):
+class SlowFastClassifier(nn.Module):
     sample_batch = 2
     def __init__(
         self, 
@@ -162,6 +162,7 @@ class SlowFastClassifier(AbstractClassifier):
         num_classes : int = 2,
         device : Optional[str] = None
     ):
+        super(SlowFastClassifier, self).__init__()
         self.input_dim = input_dim
         self.classifier = nn.Sequential(
             nn.Linear(input_dim, mlp_hidden),
@@ -189,3 +190,38 @@ class SlowFastClassifier(AbstractClassifier):
     def device_allocation(self, device: str)->None:
         self.classifier.to(device)
         self.device = device
+
+class SlowFast(nn.Module):
+    def __init__(
+        self,
+        input_shape : Tuple[int,int,int,int] = (3, 8, 112, 112),
+        block : Optional[Bottleneck3D] = Bottleneck3D,
+        layers : List[int] = [3,4,6,3],
+        alpha : int = 4,
+        tau_fast : int = 1,
+        mlp_hidden :int = 128,
+        num_classes : int = 2,
+        device : Optional[str] = None
+    ):
+        super(SlowFast, self).__init__()
+        self.input_shape = input_shape
+        self.device = device
+        self.encoder = SlowFastEncoder(input_shape, block, layers, alpha, tau_fast, device)
+        cls_input_dim = self.encoder.get_output_shape()[-1]
+        self.classifier = SlowFastClassifier(cls_input_dim, mlp_hidden, num_classes, device)
+
+    def device_allocation(self, device : str):
+        self.encoder.device_allocation(device)
+        self.classifier.device_allocation(device)
+        self.device = device
+
+    def forward(self, x : torch.Tensor) -> torch.Tensor:
+        x = self.encoder.forward(x)
+        x = self.classifier.forward(x)
+        return x
+
+    def summary(self)->None:
+        input_shape = (2, *(self.input_shape))
+        device = next(self.encoder.parameters()).device
+        sample = torch.zeros(input_shape).to(device)
+        print(summary(self, sample, max_depth = None, show_parent_layers = True, show_input = True))

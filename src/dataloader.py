@@ -105,6 +105,7 @@ class VideoDataset(Dataset):
         else:
             self.augmentation_args = augmentation_args
 
+        # preprocess : generate train-test data from video
         if not self.check_integrity():
             raise RuntimeError('Dataset not found or corrupted.' +
                                ' You need to download it from official website.')
@@ -112,7 +113,7 @@ class VideoDataset(Dataset):
         if (not self.check_preprocess()) or preprocess:
             print('Preprocessing of {} dataset, this will take long, but it will be done only once.'.format(dataset))
             self.preprocess()
-
+        
         # Obtain all the filenames of files inside all the class folders
         # Going through each class folder one at a time
         self.fnames, labels = [], []
@@ -137,7 +138,7 @@ class VideoDataset(Dataset):
                 
             with open('./dataset/dataloaders/{}.txt'.format(dataset), 'w') as f:
                 for id, label in enumerate(sorted(self.label2index)):
-                    f.writelines(str(id+1) + ' ' + label + '\n')
+                    f.writelines(str(id) + ' ' + label + '\n')
 
     def __len__(self):
         return len(self.fnames)
@@ -235,7 +236,7 @@ class VideoDataset(Dataset):
             video_files = [name for name in os.listdir(file_path)]
             
             train_and_valid, test = train_test_split(video_files, test_size=0.2, random_state=42)
-            train, val = train_test_split(train_and_valid, test_size=0.2, random_state=42)
+            train, val = train_test_split(train_and_valid, test_size=0.3, random_state=42)
 
             train_dir = os.path.join(self.output_dir, 'train', file)
             val_dir = os.path.join(self.output_dir, 'val', file)

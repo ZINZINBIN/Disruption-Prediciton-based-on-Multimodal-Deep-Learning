@@ -69,11 +69,13 @@ class FocalLossLDAM(nn.Module):
         assert gamma >= 0, "gamma should be positive"
         self.gamma = gamma
         self.weight = weight
+    
+    def update_weight(self, weight : Optional[torch.Tensor] = None, gamma : float = 0.1):
+        self.gamma = gamma
+        self.weight = weight
 
     def forward(self, input : torch.Tensor, target : torch.Tensor)->torch.Tensor:
         return compute_focal_loss(F.cross_entropy(input, target, reduction = 'none', weight = self.weight), self.gamma)
-
-        #return compute_focal_loss(F.binary_cross_entropy(torch.sigmoid(input), target, reduction = 'none', weight = self.weight), self.gamma)
 
 # Label-Distribution-Aware Margin loss
 class LDAMLoss(nn.Module):

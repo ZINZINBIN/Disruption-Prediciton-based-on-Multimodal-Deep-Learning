@@ -27,7 +27,8 @@ def evaluate(
     optimizer : Optional[torch.optim.Optimizer],
     loss_fn = None,
     device : Optional[str] = "cpu",
-    save_dir : Optional[str] = None
+    save_dir : Optional[str] = None,
+    threshold : float = 0.5
 ):
     test_loss = 0
     test_acc = 0
@@ -51,6 +52,7 @@ def evaluate(
     
             test_loss += loss.item()
             pred = torch.nn.functional.softmax(output, dim = 1).max(1, keepdim = True)[1]
+            pred = (pred > torch.FloatTensor([threshold]).to(device))
             test_acc += pred.eq(target.view_as(pred)).sum().item() / data.size(0) 
 
             total_pred = np.concatenate((total_pred, pred.cpu().numpy().reshape(-1,)))

@@ -5,9 +5,9 @@ from src.dataloader import VideoDataset
 from src.models.ViViT import ViViT
 from src.utils.sampler import ImbalancedDatasetSampler
 from torch.utils.data import DataLoader
-from src.train import train
+from src.train import train, train_LDAM_process
 from src.evaluate import evaluate
-from src.loss import FocalLoss, LDAMLoss, FocalLossLDAM
+from src.loss import LDAMLoss, FocalLossLDAM
 
 parser = argparse.ArgumentParser(description="training ViViT for disruption classifier")
 parser.add_argument("--batch_size", type = int, default = 32)
@@ -22,16 +22,16 @@ parser.add_argument("--num_workers", type = int, default = 8)
 parser.add_argument("--pin_memory", type = bool, default = False)
 
 parser.add_argument("--clip_len", type = int, default = 21)
-parser.add_argument("--use_sampler", type = bool, default = False)
+parser.add_argument("--use_sampler", type = bool, default = True)
 parser.add_argument("--wandb_save_name", type = str, default = "ViViT-exp001")
-parser.add_argument("--num_epoch", type = int, default = 128)
-parser.add_argument("--verbose", type = int, default = 4)
-parser.add_argument("--save_best_dir", type = str, default = "./weights/ViViT_clip_21_dist_10_best.pt")
-parser.add_argument("--save_last_dir", type = str, default = "./weights/ViViT_clip_21_dist_10_last.pt")
-parser.add_argument("--save_result_dir", type = str, default = "./results/train_valid_loss_acc_ViViT_clip_21_dist_10.png")
-parser.add_argument("--save_test_result", type = str, default = "./results/test_ViViT_clip_21_dist_10.txt")
+parser.add_argument("--num_epoch", type = int, default = 16)
+parser.add_argument("--verbose", type = int, default = 1)
+parser.add_argument("--save_best_dir", type = str, default = "./weights/ViViT_clip_21_dist_0_best.pt")
+parser.add_argument("--save_last_dir", type = str, default = "./weights/ViViT_clip_21_dist_0_last.pt")
+parser.add_argument("--save_result_dir", type = str, default = "./results/train_valid_loss_acc_ViViT_clip_21_dist_0.png")
+parser.add_argument("--save_test_result", type = str, default = "./results/test_ViViT_clip_21_dist_0.txt")
 parser.add_argument("--use_focal_loss", type = bool, default = True)
-parser.add_argument("--dataset", type = str, default = "dur0.1_dis10") # fast_model_dataset, dur0.2_dis100
+parser.add_argument("--dataset", type = str, default = "dur0.1_dis0") # fast_model_dataset, dur0.2_dis100
 
 args = vars(parser.parse_args())
 
@@ -131,37 +131,62 @@ if __name__ == "__main__":
     )
 
     if args['use_focal_loss']:
-        loss_fn = FocalLossLDAM(weight = None, gamma = 0.5)
+        focal_gamma = 0.5
+        loss_fn = FocalLossLDAM(weight = None, gamma = focal_gamma)
     else: 
         loss_fn = torch.nn.CrossEntropyLoss(reduction = "mean")
 
+    
     # training process
-    train_loss,  train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train(
-        train_loader,
-        valid_loader,
-        model,
-        optimizer,
-        scheduler,
-        loss_fn,
-        device,
-        args['num_epoch'],
-        args['verbose'],
-        save_best_only = False,
-        save_best_dir = save_best_dir,
-        save_last_dir = save_last_dir,
-        use_video_mixup_algorithm = False,
-        max_norm_grad = 1.0,
-        criteria = "f1_score"
-        )
+    if args['use_focal_loss']:
 
-    model.load_state_dict(torch.load(save_best_dir))
+        train_data.get_img_num_per_cls()
+        cls_num_list = train_data.get_cls_num_list()
+
+        train_loss,  train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train_LDAM_process(
+            train_loader,
+            valid_loader,
+            model,
+            optimizer,
+            loss_fn,
+            device,
+            args['num_epoch'],
+            args['verbose'],
+            save_best_only = True,
+            save_best_dir = save_best_dir,
+            save_last_dir = save_last_dir,
+            max_norm_grad = 1.0,
+            criteria = "f1_score",
+            cls_num_list = cls_num_list,
+            gamma = focal_gamma
+        )
+    else:
+        train_loss,  train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train(
+            train_loader,
+            valid_loader,
+            model,
+            optimizer,
+            scheduler,
+            loss_fn,
+            device,
+            args['num_epoch'],
+            args['verbose'],
+            save_best_only = True,
+            save_best_dir = save_best_dir,
+            save_last_dir = save_last_dir,
+            use_video_mixup_algorithm = False,
+            max_norm_grad = 1.0,
+            criteria = "f1_score"
+        )
+    
+    model.load_state_dict(torch.load(save_last_dir))
 
     # evaluation process
-    test_loss, test_acc = evaluate(
+    test_loss, test_acc, test_f1 = evaluate(
         test_loader,
         model,
         optimizer,
         loss_fn,
         device,
-        save_dir = args["save_test_result"]
+        save_dir = args["save_test_result"],
     )
