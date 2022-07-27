@@ -111,4 +111,6 @@ if __name__ == "__main__":
     sample_data, sample_target = get_batch(train_sequence, 0, batch_size = batch_size, input_window=input_window)
     sample_output = model(sample_data)
 
+    print("sample_data : ", sample_data.size())
+    print("sample_target : ", sample_target.size())
     print("sample_output : ", sample_output.size())
