@@ -44,7 +44,6 @@ def ts_interpolate(df : pd.DataFrame, cols : List, df_disruption : pd.DataFrame)
 
     return df_interpolate
 
-
 if __name__ == "__main__":
     df = pd.read_csv("./dataset/KSTAR_Disruption_ts_data.csv")
     df_disrupt = pd.read_csv("./dataset/KSTAR_Disruption_Shot_List.csv")
@@ -52,4 +51,8 @@ if __name__ == "__main__":
     cols = df.columns[df.notna().any()].drop(['Unnamed: 0','shot','time']).tolist()
 
     df_extend = ts_interpolate(df, cols, df_disrupt)
+
+    fps = 210
+    df_extend['frame_idx'] = df_extend.time.apply(lambda x : int(round(x * fps)))
+
     df_extend.to_csv("./dataset/KSTAR_Disruption_ts_data_extend.csv")

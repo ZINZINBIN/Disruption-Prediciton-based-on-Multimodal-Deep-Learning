@@ -1,8 +1,7 @@
-# Plasma Disruption Predictive model using Plasma Image dataset
+# Disruptive prediction model using KSTAR video and numerical data via Deep Learning
 ## Introduction
-
 <img src="/image/연구_소개_01.PNG"  width="900" height="224">
-<p>Research for tokamak plasma disruption prediction from 2D images via Deep Learning</p>
+<p>Research for predicting tokamak plasma disruption from video and numerical data via Deep Learning</p>
 
 ## How to Run
 ### setting
