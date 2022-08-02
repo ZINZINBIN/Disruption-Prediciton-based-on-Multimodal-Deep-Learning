@@ -11,6 +11,13 @@ conda activate research-env
 python3 {filename.py} # (ex : python3 train_slowfast.py)
 ```
 
+### data processing : producing train - test dataset 
+```
+python3 ./src/generate_data.py # generate disruptive video data and normal video data
+python3 ./src/generate_numerical_data.py # interpolate KSTAR data(channel : KSTAR / EFIT) and generate tabular dataframe
+python3 ./src/preprocessing.py # generate video dataset as converting .avi file to image sequences
+```
+
 ### training
 ```
 python3 train_model.py --batch_size {batch size} --gpu_num {gpu num} --model_name {model name} --use_LDAM {bool : use LDAM loss} --use_mixup {bool : use video mixup algorithm}
@@ -23,12 +30,20 @@ python3 test_model.py --video_file {video file path} --model_name {model name} -
 
 ## Detail
 ### model to use
+- Video Encoder
 1. SITS-BERT 
 2. R2Plus1D
 3. Slowfast
 4. UTAE
 5. R3D
 6. VAT
+7. ViViT
+
+- Tabular Encoder
+1. Transformer
+2. Self-Attention
+3. Conv1D-LSTM
+4. Tabnet
 
 ### technique or algorithm to use
 1. Solving imbalanced classificatio issue
@@ -47,13 +62,13 @@ python3 test_model.py --video_file {video file path} --model_name {model name} -
 
 ### Additional Task
 - Multi-GPU distributed Learning : done
-- Database contruction : Tabular dataset(IKSTAR) + Video dataset, not yet
-- ML Pipeline : not yet
+- Database contruction : Tabular dataset(IKSTAR) + Video dataset, done
+- ML Pipeline : Tensorboard
 
 ### Dataset
-1. Disruption : disrupted after tfQ-end reached
-2. Borderline : inter-plane region 
-3. Normal : not disrupted 
+1. Disruption : disruptive state at t = tfQ-end (thermal quench occurs)
+2. Borderline : inter-plane region(not used)
+3. Normal : non-disruptive state
 
 ### Code Structure
 ```
