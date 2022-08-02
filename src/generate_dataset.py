@@ -1,4 +1,4 @@
-'''Generate video / numerical data pair code
+'''Generate video data code
 - raw_video_path : path for video data 
 - video_shot_list_path : path for shot list corresponding to video with thermal quench time
 - ts_data_path : path for shot list with numerical dataset(=plasma parameter)
@@ -20,8 +20,8 @@ parser = argparse.ArgumentParser(description="generate dataset from raw video + 
 
 # video setting : fps, duration, distance and gap
 parser.add_argument("--fps", type = int, default = 210)
-parser.add_argument("--duration", type = float, default = 0.2) # duration * fps(=210) = seq_len(or frame length)
-parser.add_argument("--distance", type = int, default = 21) # prediction length
+parser.add_argument("--duration", type = int, default = 21) # duration * fps(=210) = seq_len(or frame length)
+parser.add_argument("--distance", type = int, default = 0) # prediction length
 parser.add_argument("--gap", type = int, default = 0)
 
 # path for data + shot list
@@ -51,7 +51,7 @@ def select_shot_list(
     ):
 
     video_shot_list = video_data.shot.values
-    ts_shot_list = ts_data.shot.values
+    ts_shot_list = np.unique(ts_data.shot.values)
 
     shot_list = []
 
@@ -62,34 +62,13 @@ def select_shot_list(
             pass
     return shot_list
 
-def frame_calculator(time, fps=210, gab=0):
+def frame_calculator(time, fps=210, gap=0):
     frame_time = 1./fps
     frame_num = time/frame_time
-    frame_num = frame_num + gab
+    frame_num = frame_num + gap
     return round(frame_num)
 
-def make_dataset(
-    shot_num : int, 
-    fps : int, 
-    gap : int, 
-    duration : int, # duration frame
-    distance : int, # distance frame
-    raw_videos_path : str, 
-    save_path : str,
-    video_data : pd.DataFrame, # video shot list with thermal quench time
-    ts_data : pd.DataFrame # ts shot list with numerical data
-    ):
-
-    video_df = video_data[video_data.shot == shot_num]
-    ts_df = ts_data[ts_data.shot == shot_num]
-
-    # thermal quench를 기준으로 disruption 시점을 정의
-    tTQend_frame = video_df['tTQend'].apply(frame_calculator, gap = gap)
-    dis_frame = tTQend_frame - distance
-
-    # dis_frame에 정수배로 duration 간격에 따라 데이터셋을 구축하기 위해 start_frame을 조정
-    start_frame = dis_frame % duration
-
+def check_directory(save_path : str):
     # save path 
     save_path = save_path + "dur{}_dis{}/".format(duration, distance)
     if os.path.isdir(save_path) == False :
@@ -102,6 +81,31 @@ def make_dataset(
         os.mkdir(dis_path)
     if os.path.isdir(nom_path) == False :
         os.mkdir(nom_path)
+
+
+def make_dataset(
+    shot_num : int, 
+    fps : int, 
+    gap : int, 
+    duration : int, # duration frame
+    distance : int, # distance frame
+    raw_videos_path : str, 
+    save_path : str,
+    video_data : pd.DataFrame, # video shot list with thermal quench time
+    ):
+
+    video_df = video_data[video_data.shot == shot_num]
+
+    # thermal quench를 기준으로 disruption 시점을 정의
+    tTQend_frame = video_df['tTQend'].apply(frame_calculator, gap = gap).values.item()
+    dis_frame = tTQend_frame - distance
+
+    # dis_frame에 정수배로 duration 간격에 따라 데이터셋을 구축하기 위해 start_frame을 조정
+    start_frame = dis_frame % duration
+
+    save_path = save_path + "dur{}_dis{}/".format(duration, distance)
+    dis_path = save_path + "disruption/"
+    nom_path = save_path + "normal/"
 
     video_shot = "%06dtv01.avi"%shot_num
     video_path = raw_videos_path + video_shot
@@ -127,8 +131,6 @@ def make_dataset(
         disruption_bool = False
         save_start = True
 
-        print("(info) shot_num : {} - tTQend_frame : {} / duration : {} / distance : {}".format(shot_num, dis_frame, duration, duration,distance))
-
         while cap.isOpened():
             ret, frame = cap.read()
             if not ret:
@@ -142,17 +144,17 @@ def make_dataset(
                 # disruption phase
                 if frame_num + duration == dis_frame: 
                     out.release()
-                    save_video = "{}_{}~{}.".format(shot_num,frame_num, frame_num+duration) + exe
+                    save_video = "{}_{}_{}.".format(shot_num,frame_num, frame_num+duration) + exe
                     out = cv2.VideoWriter(dis_path+save_video, fourcc, fps, (w, h))
                     disruption_bool= True
 
                 # normal phase
-                elif (frame_num - start_frame)%duration == 0 : 
+                elif (frame_num - start_frame)%duration == 0 and frame_num != start_frame: 
                     if disruption_bool :
                         break
                     else:
                         out.release()
-                        save_video = "{}_{}~{}.".format(shot_num, frame_num, frame_num+duration) +exe
+                        save_video = "{}_{}_{}.".format(shot_num, frame_num, frame_num+duration) +exe
                         out = cv2.VideoWriter(nom_path+save_video, fourcc, fps, (w, h))
                     
                 if is_flip:
@@ -182,6 +184,12 @@ if __name__ == "__main__":
     # choose data columns (time series data)
     ts_cols = ts_shot_df.columns[ts_shot_df.notna().any()].drop(['Unnamed: 0','shot','time']).tolist()
 
+    # check directory
+    check_directory(save_path)
+
+    # select shot list
+    shot_list = select_shot_list(video_shot_df, ts_shot_df)
+
     # multi-processing for video - numerical dataset preparation
     n_procs = cpu_count()
 
@@ -195,11 +203,8 @@ if __name__ == "__main__":
         distance = distance, 
         raw_videos_path = raw_video_path, 
         save_path = save_path,
-        video_df = video_shot_df,
-        ts_df = ts_shot_df
+        video_data = video_shot_df,
     )
-
-    shot_list = select_shot_list(video_shot_df, ts_shot_df)
 
     with tqdm(total=len(shot_list)) as pbar:
         for _ in tqdm(pool.imap_unordered(make_data_per_proc, shot_list)):
