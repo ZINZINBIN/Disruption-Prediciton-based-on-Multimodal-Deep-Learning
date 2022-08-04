@@ -1,8 +1,7 @@
 import numpy as np
 import torch
+from torch.utils.data import DataLoader
 from typing import Optional
-import torch
-import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, classification_report, f1_score
@@ -13,25 +12,20 @@ def MAE(pred, true):
 def MSE(pred, true):
     return np.mean((pred - true)**2)
 
-def Corr(pred, true):
-    sig_p = np.std(pred, axis = 0)
-    sig_g = np.std(true, axis = 0)
-    m_p = pred.mean(0)
-    m_g = true.mean(0)
-    int = (sig_g != 0)
-
-
 def evaluate(
-    test_loader : torch.utils.data.DataLoader, 
+    test_loader : DataLoader, 
     model : torch.nn.Module,
     optimizer : Optional[torch.optim.Optimizer],
-    loss_fn = None,
+    loss_fn : Optional[torch.nn.Module]= None,
     device : Optional[str] = "cpu",
-    save_dir : Optional[str] = None,
-    threshold : float = 0.5
-):
+    save_conf : Optional[str] = "./results/confusion_matrix.png",
+    save_txt : Optional[str] = None,
+    threshold : float = 0.5,
+    ):
+
     test_loss = 0
     test_acc = 0
+    test_f1 = 0
     total_pred = np.array([])
     total_label = np.array([])
 
@@ -60,29 +54,34 @@ def evaluate(
 
     test_loss /= (idx + 1)
     test_acc /= (idx + 1)
-    
     test_f1 = f1_score(total_label, total_pred, average = "macro")
-    conf_mat = confusion_matrix(total_label,  total_pred)
+    
+    conf_mat = confusion_matrix(total_label, total_pred)
+
+    if save_conf is None:
+        save_conf = "./results/confusion_matrix.png"
 
     plt.figure()
-    sns.heatmap(
-        conf_mat / np.sum(conf_mat, axis = 1),
+    s = sns.heatmap(
+        conf_mat, # conf_mat / np.sum(conf_mat),
         annot = True,
-        fmt = '.2f',
+        fmt ='04d' ,# fmt = '.2f',
         cmap = 'Blues',
-        xticklabels=["normal","disruption"],
-        yticklabels=["normal","disruption"]
+        xticklabels=["disruption","normal"],
+        yticklabels=["disruption","normal"],
     )
 
-    plt.savefig("./results/confusion_matrix.png")
+    s.set_xlabel("Prediction")
+    s.set_ylabel("Actual")
+
+    plt.savefig(save_conf)
 
     print("############### Classification Report ####################")
     print(classification_report(total_label, total_pred, labels = [0,1]))
     print("\n# test acc : {:.2f}, test f1 : {:.2f}, test loss : {:.3f}".format(test_acc, test_f1, test_loss))
-    print(conf_mat)
 
-    if save_dir:
-        with open(save_dir, 'w') as f:
+    if save_txt:
+        with open(save_txt, 'w') as f:
             f.write(classification_report(total_label, total_pred, labels = [0,1]))
             summary = "\n# test score : {:.2f}, test loss : {:.3f}, test f1 : {:.3f}".format(test_acc, test_loss, test_f1)
             f.write(summary)

@@ -113,9 +113,6 @@ class CustomDataset(Dataset):
         
         # Convert the list of label names into an array of label indices
         self.labels = np.array([self.label2index[label] for label in self.labels], dtype=int)
-        print("label : ", len(self.labels))
-        print("video_path : ", len(self.video_file_path))
-        print("indices : ", len(self.indices))
 
     def load_frames(self, file_dir : str):
         frames = sorted([os.path.join(file_dir, img) for img in os.listdir(file_dir)])
@@ -293,9 +290,17 @@ class CustomDataset(Dataset):
         classes = np.unique(self.labels)
         self.num_per_cls_dict = dict()
 
-        for cls_idx in range(self.n_classes):
-            num = np.sum(np.where(self.labels == classes[cls_idx], 1, 0))
-            self.num_per_cls_dict[cls_idx] = num
+        for cls in classes:
+            num = np.sum(np.where(self.labels == cls, 1, 0))
+            self.num_per_cls_dict[cls] = num
+         
+    def get_num_per_cls(self):
+        classes = np.unique(self.labels)
+        self.num_per_cls_dict = dict()
+
+        for cls in classes:
+            num = np.sum(np.where(self.labels == cls, 1, 0))
+            self.num_per_cls_dict[cls] = num
          
     def get_cls_num_list(self):
         cls_num_list = []

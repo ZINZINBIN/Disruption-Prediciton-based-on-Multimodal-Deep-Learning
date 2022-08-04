@@ -9,7 +9,8 @@ import torchvision.transforms as T
 from torchvision.transforms._transforms_video import CenterCropVideo, NormalizeVideo
 
 def preprocessing_video(file_path : str, width : int = 256, height: int = 256, overwrite : bool = True, save_path : Optional[str] = None):
-    '''preprocessing_video : load video data by cv2 to save as resized image file(.jpg)
+    '''
+    preprocessing_video : load video data by cv2 to save as resized image file(.jpg)
     - file_path : directory for video file
     - width, height : resized image file width, height
     - overwrite : if true, save file as image(.jpg) from save_dir
@@ -326,3 +327,31 @@ def plot_learning_curve(train_loss, valid_loss, train_f1, valid_f1, figsize : Tu
     plt.title("train and valid f1 score curve")
     plt.legend()
     plt.savefig(save_dir)
+
+def show_data_composition(root_dir : str):
+    path_disrupt = os.path.join(root_dir, 'disruption')
+    path_normal = os.path.join(root_dir, 'normal')
+
+    if os.path.exists(os.path.join(root_dir, 'borderline')):
+        path_borderline = os.path.join(root_dir, 'borderline')
+    else:
+        path_borderline = None
+
+    print("########### Total Dataset Composition ########### ")
+    print("disruption : ", len(os.listdir(path_disrupt)))
+    print("normal : ", len(os.listdir(path_normal)))
+
+    if path_borderline is not None:
+        print("borderline : ", len(os.listdir(path_borderline)))
+
+    print("\n########### Train Dataset Composition ########### ")
+    print("disruption : ", len(os.listdir(os.path.join(root_dir, 'train', 'disruption'))))
+    print("normal : ", len(os.listdir(os.path.join(root_dir, 'train','normal'))))
+
+    print("\n########### Valid Dataset Composition ########### ")
+    print("disruption : ", len(os.listdir(os.path.join(root_dir, 'valid', 'disruption'))))
+    print("normal : ", len(os.listdir(os.path.join(root_dir, 'valid','normal'))))
+
+    print("\n########### Test Dataset Composition ########### ")
+    print("disruption : ", len(os.listdir(os.path.join(root_dir, 'test', 'disruption'))))
+    print("normal : ", len(os.listdir(os.path.join(root_dir, 'test','normal'))))

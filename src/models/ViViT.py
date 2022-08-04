@@ -87,7 +87,6 @@ class Attention(nn.Module):
 
         return out
 
-    
 class Transformer(nn.Module):
     def __init__(self, dim : int, depth : int, n_heads : int, d_head : int, mlp_dim : int, dropout : float = 0.0):
         super(Transformer, self).__init__()

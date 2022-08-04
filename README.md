@@ -13,8 +13,8 @@ python3 {filename.py} # (ex : python3 train_slowfast.py)
 
 ### data processing : producing train - test dataset 
 ```
-python3 ./src/generate_data.py # generate disruptive video data and normal video data
-python3 ./src/generate_numerical_data.py # interpolate KSTAR data(channel : KSTAR / EFIT) and generate tabular dataframe
+python3 ./src/generate_video_data.py # generate disruptive video data and normal video data
+python3 ./src/generate_numerical_data.py # interpolate KSTAR data and convert as tabular dataframe
 python3 ./src/preprocessing.py # generate video dataset as converting .avi file to image sequences
 ```
 
@@ -36,8 +36,7 @@ python3 test_model.py --video_file {video file path} --model_name {model name} -
 3. Slowfast
 4. UTAE
 5. R3D
-6. VAT
-7. ViViT
+6. ViViT
 
 - Tabular Encoder
 1. Transformer
