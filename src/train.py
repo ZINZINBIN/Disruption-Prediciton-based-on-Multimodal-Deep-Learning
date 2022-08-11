@@ -1,5 +1,5 @@
 from typing import Optional, List, Literal, Union
-from src.loss import LDAMLoss, FocalLossLDAM
+from src.loss import LDAMLoss, FocalLoss
 import torch
 import numpy as np
 from tqdm.auto import tqdm
@@ -108,7 +108,7 @@ def train(
     model : torch.nn.Module,
     optimizer : torch.optim.Optimizer,
     scheduler : Optional[torch.optim.lr_scheduler._LRScheduler],
-    loss_fn : Union[torch.nn.CrossEntropyLoss, LDAMLoss, FocalLossLDAM],
+    loss_fn : Union[torch.nn.CrossEntropyLoss, LDAMLoss, FocalLoss],
     device : str = "cpu",
     num_epoch : int = 64,
     verbose : Optional[int] = 8,
@@ -203,7 +203,7 @@ def train_LDAM_process(
     valid_loader : DataLoader,
     model : torch.nn.Module,
     optimizer : torch.optim.Optimizer,
-    loss_fn : Union[LDAMLoss, FocalLossLDAM],
+    loss_fn : Union[LDAMLoss, FocalLoss],
     device : str = "cpu",
     num_epoch : int = 64,
     verbose : int = 1,
@@ -231,7 +231,7 @@ def train_LDAM_process(
     best_loss = torch.inf
 
     # class per weight update
-    def _update_per_cls_weights(betas : List, cls_num_list : List)->torch.Tensor:
+    def _update_per_cls_weights(epoch : int, betas : List, cls_num_list : List)->torch.Tensor:
         idx = epoch // int(num_epoch / len(betas))
         beta = betas[idx]
         effective_num = 1.0 - np.power(beta, cls_num_list)
@@ -242,7 +242,7 @@ def train_LDAM_process(
     
     for epoch in tqdm(range(num_epoch), desc = "training process - LDAMLoss"):
 
-        per_cls_weights = _update_per_cls_weights(betas, cls_num_list)
+        per_cls_weights = _update_per_cls_weights(epoch, betas, cls_num_list)
 
         # FocalLoss / LDAMLoss update weight
         if loss_fn.model_type == 'Focal':

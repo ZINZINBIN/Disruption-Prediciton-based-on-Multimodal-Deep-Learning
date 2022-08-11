@@ -112,10 +112,16 @@ def show_frame(frame):
     plt.show()
 
 def crop(buffer, original_height, original_width, crop_size):
-    height_index = np.random.randint(original_height - crop_size)
-    width_index = np.random.randint(original_width - crop_size)
 
-    buffer = buffer[:, height_index:height_index + crop_size, width_index:width_index + crop_size, :]
+    mid_x, mid_y = original_height // 2, original_width // 2
+    offset_x, offset_y = crop_size // 2, crop_size // 2
+
+    # height_index = np.random.randint(original_height - crop_size)
+    # width_index = np.random.randint(original_width - crop_size)
+    # buffer = buffer[:, height_index:height_index + crop_size, width_index:width_index + crop_size, :]
+
+    buffer = buffer[:, mid_x - offset_x:mid_x+offset_x, mid_y - offset_y: mid_y+ offset_y, :]
+
     return buffer
 
 def normalize(buffer:np.ndarray):
@@ -257,7 +263,6 @@ def generate_prob_curve(
                     # torch.sigmoid(output)[:,0].cpu().detach().numpy().tolist()
                 )
 
-
     if shot_list_dir and shot_number:
         shot_list = pd.read_csv(shot_list_dir)
         shot_info = shot_list[shot_list["shot"] == shot_number]
@@ -344,14 +349,14 @@ def show_data_composition(root_dir : str):
     if path_borderline is not None:
         print("borderline : ", len(os.listdir(path_borderline)))
 
-    print("\n########### Train Dataset Composition ########### ")
+    print("########### Train Dataset Composition ########### ")
     print("disruption : ", len(os.listdir(os.path.join(root_dir, 'train', 'disruption'))))
     print("normal : ", len(os.listdir(os.path.join(root_dir, 'train','normal'))))
 
-    print("\n########### Valid Dataset Composition ########### ")
+    print("########### Valid Dataset Composition ########### ")
     print("disruption : ", len(os.listdir(os.path.join(root_dir, 'valid', 'disruption'))))
     print("normal : ", len(os.listdir(os.path.join(root_dir, 'valid','normal'))))
 
-    print("\n########### Test Dataset Composition ########### ")
+    print("########### Test Dataset Composition ########### ")
     print("disruption : ", len(os.listdir(os.path.join(root_dir, 'test', 'disruption'))))
     print("normal : ", len(os.listdir(os.path.join(root_dir, 'test','normal'))))

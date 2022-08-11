@@ -1,4 +1,5 @@
 import cv2
+import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -9,19 +10,24 @@ def img2video(dir : str, fps : int = 210, t_start : int = 0, t_end : int = -1):
     return None
 
 def show_all_frame(
-    dir : str, 
-    shot_list_dir : Optional[str] = None,
+    root_dir : Optional[str] = "./dataset/raw_videos/raw_videos/",
+    shot_list_dir : Optional[str] = "./dataset/KSTAR_Disruption_Shot_List.csv",
     shot_number : Optional[int] = None,
     fps : int = 210, 
     t_start : Optional[float] = 0, 
     t_end : Optional[float] = None, 
     t_interval : Optional[float] = 3,
-    crop_size : int = 112,
-    resize_width : int = 171,
-    resize_height : int = 128
+    crop_size : int = 224,
+    resize_width : int = 256,
+    resize_height : int = 256,
     ):
 
-    capture = cv2.VideoCapture(dir)
+    video_dir = os.path.join(root_dir, "%06dtv01.avi"%shot_number)
+
+    if not os.path.exists(video_dir):
+        video_dir = os.path.join(root_dir, "%06dtv02.avi"%shot_number)
+
+    capture = cv2.VideoCapture(video_dir)
     frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
     frame_width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
     frame_height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -61,16 +67,18 @@ def show_all_frame(
         t_start = 0
 
     if t_end is None:
-        t_end = len(buffer) / fps
+        if t_disrupt is not None:
+            t_end = t_disrupt + t_interval * 4
+        else:
+            t_end = len(buffer) / fps
+
+    if t_interval is None:
+        t_interval = 1.0 / fps
 
     assert t_start < t_end, "t_start should be less than t_end"
-    assert t_end < len(buffer) / fps + 1, "t_end is out of range"
     assert t_interval < t_end - t_start, "t_interval should be less than t_end - t_start"
 
-    if t_disrupt is not None:
-        t_end = t_disrupt + t_interval
- 
-    show_indices = range(int(t_start * fps), int(t_end * fps), int(t_interval * fps))
+    show_indices = range(round(t_start * fps), round(t_end * fps), round(t_interval * fps))
 
     # plot the image with (4 X N) array
     fig_width = 18
@@ -86,13 +94,18 @@ def show_all_frame(
     axes=[]
     fig = plt.figure(figsize = (fig_width, fig_height))
 
+    is_disrupt = False
+
     for idx in range(len(show_indices)):
-        frame_idx = show_indices[idx]
+        frame_idx = int(show_indices[idx])
         frame = buffer[frame_idx, :, :, :]
         t = frame_idx / fps
         axes.append(fig.add_subplot(fig_rows, fig_cols, idx+1))
 
-        if t_disrupt is not None and t >= t_disrupt:
+        if t_disrupt is not None and t >= t_disrupt and not is_disrupt:
+            subplot_title = "frame at t : " + str(round(t,3)) + "(s), thermal quench occurs"
+            is_disrupt = True
+        elif t >= t_disrupt and is_disrupt:
             subplot_title = "frame at t : " + str(round(t,3)) + "(s), disrupted"
         else:
             subplot_title = "frame at t : " + str(round(t,3)) + "(s)"
@@ -102,5 +115,7 @@ def show_all_frame(
 
     fig.tight_layout()    
     plt.show()
-    
-    return None
+
+    del buffer
+    del capture
+    del shot_info

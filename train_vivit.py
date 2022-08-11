@@ -8,7 +8,7 @@ from src.utils.utility import show_data_composition
 from torch.utils.data import DataLoader
 from src.train import train, train_LDAM_process
 from src.evaluate import evaluate
-from src.loss import LDAMLoss, FocalLossLDAM
+from src.loss import LDAMLoss, FocalLoss
 
 parser = argparse.ArgumentParser(description="training ViViT for disruption classifier")
 parser.add_argument("--batch_size", type = int, default = 64)
@@ -108,7 +108,6 @@ if __name__ == "__main__":
     )
 
     model.to(device)
-
     model.summary(device, show_input = True, show_hierarchical=False, print_summary=True, show_parent_layers=False)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr = lr, weight_decay=gamma)
@@ -123,7 +122,7 @@ if __name__ == "__main__":
         per_cls_weights = torch.FloatTensor(per_cls_weights)
 
         focal_gamma = 2.0
-        loss_fn = FocalLossLDAM(weight = per_cls_weights, gamma = focal_gamma)
+        loss_fn = FocalLoss(weight = per_cls_weights, gamma = focal_gamma)
 
     else: 
         loss_fn = torch.nn.CrossEntropyLoss(reduction = "sum")

@@ -4,14 +4,14 @@ import seaborn as sns
 import argparse
 import os
 import matplotlib.pyplot as plt
-from src.dataloader import VideoDataset
+from src.CustomDataset import CustomDataset
 from torch.utils.data import DataLoader
 from src.models.model import SBERTDisruptionClassifier, SITSBertSpatialEncoder
 from src.utils.sampler import ImbalancedDatasetSampler
 from src.models.transformer import SBERT
 from src.train import train_
 from src.evaluate import evaluate
-from src.loss import FocalLoss, FocalLossLDAM, LDAMLoss
+from src.loss import FocalLoss, FocalLoss, LDAMLoss
 
 # argument parser
 def parsing():
@@ -238,7 +238,7 @@ if __name__ == "__main__":
     elif args['loss_type'] == 'LDAM':
         loss_fn = LDAMLoss(cls_num_list, max_m = 0.5, s = 30, weight = per_cls_weights)
     elif args['loss_type'] == 'Focal':
-        loss_fn = FocalLossLDAM(per_cls_weights, gamma = 1.0)
+        loss_fn = FocalLoss(per_cls_weights, gamma = 1.0)
     else:
         loss_fn = torch.nn.CrossEntropyLoss(reduction = "mean")
 

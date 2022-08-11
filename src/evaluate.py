@@ -35,6 +35,8 @@ def evaluate(
     model.to(device)
     model.eval()
 
+    total_size = 0
+
     for idx, (data, target) in enumerate(test_loader):
         with torch.no_grad():
             optimizer.zero_grad()
@@ -47,13 +49,15 @@ def evaluate(
             test_loss += loss.item()
             pred = torch.nn.functional.softmax(output, dim = 1).max(1, keepdim = True)[1]
             pred = (pred > torch.FloatTensor([threshold]).to(device))
-            test_acc += pred.eq(target.view_as(pred)).sum().item() / data.size(0) 
+            test_acc += pred.eq(target.view_as(pred)).sum().item()
 
+            total_size += data.size(0)
+            
             total_pred = np.concatenate((total_pred, pred.cpu().numpy().reshape(-1,)))
             total_label = np.concatenate((total_label, target.cpu().numpy().reshape(-1,)))
 
     test_loss /= (idx + 1)
-    test_acc /= (idx + 1)
+    test_acc /= total_size
     test_f1 = f1_score(total_label, total_pred, average = "macro")
     
     conf_mat = confusion_matrix(total_label, total_pred)
