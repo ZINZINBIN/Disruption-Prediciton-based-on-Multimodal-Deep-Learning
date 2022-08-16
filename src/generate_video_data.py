@@ -22,11 +22,11 @@ parser = argparse.ArgumentParser(description="generate dataset from raw video + 
 parser.add_argument("--fps", type = int, default = 210)
 parser.add_argument("--duration", type = int, default = 21) # duration * fps(=210) = seq_len(or frame length)
 parser.add_argument("--distance", type = int, default = 0) # prediction length
-parser.add_argument("--gap", type = int, default = 0)
+parser.add_argument("--gap", type = int, default = int(0.1 * 207))
 
 # path for data + shot list
 parser.add_argument("--raw_video_path", type = str, default = "./dataset/raw_videos/raw_videos/")
-parser.add_argument("--video_shot_list_path", type = str, default = "./dataset/KSTAR_Disruption_Shot_List.csv")
+parser.add_argument("--video_shot_list_path", type = str, default = "./dataset/KSTAR_Disruption_Shot_List_extend.csv")
 parser.add_argument("--ts_data_path", type = str, default = "./dataset/KSTAR_Disruption_ts_data_extend.csv")
 
 # path for saving result(=dataset)
@@ -82,7 +82,6 @@ def check_directory(save_path : str):
     if os.path.isdir(nom_path) == False :
         os.mkdir(nom_path)
 
-
 def make_dataset(
     shot_num : int, 
     fps : int, 
@@ -97,8 +96,14 @@ def make_dataset(
     video_df = video_data[video_data.shot == shot_num]
 
     # thermal quench를 기준으로 disruption 시점을 정의
-    tTQend_frame = video_df['tTQend'].apply(frame_calculator, gap = gap).values.item()
-    dis_frame = tTQend_frame - distance
+    tftsrt = video_df['tftsrt'].apply(frame_calculator, fps = fps, gap = gap).values.item()
+
+    # tTQend_frame = video_df['tTQend'].apply(frame_calculator, fps = fps, gap = gap).values.item()
+    # dis_frame = tTQend_frame - distance
+    tipminf_frame = video_df['frame_tipminf'].values.item()
+    cutoff_frame = video_df['frame_cutoff'].values.item()
+
+    dis_frame = tipminf_frame - distance
 
     # dis_frame에 정수배로 duration 간격에 따라 데이터셋을 구축하기 위해 start_frame을 조정
     start_frame = dis_frame % duration
@@ -127,7 +132,7 @@ def make_dataset(
         
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
 
-        frame_num = start_frame
+        frame_num = 0
         disruption_bool = False
         save_start = True
 
@@ -135,12 +140,15 @@ def make_dataset(
             ret, frame = cap.read()
             if not ret:
                 break
+
+            if frame_num < tftsrt:
+                pass
             else:
-                if save_start :
+                if save_start:
                     save_video = "{}_{}_{}.".format(shot_num, frame_num, frame_num+duration) + exe
                     out = cv2.VideoWriter(nom_path+save_video, fourcc, fps, (w, h))
                     save_start = False
-
+                
                 # disruption phase
                 if frame_num + duration == dis_frame: 
                     out.release()
@@ -159,7 +167,9 @@ def make_dataset(
                     
                 if is_flip:
                     frame = cv2.flip(frame, 1)
+
                 out.write(frame)
+                
             frame_num+=1
 
         try :
@@ -174,8 +184,9 @@ if __name__ == "__main__":
     # video shot list
     video_shot_df = pd.read_csv(video_shot_list_path, encoding = "euc-kr")
 
-    N_index = video_shot_df['Isdata'][video_shot_df['Isdata'] == 'N'].index
-    video_shot_df = video_shot_df.drop(N_index)
+    # N_index = video_shot_df['Isdata'][video_shot_df['Isdata'] == 'N'].index
+    # video_shot_df = video_shot_df.drop(N_index)
+
     video_shot_df.reset_index(drop = True, inplace = True)
 
     # shot info list

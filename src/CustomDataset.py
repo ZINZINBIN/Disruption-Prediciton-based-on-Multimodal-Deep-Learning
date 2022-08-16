@@ -261,7 +261,7 @@ class CustomDataset(Dataset):
     def to_tensor(self, buffer:Union[np.ndarray, torch.Tensor]):
         return buffer.transpose((3, 0, 1, 2))
 
-    def crop(self, buffer : Union[np.ndarray, torch.Tensor], clip_len : int, crop_size : int):
+    def crop(self, buffer : Union[np.ndarray, torch.Tensor], clip_len : int, crop_size : int, is_random : bool = False):
         # randomly select time index for temporal jittering
         if buffer.shape[0] < clip_len :
             time_index = np.random.randint(abs(buffer.shape[0] - clip_len))
@@ -271,16 +271,23 @@ class CustomDataset(Dataset):
             # print("buffer.shape[0] : ", buffer.shape[0])
             time_index = np.random.randint(buffer.shape[0] - clip_len)
 
-        # Randomly select start indices in order to crop the video
-        height_index = np.random.randint(buffer.shape[1] - crop_size)
-        width_index = np.random.randint(buffer.shape[2] - crop_size)
+        if not is_random:
+            original_height = self.resize_height
+            original_width = self.resize_width
+            mid_x, mid_y = original_height // 2, original_width // 2
+            offset_x, offset_y = crop_size // 2, crop_size // 2
+            buffer = buffer[time_index : time_index + clip_len, mid_x - offset_x:mid_x+offset_x, mid_y - offset_y: mid_y+ offset_y, :]
+        else:
+            # Randomly select start indices in order to crop the video
+            height_index = np.random.randint(buffer.shape[1] - crop_size)
+            width_index = np.random.randint(buffer.shape[2] - crop_size)
 
-        # Crop and jitter the video using indexing. The spatial crop is performed on
-        # the entire array, so each frame is cropped in the same location. The temporal
-        # jitter takes place via the selection of consecutive frames
-        buffer = buffer[time_index:time_index + clip_len,
-                 height_index:height_index + crop_size,
-                 width_index:width_index + crop_size, :]
+            # Crop and jitter the video using indexing. The spatial crop is performed on
+            # the entire array, so each frame is cropped in the same location. The temporal
+            # jitter takes place via the selection of consecutive frames
+            buffer = buffer[time_index:time_index + clip_len,
+                    height_index:height_index + crop_size,
+                    width_index:width_index + crop_size, :]
 
         return buffer
 

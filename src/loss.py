@@ -19,7 +19,7 @@ class FocalLoss(nn.Module):
     def update_weight(self, weight : Optional[torch.Tensor] = None):
         self.weight = weight
 
-    def compute_focal_loss(inputs:torch.Tensor, gamma:float, alpha : torch.Tensor):
+    def compute_focal_loss(self, inputs:torch.Tensor, gamma:float, alpha : torch.Tensor):
         p = torch.exp(-inputs)
         loss = alpha * (1-p) ** gamma * inputs
         return loss.sum()

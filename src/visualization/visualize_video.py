@@ -40,8 +40,10 @@ def show_all_frame(
         shot_list = pd.read_csv(shot_list_dir)
         shot_info = shot_list[shot_list["shot"] == shot_number]
         t_disrupt = shot_info["tTQend"].values[0]
+        tifminf = shot_info["tipminf"].values[0]
     else:
         t_disrupt = None
+        tifminf = None
 
     # build buffer with (frame_count, resize_width, resize_height, c)
     buffer = np.empty((frame_count, resize_height, resize_width, channels), np.dtype('float32'))
@@ -78,7 +80,15 @@ def show_all_frame(
     assert t_start < t_end, "t_start should be less than t_end"
     assert t_interval < t_end - t_start, "t_interval should be less than t_end - t_start"
 
-    show_indices = range(round(t_start * fps), round(t_end * fps), round(t_interval * fps))
+    # t : -100ms modification
+    # add 0.1 to t_start and t_end
+    # fps : 210 (origin) but occurs some delay when the frame count is large
+    if frame_count > (4 + 0.1) * 210:
+        fps_r = 207
+    else:
+        fps_r = fps
+
+    show_indices = range(round((t_start + 0.1) * fps_r), round((t_end + 0.1) * fps_r), round(t_interval * fps_r))
 
     # plot the image with (4 X N) array
     fig_width = 18
@@ -94,19 +104,29 @@ def show_all_frame(
     axes=[]
     fig = plt.figure(figsize = (fig_width, fig_height))
 
-    is_disrupt = False
+    is_tq = False
+    is_cq = False
 
     for idx in range(len(show_indices)):
         frame_idx = int(show_indices[idx])
         frame = buffer[frame_idx, :, :, :]
-        t = frame_idx / fps
+        t = frame_idx / fps_r - 0.1
         axes.append(fig.add_subplot(fig_rows, fig_cols, idx+1))
 
-        if t_disrupt is not None and t >= t_disrupt and not is_disrupt:
+        if t_disrupt is not None and t >= t_disrupt and not is_tq:
             subplot_title = "frame at t : " + str(round(t,3)) + "(s), thermal quench occurs"
-            is_disrupt = True
-        elif t >= t_disrupt and is_disrupt:
+            is_tq = True
+
+        elif t >= t_disrupt and is_cq:
             subplot_title = "frame at t : " + str(round(t,3)) + "(s), disrupted"
+
+        elif tifminf is not None and t >= tifminf and not is_cq:
+            subplot_title = "frame at t : " + str(round(t,3)) + "(s), current quench"
+            is_cq = True
+        
+        elif t>=t_disrupt and t <= tifminf:
+            subplot_title = "frame at t : " + str(round(t,3)) + "(s), disruptive phase"
+
         else:
             subplot_title = "frame at t : " + str(round(t,3)) + "(s)"
 

@@ -23,7 +23,7 @@ parser.add_argument("--num_workers", type = int, default = 8)
 parser.add_argument("--pin_memory", type = bool, default = False)
 
 parser.add_argument("--seq_len", type = int, default = 21)
-parser.add_argument("--use_sampler", type = bool, default = False)
+parser.add_argument("--use_sampler", type = bool, default = True)
 parser.add_argument("--wandb_save_name", type = str, default = "ViViT-exp001")
 parser.add_argument("--num_epoch", type = int, default = 16)
 parser.add_argument("--verbose", type = int, default = 1)
