@@ -148,11 +148,12 @@ if __name__ == "__main__":
     model.load_state_dict(torch.load(save_best_dir))
 
     # evaluation process
-    test_loss, test_acc = evaluate(
+    test_loss, test_acc, test_f1 = evaluate(
         test_loader,
         model,
         optimizer,
         loss_fn,
         device,
-        save_dir = args["save_test_result"]
+        save_conf = save_conf,
+        save_txt = save_txt
     )
