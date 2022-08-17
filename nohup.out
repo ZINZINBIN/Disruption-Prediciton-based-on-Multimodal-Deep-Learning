@@ -1,0 +1,11 @@
+torch device avaliable :  True
+torch current device :  0
+torch device num :  4
+training process:   0%|          | 0/64 [00:00<?, ?it/s]torch device avaliable :  True
+torch current device :  0
+torch device num :  4
+training process:   0%|          | 0/64 [00:00<?, ?it/s]torch device avaliable :  True
+torch current device :  0
+torch device num :  4
+training process:   0%|          | 0/64 [00:00<?, ?it/s]training process:   2%|▏         | 1/64 [00:45<47:59, 45.70s/it]epoch : 1, train loss : 0.011, valid loss : 0.140, train acc : 0.994, valid acc : 0.986, train f1 : 0.853, valid f1 : 0.496
+training process:   2%|▏         | 1/64 [00:50<53:02, 50.52s/it]epoch : 1, train loss : 0.003, valid loss : 0.077, train acc : 0.994, valid acc : 0.986, train f1 : 0.836, valid f1 : 0.496

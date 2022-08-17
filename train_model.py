@@ -6,16 +6,14 @@ import os
 import matplotlib.pyplot as plt
 from src.CustomDataset import CustomDataset
 from torch.utils.data import DataLoader
-from src.models.model import SBERTDisruptionClassifier, SITSBertSpatialEncoder
 from src.utils.sampler import ImbalancedDatasetSampler
-from src.models.transformer import SBERT
-from src.train import train_
+from src.train import train
 from src.evaluate import evaluate
-from src.loss import FocalLoss, FocalLoss, LDAMLoss
+from src.loss import FocalLoss, LDAMLoss
 
 # argument parser
 def parsing():
-    parser = argparse.ArgumentParser(description="training disruption classifier model")
+    parser = argparse.ArgumentParser(description="training disruption prediction model")
 
     # gpu allocation
     parser.add_argument("--gpu_num", type = int, default = 0)

@@ -4,9 +4,9 @@ import numpy as np
 from torch.utils.data import DataLoader
 from src.CustomDataset import CustomDataset
 from src.models.resnet import Bottleneck3D
-from src.models.slowfast import SlowFastClassifier, SlowFastEncoder, SlowFast
+from src.models.slowfast import SlowFast
 from src.utils.sampler import ImbalancedDatasetSampler
-from src.train import train, train_LDAM_process
+from src.train import train
 from src.evaluate import evaluate
 from src.loss import FocalLoss, LDAMLoss
 from src.utils.utility import show_data_composition, plot_learning_curve
@@ -30,13 +30,13 @@ parser.add_argument("--use_sampler", type = bool, default = True)
 parser.add_argument("--num_epoch", type = int, default = 128)
 parser.add_argument("--verbose", type = int, default = 1)
 
-parser.add_argument("--save_best_dir", type = str, default = "./weights/slowfast_clip_21_dist_0_best.pt")
-parser.add_argument("--save_last_dir", type = str, default = "./weights/slowfast_clip_21_dist_0_last.pt")
-parser.add_argument("--save_result_dir", type = str, default = "./results/train_valid_loss_acc_slowfast_clip_21_dist_0.png")
-parser.add_argument("--save_txt", type = str, default = "./results/test_slowfast_clip_21_dist_0.txt")
-parser.add_argument("--save_conf", type = str, default = "./results/test_slowfast_clip_21_dist_0_confusion_matrix.png")
+parser.add_argument("--save_best_dir", type = str, default = "./weights/slowfast_clip_21_dist_3_best.pt")
+parser.add_argument("--save_last_dir", type = str, default = "./weights/slowfast_clip_21_dist_3_last.pt")
+parser.add_argument("--save_result_dir", type = str, default = "./results/train_valid_loss_acc_slowfast_clip_21_dist_3.png")
+parser.add_argument("--save_txt", type = str, default = "./results/test_slowfast_clip_21_dist_3.txt")
+parser.add_argument("--save_conf", type = str, default = "./results/test_slowfast_clip_21_dist_3_confusion_matrix.png")
 parser.add_argument("--use_focal_loss", type = bool, default = True)
-parser.add_argument("--root_dir", type = str, default = "./dataset/dur21_dis0")
+parser.add_argument("--root_dir", type = str, default = "./dataset/dur21_dis3")
 
 args = vars(parser.parse_args())
 

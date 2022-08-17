@@ -467,7 +467,7 @@ class R2P1DwithSTNClassifier(nn.Module):
 if __name__ == "__main__":
 
     model = R2Plus1DClassifier(
-        input_size = (3, 21, 224, 224),
+        input_size = (3, 21, 128, 128),
         num_classes = 2, 
         layer_sizes = [1,2,2,1], 
         pretrained = False, 
@@ -483,15 +483,15 @@ if __name__ == "__main__":
     model.summary()
 
     model.cpu()
-    del model
+    # del model
 
-    model = R2P1DwithSTNClassifier(
-        input_size = (3, 21, 224, 224),
-        num_classes = 2, 
-        layer_sizes = [1,2,2,1], 
-        pretrained = False, 
-        alpha = 0.01
-    )
+    # model = R2P1DwithSTNClassifier(
+    #     input_size = (3, 21, 128, 128),
+    #     num_classes = 2, 
+    #     layer_sizes = [1,2,2,1], 
+    #     pretrained = False, 
+    #     alpha = 0.01
+    # )
 
-    model.to(device)
-    model.summary()
+    # model.to(device)
+    # model.summary()

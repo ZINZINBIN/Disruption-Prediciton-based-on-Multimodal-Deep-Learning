@@ -7,4 +7,4 @@
    macro avg       0.98      0.98      0.98      1662
 weighted avg       1.00      1.00      1.00      1662
 
-# test score : 1.00, test loss : 0.039, test f1 : 0.979
+# test score : 1.00, test loss : 0.039, test f1 : 0.979, test_auc : 0.979

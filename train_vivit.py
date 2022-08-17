@@ -6,7 +6,7 @@ from src.models.ViViT import ViViT
 from src.utils.sampler import ImbalancedDatasetSampler
 from src.utils.utility import show_data_composition, plot_learning_curve
 from torch.utils.data import DataLoader
-from src.train import train, train_LDAM_process
+from src.train import train
 from src.evaluate import evaluate
 from src.loss import LDAMLoss, FocalLoss
 
@@ -24,16 +24,17 @@ parser.add_argument("--pin_memory", type = bool, default = False)
 
 parser.add_argument("--seq_len", type = int, default = 21)
 parser.add_argument("--use_sampler", type = bool, default = True)
-parser.add_argument("--wandb_save_name", type = str, default = "ViViT-exp001")
 parser.add_argument("--num_epoch", type = int, default = 128)
 parser.add_argument("--verbose", type = int, default = 1)
-parser.add_argument("--save_best_dir", type = str, default = "./weights/ViViT_clip_21_dist_0_best.pt")
-parser.add_argument("--save_last_dir", type = str, default = "./weights/ViViT_clip_21_dist_0_last.pt")
-parser.add_argument("--save_result_dir", type = str, default = "./results/train_valid_loss_acc_ViViT_clip_21_dist_0.png")
-parser.add_argument("--save_txt", type = str, default = "./results/test_ViViT_clip_21_dist_0.txt")
-parser.add_argument("--save_conf", type = str, default = "./results/test_ViViT_clip_21_dist_0_confusion_matrix.png")
+parser.add_argument("--save_best_dir", type = str, default = "./weights/ViViT_clip_21_dist_5_best.pt")
+parser.add_argument("--save_last_dir", type = str, default = "./weights/ViViT_clip_21_dist_5_last.pt")
+parser.add_argument("--save_result_dir", type = str, default = "./results/train_valid_loss_acc_ViViT_clip_21_dist_5.png")
+parser.add_argument("--save_txt", type = str, default = "./results/test_ViViT_clip_21_dist_5.txt")
+parser.add_argument("--save_conf", type = str, default = "./results/test_ViViT_clip_21_dist_5_confusion_matrix.png")
 parser.add_argument("--use_focal_loss", type = bool, default = True)
-parser.add_argument("--root_dir", type = str, default = "./dataset/dur21_dis0")
+parser.add_argument("--use_LDAM_loss", type = bool, default = False)
+parser.add_argument("--use_weight", type = bool, default = False)
+parser.add_argument("--root_dir", type = str, default = "./dataset/dur21_dis5")
 
 args = vars(parser.parse_args())
 
@@ -111,21 +112,29 @@ if __name__ == "__main__":
     model.summary(device, show_input = True, show_hierarchical=False, print_summary=True, show_parent_layers=False)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr = lr, weight_decay=gamma)
-    # scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer,T_0 = 8,T_mult = 2)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size = 4, gamma=gamma)
 
-    if args['use_focal_loss']:
-        train_data.get_num_per_cls()
-        cls_num_list = train_data.get_cls_num_list()
+    train_data.get_num_per_cls()
+    cls_num_list = train_data.get_cls_num_list()
+    
+    if args['use_weight']:
         per_cls_weights = 1.0 / np.array(cls_num_list)
         per_cls_weights = per_cls_weights / np.sum(per_cls_weights)
         per_cls_weights = torch.FloatTensor(per_cls_weights)
-
+    else:
+        per_cls_weights = np.array([1,1])
+        per_cls_weights = torch.FloatTensor(per_cls_weights).to(device)
+    
+    if args['use_focal_loss']:
         focal_gamma = 2.0
         loss_fn = FocalLoss(weight = per_cls_weights, gamma = focal_gamma)
 
+    elif args['use_LDAM_loss']:
+        max_m = 0.5
+        s = 1.0
+        loss_fn = LDAMLoss(cls_num_list, max_m = max_m, weight = per_cls_weights, s = s)
     else: 
-        loss_fn = torch.nn.CrossEntropyLoss(reduction = "sum")
+        loss_fn = torch.nn.CrossEntropyLoss(reduction = "sum", weight = per_cls_weights)
 
     train_loss,  train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train(
         train_loader,
@@ -143,44 +152,7 @@ if __name__ == "__main__":
         criteria = "f1_score",
     )
 
-    plot_learning_curve(train_loss, valid_loss, train_f1, valid_f1, figsize = (12,6), save_dir = "./results/train_valid_loss_f1_curve_ViViT_clip_21_dist_0.png")
-
-    '''
-    # training process
-    if args['use_focal_loss']:
-        train_loss,  train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train_LDAM_process(
-            train_loader,
-            valid_loader,
-            model,
-            optimizer,
-            loss_fn,
-            device,
-            args['num_epoch'],
-            args['verbose'],
-            save_best_dir = save_best_dir,
-            save_last_dir = save_last_dir,
-            max_norm_grad = 1.0,
-            criteria = "f1_score",
-            cls_num_list = cls_num_list,
-            gamma = focal_gamma
-        )
-    else:
-        train_loss,  train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train(
-            train_loader,
-            valid_loader,
-            model,
-            optimizer,
-            scheduler,
-            loss_fn,
-            device,
-            args['num_epoch'],
-            args['verbose'],
-            save_best_dir = save_best_dir,
-            save_last_dir = save_last_dir,
-            max_norm_grad = 1.0,
-            criteria = "f1_score",
-        )
-    '''
+    # plot_learning_curve(train_loss, valid_loss, train_f1, valid_f1, figsize = (12,6), save_dir = "./results/train_valid_loss_f1_curve_ViViT_clip_21_dist_0.png")
     
     model.load_state_dict(torch.load(save_best_dir))
 

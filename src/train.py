@@ -196,11 +196,10 @@ def train(
         best_loss, best_acc, best_f1, best_epoch
     ))
 
-    
-
     return  train_loss_list, train_acc_list, train_f1_list,  valid_loss_list,  valid_acc_list, valid_f1_list
 
-def train_LDAM_process(
+# Deferred Re-weighting with LDAM or Focal Loss
+def train_DRW(
     train_loader : DataLoader,
     valid_loader : DataLoader,
     model : torch.nn.Module,
@@ -214,7 +213,6 @@ def train_LDAM_process(
     max_norm_grad : Optional[float] = None,
     criteria : Literal["f1_score", "acc", "loss"] = "f1_score",
     cls_num_list : Optional[List] = None,
-    gamma : float = 0.5,
     betas : List = [0, 0.25, 0.75, 0.9]
     ):
 
@@ -242,7 +240,7 @@ def train_LDAM_process(
         per_cls_weights = torch.FloatTensor(per_cls_weights).to(device)
         return per_cls_weights      
     
-    for epoch in tqdm(range(num_epoch), desc = "training process - LDAMLoss"):
+    for epoch in tqdm(range(num_epoch), desc = "training process - Deferred Re-weighting"):
 
         per_cls_weights = _update_per_cls_weights(epoch, betas, cls_num_list)
 

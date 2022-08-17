@@ -6,6 +6,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 from typing import Optional, List
+import warnings
+
+warnings.filterwarnings(action="ignore")
 
 # Focal Loss : https://arxiv.org/abs/1708.02002 
 class FocalLoss(nn.Module):

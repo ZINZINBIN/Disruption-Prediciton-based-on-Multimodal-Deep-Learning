@@ -5,6 +5,7 @@ from typing import Optional
 import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, classification_report, f1_score
+from sklearn.metrics import roc_auc_score, roc_curve
 
 def MAE(pred, true):
     return np.mean(np.abs(pred - true))
@@ -59,6 +60,7 @@ def evaluate(
     test_loss /= (idx + 1)
     test_acc /= total_size
     test_f1 = f1_score(total_label, total_pred, average = "macro")
+    test_auc = roc_auc_score(total_label, total_pred, average='macro')
     
     conf_mat = confusion_matrix(total_label, total_pred)
 
@@ -82,12 +84,32 @@ def evaluate(
 
     print("############### Classification Report ####################")
     print(classification_report(total_label, total_pred, labels = [0,1]))
-    print("\n# test acc : {:.2f}, test f1 : {:.2f}, test loss : {:.3f}".format(test_acc, test_f1, test_loss))
+    print("\n# test acc : {:.2f}, test f1 : {:.2f}, test AUC : {:.2f}, test loss : {:.3f}".format(test_acc, test_f1, test_auc, test_loss))
 
     if save_txt:
         with open(save_txt, 'w') as f:
             f.write(classification_report(total_label, total_pred, labels = [0,1]))
-            summary = "\n# test score : {:.2f}, test loss : {:.3f}, test f1 : {:.3f}".format(test_acc, test_loss, test_f1)
+            summary = "\n# test score : {:.2f}, test loss : {:.3f}, test f1 : {:.3f}, test_auc : {:.3f}".format(test_acc, test_loss, test_f1, test_auc)
             f.write(summary)
 
     return test_loss, test_acc, test_f1
+
+def plot_roc_curve(y_true : np.ndarray, y_pred : np.ndarray, save_dir : str, title : Optional[str] = None):
+    auc = roc_auc_score(y_true, y_pred, average='macro')
+    fpr, tpr, threshold = roc_curve(y_true, y_pred)
+
+    lw = 2
+    plt.figure()
+    plt.plot(fpr, tpr, color = "darkorange", lw = lw, label = "ROC curve (area : {:.2f}".format(auc))
+    plt.plot([0, 1], [0, 1], color="navy", lw=lw, linestyle="--")
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel("False Positive Rate")
+    plt.ylabel("True Positive Rate")
+    if title is not None:
+        plt.title(title)
+    else:
+        plt.title("Receiver operating characteristic")
+    plt.legend(loc="lower right")
+    plt.show()
+    plt.savefig(save_dir)
