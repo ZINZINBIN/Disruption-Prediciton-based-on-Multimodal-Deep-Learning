@@ -196,6 +196,8 @@ def train(
         best_loss, best_acc, best_f1, best_epoch
     ))
 
+    
+
     return  train_loss_list, train_acc_list, train_f1_list,  valid_loss_list,  valid_acc_list, valid_f1_list
 
 def train_LDAM_process(

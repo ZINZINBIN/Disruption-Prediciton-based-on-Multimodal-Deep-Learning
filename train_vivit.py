@@ -4,19 +4,19 @@ import numpy as np
 from src.CustomDataset import CustomDataset
 from src.models.ViViT import ViViT
 from src.utils.sampler import ImbalancedDatasetSampler
-from src.utils.utility import show_data_composition
+from src.utils.utility import show_data_composition, plot_learning_curve
 from torch.utils.data import DataLoader
 from src.train import train, train_LDAM_process
 from src.evaluate import evaluate
 from src.loss import LDAMLoss, FocalLoss
 
 parser = argparse.ArgumentParser(description="training ViViT for disruption classifier")
-parser.add_argument("--batch_size", type = int, default = 64)
+parser.add_argument("--batch_size", type = int, default = 32)
 parser.add_argument("--lr", type = float, default = 1e-3)
 parser.add_argument("--gamma", type = float, default = 0.95)
-parser.add_argument("--gpu_num", type = int, default = 0)
+parser.add_argument("--gpu_num", type = int, default = 2)
 
-parser.add_argument("--image_size", type = int, default = 224)
+parser.add_argument("--image_size", type = int, default = 128)
 parser.add_argument("--patch_size", type = int, default = 32)
 
 parser.add_argument("--num_workers", type = int, default = 8)
@@ -25,7 +25,7 @@ parser.add_argument("--pin_memory", type = bool, default = False)
 parser.add_argument("--seq_len", type = int, default = 21)
 parser.add_argument("--use_sampler", type = bool, default = True)
 parser.add_argument("--wandb_save_name", type = str, default = "ViViT-exp001")
-parser.add_argument("--num_epoch", type = int, default = 16)
+parser.add_argument("--num_epoch", type = int, default = 128)
 parser.add_argument("--verbose", type = int, default = 1)
 parser.add_argument("--save_best_dir", type = str, default = "./weights/ViViT_clip_21_dist_0_best.pt")
 parser.add_argument("--save_last_dir", type = str, default = "./weights/ViViT_clip_21_dist_0_last.pt")
@@ -98,7 +98,7 @@ if __name__ == "__main__":
         n_frames = seq_len,
         dim = 64,
         depth = 4,
-        n_heads = 4,
+        n_heads = 8,
         pool = "cls",
         in_channels = 3,
         d_head = 64,
@@ -143,6 +143,7 @@ if __name__ == "__main__":
         criteria = "f1_score",
     )
 
+    plot_learning_curve(train_loss, valid_loss, train_f1, valid_f1, figsize = (12,6), save_dir = "./results/train_valid_loss_f1_curve_ViViT_clip_21_dist_0.png")
 
     '''
     # training process
@@ -181,7 +182,7 @@ if __name__ == "__main__":
         )
     '''
     
-    model.load_state_dict(torch.load(save_last_dir))
+    model.load_state_dict(torch.load(save_best_dir))
 
     # evaluation process
     test_loss, test_acc, test_f1 = evaluate(

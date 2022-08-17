@@ -4,7 +4,7 @@
 # dataset/dur0.1_dis10
 # dataset/raw_videos
 # dataset/dataset.zip
-dataset/
+dataset/*
 
 # ignore weight and zip file
 *.pt

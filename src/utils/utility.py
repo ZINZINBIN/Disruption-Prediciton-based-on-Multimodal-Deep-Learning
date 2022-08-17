@@ -238,14 +238,13 @@ def generate_prob_curve(
                 frames = frames.to(device)
                 output = model(frames)
                 probs = torch.nn.functional.softmax(output, dim = 1)[:,0]
-                # probs = torch.sigmoid(output)[:,0]
+                probs = probs.cpu().detach().numpy().tolist()
 
                 prob_list.extend(
-                    probs.cpu().detach().numpy().tolist()
+                    probs
                 )
                 is_disruption.extend(
                     torch.nn.functional.softmax(output, dim = 1).max(1, keepdim = True)[1].cpu().detach().numpy().tolist()
-                    # torch.sigmoid(output)[:,0].cpu().detach().numpy().tolist()
                 )
 
     else:
@@ -254,14 +253,13 @@ def generate_prob_curve(
             frames = frames.to(device)
             probs = model(frames)
             probs = torch.nn.functional.softmax(probs, dim = 1)[:,0]
-            # probs = torch.sigmoid(output)[:,0]
+            probs = probs.cpu().detach().numpy().tolist()
             prob_list.extend(
-                probs.cpu().detach().numpy().tolist()
+                probs
             )
             is_disruption.extend(
                     torch.nn.functional.softmax(output, dim = 1).max(1, keepdim = True)[1].cpu().detach().numpy().tolist()
-                    # torch.sigmoid(output)[:,0].cpu().detach().numpy().tolist()
-                )
+            )
 
     if shot_list_dir and shot_number:
         shot_list = pd.read_csv(shot_list_dir)
@@ -271,8 +269,8 @@ def generate_prob_curve(
         shot_info = None
 
     if shot_info is not None:
-        t_disrupt = shot_info["tTQend"].values[0]
-        t_current = shot_info["tipminf"].values[0]
+        t_disrupt = shot_info["tTQend"].values[0] + 0.1 # video frame이 -100ms 부터 시작됨, 보정값
+        t_current = shot_info["tipminf"].values[0] + 0.1 
     else:
         t_disrupt = None
         t_current = None
@@ -291,7 +289,7 @@ def generate_prob_curve(
         time_x = np.arange(1, len(prob_list) + 1) * (1/fps) * interval
         threshold_line = [0.5] * len(time_x)
 
-        plt.figure(figsize = (8,5))
+        plt.figure(figsize = (8,5), facecolor = 'white')
         plt.plot(time_x, threshold_line, 'k', label = "threshold(p = 0.5)")
         plt.plot(time_x, prob_list, 'b-', label = "disruption probs")
         # plt.plot(time_x, is_disruption, "r", label = "disruption line(predict)")
@@ -315,7 +313,7 @@ from typing import Tuple
 def plot_learning_curve(train_loss, valid_loss, train_f1, valid_f1, figsize : Tuple[int,int] = (12,6), save_dir : str = "./results/learning_curve.png"):
     x_epochs = range(1, len(train_loss) + 1)
 
-    plt.figure(1, figsize=figsize)
+    plt.figure(1, figsize=figsize, facecolor = 'white')
     plt.subplot(1,2,1)
     plt.plot(x_epochs, train_loss, 'ro-', label = "train loss")
     plt.plot(x_epochs, valid_loss, 'bo-', label = "valid loss")
