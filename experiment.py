@@ -28,7 +28,7 @@ DEFAULT_ARGS = {
     "pin_memory" : False,
     "seq_len" : 21,
     "use_sampler" : True,
-    "num_epoch" : 64,
+    "num_epoch" : 16,
     "verbose" : 8,
     "save_best_dir" : "./weights/ViViT_clip_21_dist_5_best.pt",
     "save_last_dir" : "./weights/ViViT_clip_21_dist_5_last.pt",
@@ -76,11 +76,17 @@ def scheduling(args : Dict, idx : int, loss_type : str):
         args['use_DRW'] = False
         title = "RS_RW"
 
-    else:
+    elif idx == 4:
         args['use_sampler'] = False
         args['use_weight'] = False
         args['use_DRW'] = True
         title = "DRW"
+    
+    else:
+        args['use_sampler'] = True
+        args['use_weight'] = False
+        args['use_DRW'] = True
+        title = "DRW_RS"
 
     save_best_dir = os.path.join(weight_path, args['root_dir'].split("/")[-1] + "_{}.pt".format(title))
     save_last_dir = os.path.join(weight_path, args['root_dir'].split("/")[-1] + "_{}.pt".format(title))
@@ -234,7 +240,8 @@ def process(args : Dict = DEFAULT_ARGS):
     del train_loader, valid_loader, test_loader
     del model, optimizer, scheduler
 
-root_dir_list = ["./dataset/dur21_dis0", "./dataset/dur21_dis3", "./dataset/dur21_dis5"]
+# root_dir_list = ["./dataset/dur21_dis0", "./dataset/dur21_dis3", "./dataset/dur21_dis5"]
+root_dir_list = ["./dataset/dur21_dis3", "./dataset/dur21_dis5"]
 
 if __name__ == "__main__":
 
@@ -244,6 +251,12 @@ if __name__ == "__main__":
 
         kwargs['root_dir'] = root_dir
 
-        for idx in range(5):
+        if args['loss_type'] not in ['LDAM', 'FOCAL']:
+            n = 4
+        else:
+            n = 6
+
+        for idx in range(n):
+
             scheduling(kwargs, idx, args['loss_type'])
             process(kwargs)

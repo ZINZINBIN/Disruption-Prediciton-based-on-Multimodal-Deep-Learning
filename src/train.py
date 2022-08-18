@@ -245,11 +245,7 @@ def train_DRW(
         per_cls_weights = _update_per_cls_weights(epoch, betas, cls_num_list)
 
         # FocalLoss / LDAMLoss update weight
-        if loss_fn.model_type == 'Focal':
-            loss_fn.update_weight(per_cls_weights)
-        else:
-            loss_fn.update_m_list(cls_num_list)
-            loss_fn.update_weight(per_cls_weights)
+        loss_fn.update_weight(per_cls_weights)
 
         train_loss, train_acc, train_f1 = train_per_epoch(
             train_loader, 

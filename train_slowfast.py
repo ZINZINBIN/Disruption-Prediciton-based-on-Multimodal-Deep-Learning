@@ -127,7 +127,7 @@ if __name__ == "__main__":
         loss_fn = FocalLoss(weight = per_cls_weights, gamma = focal_gamma)
 
     else: 
-        loss_fn = torch.nn.CrossEntropyLoss(reduction = "sum")
+        loss_fn = torch.nn.CrossEntropyLoss(reduction = "mean")
 
     train_loss,  train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train(
         train_loader,

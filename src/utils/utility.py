@@ -283,10 +283,10 @@ def generate_prob_curve(
         interval = clip_len
         prob_list = [0] * (1 + int(dist_frame / clip_len)) + prob_list
 
+    fps = 210
+    time_x = np.arange(1, len(prob_list) + 1) * (1/fps) * interval - 0.1
+    
     if save_dir:
-        fps = 210
-
-        time_x = np.arange(1, len(prob_list) + 1) * (1/fps) * interval
         threshold_line = [0.5] * len(time_x)
 
         plt.figure(figsize = (8,5), facecolor = 'white')
@@ -307,7 +307,7 @@ def generate_prob_curve(
         plt.legend()
         plt.savefig(save_dir)
 
-    return prob_list
+    return time_x, prob_list
 
 from typing import Tuple
 def plot_learning_curve(train_loss, valid_loss, train_f1, valid_f1, figsize : Tuple[int,int] = (12,6), save_dir : str = "./results/learning_curve.png"):

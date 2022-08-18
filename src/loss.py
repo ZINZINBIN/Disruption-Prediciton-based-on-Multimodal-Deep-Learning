@@ -15,7 +15,7 @@ class FocalLoss(nn.Module):
     def __init__(self, weight : Optional[torch.Tensor] = None, gamma : float = 2.0):
         super(FocalLoss, self).__init__()
         assert gamma >= 0, "gamma should be positive"
-        self.loss_type = "Focal"
+        self.model_type = "Focal"
         self.gamma = gamma
         self.weight = weight
     
