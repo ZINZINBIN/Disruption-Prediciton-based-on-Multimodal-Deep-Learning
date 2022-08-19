@@ -240,8 +240,7 @@ def process(args : Dict = DEFAULT_ARGS):
     del train_loader, valid_loader, test_loader
     del model, optimizer, scheduler
 
-# root_dir_list = ["./dataset/dur21_dis0", "./dataset/dur21_dis3", "./dataset/dur21_dis5"]
-root_dir_list = ["./dataset/dur21_dis3", "./dataset/dur21_dis5"]
+root_dir_list = ["./dataset/dur21_dis0", "./dataset/dur21_dis3", "./dataset/dur21_dis5"]
 
 if __name__ == "__main__":
 
@@ -256,7 +255,8 @@ if __name__ == "__main__":
         else:
             n = 6
 
-        for idx in range(n):
+        # for idx in range(n):
+        for idx in [6]:
 
             scheduling(kwargs, idx, args['loss_type'])
             process(kwargs)
