@@ -98,3 +98,4 @@ python3 experiment.py --gpu_num {gpu_num} --loss_type {'CE', 'FOCAL', 'LDAM'}
 - Video Data Augmentation : VideoMix: Rethinking Data Augmentation for Video Classification
 - SITS-BERT : Self-Supervised pretraining of Transformers for Satellite Image Time Series Classification
 - UTAE : Panoptic Segmentation of Satellite Image Time Series with Convolutional Temporal Attention Networks
+- LDAM : Label-distribution-aware Margin Loss
