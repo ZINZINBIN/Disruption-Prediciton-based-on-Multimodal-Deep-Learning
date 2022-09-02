@@ -1,7 +1,18 @@
 # Disruptive prediction model using KSTAR video and numerical data via Deep Learning
 ## Introduction
-<img src="/image/연구_소개_01.PNG"  width="900" height="224">
-<p>Research for predicting tokamak plasma disruption from video and numerical data via Deep Learning</p>
+<div>
+    <p>Research for predicting tokamak plasma disruption from video and numerical data via Deep Learning</p>
+    <img src="/image/연구_소개_01.PNG"  width="900" height="224">
+</div>
+<div>
+    <p>This research aims to predict disruptive phase using KSTAR IVIS(video data) for real experiment shot</p>
+    <img src="/image/연구_소개_02.PNG"  width="450" height="224">
+    <img src="/image/연구_소개_03.PNG"  width="450" height="224">
+</div>
+<div>
+    <p>We can proceed real-time disruption prediction using video data for shot 21310</p>
+    <img src="/image/연구_소개_04.PNG"  width="500" height="350">
+</div>
 
 ## How to Run
 ### setting
@@ -45,19 +56,15 @@ python3 experiment.py --gpu_num {gpu_num} --loss_type {'CE', 'FOCAL', 'LDAM'}
 
 ## Detail
 ### model to use
-- Video Encoder
-1. SITS-BERT : not used
-2. R2Plus1D
-3. Slowfast
-4. UTAE : not used
-5. R3D
-6. ViViT
+- Video encoder
+1. R2Plus1D
+2. Slowfast
+3. ViViT : selected due to its efficiency
 
-- Tabular Encoder
+- 0D data encoder
 1. Transformer
 2. Self-Attention
 3. Conv1D-LSTM
-4. Tabnet
 
 ### technique or algorithm to use
 1. Solving imbalanced classificatio issue
