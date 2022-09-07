@@ -10,14 +10,15 @@ class ConvLSTM(nn.Module):
         self, 
         seq_len : int = 21, 
         col_dim : int = 10, 
-        conv_dim : int = 64, 
+        conv_dim : int = 32, 
         conv_kernel : int = 3,
         conv_stride : int = 1, 
         conv_padding : int = 1,
-        lstm_dim : int = 128, 
+        lstm_dim : int = 64, 
         n_classes : int = 2, 
         mlp_dim : int = 64,
         ):
+        
         super(ConvLSTM, self).__init__()
         self.col_dim = col_dim
         self.seq_len = seq_len
@@ -32,8 +33,11 @@ class ConvLSTM(nn.Module):
             nn.BatchNorm1d(conv_dim), 
             nn.ReLU(),
         )
+
+        lstm_input_dim = self.compute_conv1d_output_dim(self.compute_conv1d_output_dim(seq_len, conv_kernel, conv_stride, conv_padding, 1), conv_kernel, conv_stride, conv_padding, 1)
+
         # temporl - lstm
-        self.lstm = nn.LSTM(seq_len, lstm_dim, bidirectional = True, batch_first = False)
+        self.lstm = nn.LSTM(lstm_input_dim, lstm_dim, bidirectional = True, batch_first = False)
         self.w_s1 = nn.Linear(lstm_dim * 2, lstm_dim)
         self.w_s2 = nn.Linear(lstm_dim, lstm_dim)
 
@@ -46,17 +50,18 @@ class ConvLSTM(nn.Module):
             nn.ReLU(),
             nn.Linear(mlp_dim, n_classes)
         )
+    
+    def compute_conv1d_output_dim(self, input_dim : int, kernel_size : int = 3, stride : int = 1, padding : int = 1, dilation : int = 1):
+        return int((input_dim + 2 * padding - dilation * (kernel_size - 1) - 1) / stride + 1)
 
     def attention(self, lstm_output : torch.Tensor)->torch.Tensor:
         attn_weight_matrix = self.w_s2(torch.tanh(self.w_s1(lstm_output)))
-        # attn_weight_matrix = attn_weight_matrix.permute(0,2,1)
         attn_weight_matrix = F.softmax(attn_weight_matrix, dim = 2)
         return attn_weight_matrix
 
     def forward(self, x : torch.Tensor)->torch.Tensor:
         # x : (batch, seq_len, col_dim)
         x_conv = self.conv(x.permute(0,2,1))
-
         h_0 = Variable(torch.zeros(2, x.size()[0], self.lstm_dim)).to(x.device)
         c_0 = Variable(torch.zeros(2, x.size()[0], self.lstm_dim)).to(x.device)
 
@@ -64,8 +69,8 @@ class ConvLSTM(nn.Module):
         lstm_output = lstm_output.permute(1,0,2)
         att = self.attention(lstm_output)
         hidden = torch.bmm(att.permute(0,2,1), lstm_output).mean(dim = 1)
+        hidden = hidden.view(hidden.size()[0], -1)
         output = self.classifier(hidden)
-
         return output
 
 

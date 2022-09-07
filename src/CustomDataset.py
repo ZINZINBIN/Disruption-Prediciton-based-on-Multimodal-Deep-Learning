@@ -24,6 +24,12 @@ DEFAULT_AUGMENTATION_ARGS = {
     "horizontal_p" : 0.25
 }
 
+DEFAULT_TS_COLS = [
+    '\\q95', '\\ipmhd', '\\kappa', 
+    '\\tritop', '\\tribot','\\betap','\\betan',
+    '\\li', '\\WTOT_DLM03'
+]
+
 # multi-modal dataset : video(or image sequence) + numerical variables(time series tabular data)
 class CustomDataset(Dataset):
     def __init__(
@@ -32,14 +38,18 @@ class CustomDataset(Dataset):
         task : Literal["train", "valid", "test"] = "train", 
         ts_data : Optional[pd.DataFrame] = None,
         ts_cols : Optional[List] = None,
-        augmentation : bool = True, 
+        ts_disrupt : Optional[pd.DataFrame] = None,
+        dt : Optional[float] = 1.0 / 210 * 4,
+        distance : Optional[int] = 0,
+        augmentation : Optional[bool] = True, 
         augmentation_args : Optional[Dict] = None,
-        resize_height : int = 256,
-        resize_width : int = 256,
-        crop_size : int = 224,
+        resize_height : Optional[int] = 256,
+        resize_width : Optional[int] = 256,
+        crop_size : Optional[int] = 224,
         seq_len : int = 21,
         mode : Literal['video','tabular','multi-modal'] = "multi-modal"
         ):
+
         self.root_dir = root_dir
         self.task = task
         self.augmentation = augmentation
@@ -49,6 +59,10 @@ class CustomDataset(Dataset):
         self.crop_size = crop_size
         self.seq_len = seq_len
         self.mode = mode
+
+        # use for 0D data prediction
+        self.distance = distance
+        self.dt = dt
 
         # data augmentation setup
         if augmentation_args is None:
@@ -69,6 +83,7 @@ class CustomDataset(Dataset):
         self.class_list = sorted(os.listdir(self.folder))
         self.n_classes = len(self.class_list)
 
+        # ts_data : dataframe for 0D data 
         if ts_data is None and self.mode != "video":
             ts_data_path = "./dataset/KSTAR_Disruption_ts_data_extend.csv"
             if os.path.exists(ts_data_path):
@@ -79,22 +94,24 @@ class CustomDataset(Dataset):
             self.ts_data = ts_data
         else:
             self.ts_data = None
+
+        # ts_disrupt : dataframe for 0D data with 
         
+        # select columns for 0D data prediction
         if ts_cols is None and self.mode != "video":
-            self.ts_cols = [
-                '\\q95', '\\ipmhd', '\\kappa', 
-                '\\tritop', '\\tribot','\\betap','\\betan',
-                '\\li', '\\ne_inter01', '\\WTOT_DLM03'
-            ]
-        else:
+            self.ts_cols = DEFAULT_TS_COLS
+        elif ts_cols is not None:
             self.ts_cols = ts_cols
+        else:
+            self.ts_cols = None
 
-        for cls in self.class_list:
-            for fname in os.listdir(os.path.join(self.folder, cls)):
-                self.video_file_path.append(os.path.join(self.folder, cls, fname))
-                self.labels.append(cls)
-
-        assert len(self.labels) == len(self.video_file_path), "video data and labels are not matched"
+        # video file path and label match
+        if self.mode != 'tabular':
+            for cls in self.class_list:
+                for fname in os.listdir(os.path.join(self.folder, cls)):
+                    self.video_file_path.append(os.path.join(self.folder, cls, fname))
+                    self.labels.append(cls)
+            assert len(self.labels) == len(self.video_file_path), "video data and labels are not matched"
 
         if self.mode != "video":
             for video_path in tqdm(self.video_file_path, desc="index matching for tabular and video data"):

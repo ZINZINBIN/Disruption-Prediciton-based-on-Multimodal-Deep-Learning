@@ -3,7 +3,7 @@ import cv2
 import os
 import pandas as pd
 import numpy as np
-from typing import Optional
+from typing import Optional,List
 import matplotlib.pyplot as plt
 import torchvision.transforms as T
 from torchvision.transforms._transforms_video import CenterCropVideo, NormalizeVideo
@@ -308,6 +308,110 @@ def generate_prob_curve(
         plt.savefig(save_dir)
 
     return time_x, prob_list
+
+def generate_prob_curve_from_0D(
+    model : torch.nn.Module, 
+    batch_size : int = 32, 
+    device : str = "cpu", 
+    save_dir : Optional[str] = "./results/disruption_probs_curve.png",
+    ts_data : Optional[str] = "./dataset/KSTAR_Disruption_ts_data_extend.csv",
+    ts_cols : Optional[List] = None,
+    shot_list_dir : Optional[str] = './dataset/KSTAR_Disruption_Shot_List_extend.csv',
+    shot : Optional[int] = None,
+    seq_len : Optional[int] = None,
+    dist : Optional[int] = None,
+    dt : Optional[int] = None,
+    ):
+    
+    prob_list = []
+    is_disruption = []
+    
+    model.to(device)
+    model.eval()
+
+    # obtain tTQend, tipmin and tftsrt
+    shot_list_dir = pd.read_csv(shot_list_dir, encoding = "euc-kr")
+    tTQend = shot_list_dir[shot_list_dir.shot == shot].tTQend.values[0]
+    tftsrt = shot_list_dir[shot_list_dir.shot == shot].tftsrt.values[0]
+    tipminf = shot_list_dir[shot_list_dir.shot == shot].tipminf.values[0]
+
+    # input data generation
+    ts_data = pd.read_csv(ts_data).reset_index()
+
+    for col in ts_cols:
+        ts_data[col] = ts_data[col].astype(np.float32)
+
+    ts_data.interpolate(method = 'linear', limit_direction = 'forward')
+
+    from sklearn.preprocessing import RobustScaler
+    scaler = RobustScaler()
+    ts_data[ts_cols] = scaler.fit_transform(ts_data[ts_cols].values)
+    df_shot = ts_data[ts_data.shot == shot]
+    
+    dataset = torch.from_numpy(df_shot[ts_cols].values).view(-1, len(ts_cols))
+
+    if dataset.size()[0] % seq_len !=0:
+        pad = np.zeros((seq_len - dataset.size()[0] % seq_len, len(ts_cols)), dtype = np.float32)
+        pad = torch.from_numpy(pad).float()
+        dataset = torch.concat([dataset, pad], axis = 0)
+
+    num_data = dataset.size()[0] // seq_len
+
+    for idx in range(0, num_data // batch_size):
+        with torch.no_grad():
+            idx_start = batch_size * idx * seq_len
+            idx_end = batch_size * (idx + 1) * seq_len
+            data = dataset[idx_start : idx_end, :].view(batch_size, seq_len, len(ts_cols))
+            output = model(data.to(device))
+            probs = torch.nn.functional.softmax(output, dim = 1)[:,1]
+            probs = probs.cpu().detach().numpy().tolist()
+            prob_list.extend(
+                probs
+            )
+            is_disruption.extend(
+                torch.nn.functional.softmax(output, dim = 1).max(1, keepdim = True)[1].cpu().detach().numpy().tolist()
+            )
+
+    if num_data % batch_size != 0:
+        with torch.no_grad():
+            idx_start = batch_size * idx * seq_len
+            data = dataset[idx_start : , :].view(-1, seq_len, len(ts_cols))
+            output = model(data.to(device))
+            probs = torch.nn.functional.softmax(output, dim = 1)[:,1]
+            probs = probs.cpu().detach().numpy().tolist()
+            prob_list.extend(
+                probs
+            )
+            is_disruption.extend(
+                torch.nn.functional.softmax(output, dim = 1).max(1, keepdim = True)[1].cpu().detach().numpy().tolist()
+            )
+
+    t_disrupt = tTQend
+    t_current = tipminf
+    
+    prob_list = [0] + prob_list
+    interval = seq_len * dt
+    time_x = np.arange(1, len(prob_list) + 1) * interval - dist * dt
+    
+    if save_dir:
+        threshold_line = [0.5] * len(time_x)
+
+        plt.figure(figsize = (8,5), facecolor = 'white')
+        plt.plot(time_x, threshold_line, 'k', label = "threshold(p = 0.5)")
+        plt.plot(time_x, prob_list, 'b-', label = "disruption probs")
+        plt.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed", label = "thermal quench")
+        plt.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed", label = "current quench")
+        plt.axvline(x = tftsrt, ymin = 0, ymax = 1, color = "purple", linestyle = "dashed", label = "burn-up")
+
+        plt.ylabel("probability")
+        plt.xlabel("time(unit : s)")
+        plt.ylim([0,1])
+        plt.xlim([0,max(time_x)])
+        plt.legend()
+        plt.savefig(save_dir)
+
+    return time_x, prob_list
+
 
 from typing import Tuple
 def plot_learning_curve(train_loss, valid_loss, train_f1, valid_f1, figsize : Tuple[int,int] = (12,6), save_dir : str = "./results/learning_curve.png"):
