@@ -363,7 +363,7 @@ def generate_prob_curve_from_0D(
             idx_end = batch_size * (idx + 1) * seq_len
             data = dataset[idx_start : idx_end, :].view(batch_size, seq_len, len(ts_cols))
             output = model(data.to(device))
-            probs = torch.nn.functional.softmax(output, dim = 1)[:,1]
+            probs = torch.nn.functional.softmax(output, dim = 1)[:,0]
             probs = probs.cpu().detach().numpy().tolist()
             prob_list.extend(
                 probs
@@ -377,7 +377,7 @@ def generate_prob_curve_from_0D(
             idx_start = batch_size * idx * seq_len
             data = dataset[idx_start : , :].view(-1, seq_len, len(ts_cols))
             output = model(data.to(device))
-            probs = torch.nn.functional.softmax(output, dim = 1)[:,1]
+            probs = torch.nn.functional.softmax(output, dim = 1)[:,0]
             probs = probs.cpu().detach().numpy().tolist()
             prob_list.extend(
                 probs

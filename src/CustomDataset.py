@@ -24,17 +24,18 @@ DEFAULT_AUGMENTATION_ARGS = {
     "horizontal_p" : 0.25
 }
 
+# 0D data default columns
 DEFAULT_TS_COLS = [
     '\\q95', '\\ipmhd', '\\kappa', 
     '\\tritop', '\\tribot','\\betap','\\betan',
     '\\li', '\\WTOT_DLM03'
 ]
 
-# multi-modal dataset : video(or image sequence) + numerical variables(time series tabular data)
+# Custom dataset : used for video data or multi-modal data
 class CustomDataset(Dataset):
     def __init__(
         self, 
-        root_dir : str = "./dataset/dur21_dis0",
+        root_dir : Optional[str] = "./dataset/dur21_dis0",
         task : Literal["train", "valid", "test"] = "train", 
         ts_data : Optional[pd.DataFrame] = None,
         ts_cols : Optional[List] = None,
@@ -47,22 +48,31 @@ class CustomDataset(Dataset):
         resize_width : Optional[int] = 256,
         crop_size : Optional[int] = 224,
         seq_len : int = 21,
-        mode : Literal['video','tabular','multi-modal'] = "multi-modal"
+        mode : Literal['video','multi-modal'] = "video"
         ):
 
-        self.root_dir = root_dir
-        self.task = task
-        self.augmentation = augmentation
-        self.augmentation_args = augmentation_args
+        self.root_dir = root_dir # video root directory
+        self.task = task # task : train / valid / test 
+        self.augmentation = augmentation # video sequence augmentation
+        self.augmentation_args = augmentation_args # argument for augmentation
+        
+        # resize each frame from video
         self.resize_height = resize_height
         self.resize_width = resize_width
+        
+        # crop
         self.crop_size = crop_size
+        
+        # video sequence length
+        # warning : 0D data and video data should have equal sequence length
         self.seq_len = seq_len
+        
+        # mode : choose data type, video, tabular, multi-modal
         self.mode = mode
 
         # use for 0D data prediction
-        self.distance = distance
-        self.dt = dt
+        self.distance = distance # prediction time
+        self.dt = dt # time difference of 0D data
 
         # data augmentation setup
         if augmentation_args is None:
@@ -95,8 +105,18 @@ class CustomDataset(Dataset):
         else:
             self.ts_data = None
 
-        # ts_disrupt : dataframe for 0D data with 
-        
+        # ts_disrupt : dataframe for shot list data with thermal quench / current quench info
+        if ts_disrupt is None and self.mode != "video":
+            ts_disrupt_path = "./dataset/KSTAR_Disruption_Shot_List_extend.csv"
+            if os.path.exists(ts_disrupt_path):
+                self.ts_disrupt = pd.read_csv(ts_disrupt_path, encoding = "euc-kr")
+            else:
+                raise RuntimeError("ts_disrupt is invalid, check the directory or input ts disrupt as pd.DataFrame")
+        elif self.mode != 'video':
+            self.ts_disrupt = ts_disrupt
+        else:
+            self.ts_disrupt = None
+                    
         # select columns for 0D data prediction
         if ts_cols is None and self.mode != "video":
             self.ts_cols = DEFAULT_TS_COLS
@@ -106,14 +126,14 @@ class CustomDataset(Dataset):
             self.ts_cols = None
 
         # video file path and label match
-        if self.mode != 'tabular':
+        if self.mode == 'video':
             for cls in self.class_list:
                 for fname in os.listdir(os.path.join(self.folder, cls)):
                     self.video_file_path.append(os.path.join(self.folder, cls, fname))
                     self.labels.append(cls)
             assert len(self.labels) == len(self.video_file_path), "video data and labels are not matched"
 
-        if self.mode != "video":
+        elif self.mode == "multi-modal":
             for video_path in tqdm(self.video_file_path, desc="index matching for tabular and video data"):
                 video_filename = video_path.split('/')[-1]
                 shot_num, frame_start, frame_end = int(video_filename.split('_')[0]), int(video_filename.split('_')[1]), int(video_filename.split('_')[2])
@@ -176,7 +196,7 @@ class CustomDataset(Dataset):
     
     def get_tabular_data(self, index : int):
         ts_idx = self.indices[index]
-        data = self.ts_data[self.ts_cols].loc[ts_idx:ts_idx+self.seq_len-1].values
+        data = self.ts_data[self.ts_cols].loc[ts_idx:ts_idx+self.seq_len].values
         return torch.from_numpy(data)
 
     def refill_temporal_slide(self, buffer:np.ndarray):
@@ -333,6 +353,93 @@ class CustomDataset(Dataset):
         for i in range(self.n_classes):
             cls_num_list.append(self.num_per_cls_dict[i])
         return cls_num_list
+    
+# Dataset for 0D data : different method used for label matching
+class DatasetFor0D(Dataset):
+    def __init__(self, ts_data : pd.DataFrame, disrupt_data : pd.DataFrame, seq_len : int = 21, cols : List = DEFAULT_TS_COLS, dist:int = 3, dt : float = 1.0 / 210 * 4):
+        self.ts_data = ts_data
+        self.disrupt_data = disrupt_data
+        self.seq_len = seq_len
+        self.dt = dt
+        self.cols = cols
+        self.dist = dist # distance
+
+        self.indices = []
+        self.labels = []
+        self.n_classes = 2
+        self._generate_index()
+
+    def _generate_index(self):
+        shot_list = np.unique(self.ts_data.shot.values).tolist()
+        df_disruption = self.disrupt_data
+
+        for shot in tqdm(shot_list):
+            tTQend = df_disruption[df_disruption.shot == shot].tTQend.values[0]
+            tftsrt = df_disruption[df_disruption.shot == shot].tftsrt.values[0]
+            tipminf = df_disruption[df_disruption.shot == shot].tipminf.values[0]
+
+            t_disrupt = tipminf
+
+            df_shot = self.ts_data[self.ts_data.shot == shot]
+            indices = []
+            labels = []
+
+            idx = int(tftsrt * self.dt)
+            idx_last = len(df_shot.index) - self.seq_len - self.dist
+
+            while(idx < idx_last):
+                row = df_shot.iloc[idx]
+                t = row['time']
+
+                if idx_last - idx - self.seq_len - self.dist < 0:
+                    break
+
+                if t >= tftsrt and t < t_disrupt - self.dt * (self.seq_len + self.dist):
+                    indx = df_shot.index.values[idx]
+                    indices.append(indx)
+                    labels.append(1)
+                    idx += self.seq_len
+
+                elif t > t_disrupt - self.dt * (self.seq_len + self.dist) and t <= t_disrupt:
+                    indx = df_shot.index.values[idx]
+                    indices.append(indx)
+                    labels.append(0)
+                    idx += self.seq_len
+                
+                elif t < tftsrt:
+                    idx += self.seq_len
+                
+                elif t > t_disrupt:
+                    break
+
+            self.indices.extend(indices)
+            self.labels.extend(labels)
+
+    def __getitem__(self, idx:int):
+        indx = self.indices[idx]
+        label = self.labels[idx]
+        label = np.array(label)
+        label = torch.from_numpy(label)
+        data = self.ts_data[self.cols].loc[indx:indx+self.seq_len - 1].values
+        data = torch.from_numpy(data).float()
+        return data, label
+
+    def __len__(self):
+        return len(self.indices)
+
+    def get_num_per_cls(self):
+        classes = np.unique(self.labels)
+        self.num_per_cls_dict = dict()
+
+        for cls in classes:
+            num = np.sum(np.where(self.labels == cls, 1, 0))
+            self.num_per_cls_dict[cls] = num
+         
+    def get_cls_num_list(self):
+        cls_num_list = []
+        for i in range(self.n_classes):
+            cls_num_list.append(self.num_per_cls_dict[i])
+        return cls_num_list
 
 if __name__ == "__main__":
 
@@ -347,13 +454,30 @@ if __name__ == "__main__":
         resize_width=256,
         crop_size = 224,
         seq_len = 21,
-        mode = "multi-modal"
+        mode = "video"
     )
 
     test_loader = DataLoader(test_data, batch_size=64, shuffle=True)
+    sample_data, sample_label = next(iter(test_loader))
 
-    sample_buffer, sample_data, sample_label = next(iter(test_loader))
+    print("test for video loader")
+    print('sample_data : ', sample_data.size())
+    print('sample_target : ', sample_label.size())
+    
+    del test_loader, test_data, sample_data, sample_label
+    
+    test_data = DatasetFor0D(
+        pd.read_csv("./dataset/KSTAR_Disruption_ts_data_extend.csv").reset_index(), 
+        pd.read_csv('./dataset/KSTAR_Disruption_Shot_List_extend.csv', encoding = "euc-kr"), 
+        seq_len = 21, 
+        cols = DEFAULT_TS_COLS, 
+        dist = 3, 
+        dt = 1.0 / 210 * 4
+    )
 
-    print('sample_buffer : ', sample_buffer.size())
+    test_loader = DataLoader(test_data, batch_size=64, shuffle=True)
+    sample_data, sample_label = next(iter(test_loader))
+
+    print("test for 0D data loader")
     print('sample_data : ', sample_data.size())
     print('sample_target : ', sample_label.size())

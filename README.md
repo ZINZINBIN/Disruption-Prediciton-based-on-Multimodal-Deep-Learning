@@ -12,7 +12,10 @@
 <div>
     <p>We can proceed real-time disruption prediction using video data for shot 21310</p>
     <img src="/image/연구_소개_04.PNG"  width="500" height="350">
+    <p>And this is the real-time disruption prediction using 0D data for shot 21310</p>
+    <img src="/image/연구_소개_05.PNG"  width="500" height="350">
 </div>
+<p>In the future, we will try to predict disruption using multimodal data(video + 0D data)</p>
 
 ## How to Run
 ### setting

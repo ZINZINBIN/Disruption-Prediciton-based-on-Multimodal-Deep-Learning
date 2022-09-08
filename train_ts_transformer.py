@@ -3,7 +3,7 @@ import argparse
 import numpy as np
 import pandas as pd
 from src.CustomDataset import DatasetFor0D
-from src.models.ConvLSTM import ConvLSTM
+from src.models.ts_transformer import TStransformer
 from src.utils.sampler import ImbalancedDatasetSampler
 from src.utils.utility import plot_learning_curve, generate_prob_curve_from_0D
 from torch.utils.data import DataLoader
@@ -11,7 +11,7 @@ from src.train import train
 from src.evaluate import evaluate
 from src.loss import LDAMLoss, FocalLoss
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import RobustScaler, MinMaxScaler, StandardScaler
+from sklearn.preprocessing import RobustScaler
 
 df = pd.read_csv("./dataset/KSTAR_Disruption_ts_data_extend.csv").reset_index()
 
@@ -65,14 +65,14 @@ ts_train = df_train
 ts_valid = df_valid
 ts_test = df_test
 seq_len = 21
-dist = 5
+dist = 3
 dt = 1 / 210 * 4
 cols = ts_cols
 col_len = len(cols)
-save_best_dir = "./weights/ts_conv_lstm_clip_21_dist_5_best.pt"
-save_last_dir = "./weights/ts_conv_lstm_clip_21_dist_5_best.pt"
-save_txt = "./results/test_ts_conv_lstm_clip_21_dist_5.txt"
-save_conf = "./results/test_ts_conv_lstm_clip_21_dist_5_confusion_matrix.png"
+save_best_dir = "./weights/ts_transformer_clip_21_dist_3_best.pt"
+save_last_dir = "./weights/ts_transformer_clip_21_dist_3_best.pt"
+save_txt = "./results/test_ts_transformer_clip_21_dist_3.txt"
+save_conf = "./results/test_ts_transformer_clip_21_dist_3_confusion_matrix.png"
 
 train_data = DatasetFor0D(ts_train, kstar_shot_list, seq_len = seq_len, cols = ts_cols, dist = dist, dt = 1.0 / 210 * 4)
 valid_data = DatasetFor0D(ts_valid, kstar_shot_list, seq_len = seq_len, cols = ts_cols, dist = dist, dt = 1.0 / 210 * 4)
@@ -109,9 +109,16 @@ else:
     
 if __name__ == "__main__":
 
-    model = ConvLSTM(
-    seq_len = seq_len,
-    col_dim = col_len,
+    model = TStransformer(
+        n_features=col_len,
+        feature_dims = 16,
+        max_len = seq_len, 
+        n_layers = 4,
+        n_heads = 4, 
+        dim_feedforward = 1024,
+        dropout = 0.5, 
+        cls_dims = 128, 
+        n_classes  = 2
     )
 
     model.to(device)
@@ -129,7 +136,6 @@ if __name__ == "__main__":
     focal_gamma = 2.0
     loss_fn = FocalLoss(weight = per_cls_weights, gamma = focal_gamma)
 
-    
     train_loss,  train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train(
         train_loader,
         valid_loader,
