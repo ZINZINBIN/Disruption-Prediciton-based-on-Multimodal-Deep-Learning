@@ -5,17 +5,25 @@
     <img src="/image/연구_소개_01.PNG"  width="900" height="224">
 </div>
 <div>
-    <p>This research aims to predict disruptive phase using KSTAR IVIS(video data) for real experiment shot</p>
-    <img src="/image/연구_소개_02.PNG"  width="450" height="224">
-    <img src="/image/연구_소개_03.PNG"  width="450" height="224">
+    <p>This research aims to predict disruptive phase using KSTAR IVIS(video) for real experiment shot</p>
+    <p float = "left">
+        <img src="/image/연구_소개_02.PNG"  width="450" height="224">
+        <img src="/image/연구_소개_03.PNG"  width="450" height="224">
+    </p>
 </div>
 <div>
     <p>We can proceed real-time disruption prediction using video data for shot 21310</p>
-    <img src="/image/연구_소개_04.PNG"  width="500" height="350">
+    <img src="/image/연구_소개_04.PNG"  width="450" height="350">
     <p>And this is the real-time disruption prediction using 0D data for shot 21310</p>
-    <img src="/image/연구_소개_05.PNG"  width="500" height="350">
+    <p>We can predict plasma disruption prior to 95.2ms(maximum prediction time) with 0D data</p>
+    <p float = 'left'>
+        <img src="/image/연구_소개_05.PNG"  width="450" height="224">
+        <img src="/image/연구_소개_06.PNG"  width="450" height="224">
+    </p>
 </div>
-<p>In the future, we will try to predict disruption using multimodal data(video + 0D data)</p>
+
+- Video data would be helpful to detect VDE(Vertical Displacement Error) and time-varying shape characteristcs
+- In future, we will try to predict disruption using multimodal data(video + 0D data)</p>
 
 ## How to Run
 ### setting

@@ -182,6 +182,30 @@ class ViViT(nn.Module):
         x = self.mlp(x)
 
         return x
+    
+    def encode(self, x : torch.Tensor)->torch.Tensor:
+        with torch.no_grad():
+            if x.size()[1] == self.in_channels:
+                x = torch.permute(x, (0,2,1,3,4))
+            
+            x = self.to_patch_embedding(x)
+            b, t, n, _ = x.shape
+            cls_space_token = repeat(self.space_token, '() n d -> b t n d', b = b, t = t)
+            cls_temporal_token = repeat(self.temporal_token, '() n d -> b n d', b = b)
+
+            x = torch.cat((cls_space_token, x), dim = 2)
+            x += self.pos_embedding[:,:,:(n+1)]
+            x = self.dropout(x)
+
+            x = rearrange(x, 'b t n d -> (b t) n d')
+            x = self.space_transformer(x)
+            x = rearrange(x[:,0], '(b t) ... -> b t ...', b = b)
+
+            x = torch.cat((cls_temporal_token, x), dim = 1)
+            x = self.temporal_transformer(x)
+            x = x.mean(dim = 1) if self.pool == 'mean' else x[:, 0]
+            
+        return x
 
     def summary(self, device : str = 'cpu', show_input : bool = True, show_hierarchical : bool = True, print_summary : bool = True, show_parent_layers : bool = True)->None:
         sample = torch.zeros((1, self.n_frames, self.in_channels, self.image_size, self.image_size), device = device)

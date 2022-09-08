@@ -269,6 +269,11 @@ class R2Plus1DClassifier(nn.Module):
             elif isinstance(m, nn.BatchNorm3d):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
+                
+    def encode(self, x : torch.Tensor)->torch.Tensor:
+        with torch.no_grad():
+            x = self.res2plus1d(x)
+        return x
 
     def forward(self, x:torch.Tensor)->torch.Tensor:
         x = self.res2plus1d(x)
@@ -483,15 +488,3 @@ if __name__ == "__main__":
     model.summary()
 
     model.cpu()
-    # del model
-
-    # model = R2P1DwithSTNClassifier(
-    #     input_size = (3, 21, 128, 128),
-    #     num_classes = 2, 
-    #     layer_sizes = [1,2,2,1], 
-    #     pretrained = False, 
-    #     alpha = 0.01
-    # )
-
-    # model.to(device)
-    # model.summary()

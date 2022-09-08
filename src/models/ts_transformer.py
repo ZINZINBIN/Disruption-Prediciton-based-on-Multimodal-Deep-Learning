@@ -57,6 +57,19 @@ class TStransformer(nn.Module):
             GELU(),
             nn.Linear(cls_dims, n_classes)
         )
+        
+    def encode(self, x: torch.Tensor)->torch.Tensor:
+        with torch.no_grad():
+            x = self.encoder_input_layer(x)
+            x = x.permute(1,0,2)
+            if self.src_mask is None or self.src_mask.size(0) != len(x):
+                device = x.device
+                mask = self._generate_square_subsequent_mask(len(x)).to(device)
+                self.src_mask = mask
+        
+            x = self.pos_enc(x)
+            x = self.transformer_encoder(x, self.src_mask.to(x.device)).permute(1,0,2).mean(dim = 1)
+        return x
 
     def forward(self, x : torch.Tensor)->torch.Tensor:
         x = self.encoder_input_layer(x)

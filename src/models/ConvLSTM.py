@@ -58,6 +58,20 @@ class ConvLSTM(nn.Module):
         attn_weight_matrix = self.w_s2(torch.tanh(self.w_s1(lstm_output)))
         attn_weight_matrix = F.softmax(attn_weight_matrix, dim = 2)
         return attn_weight_matrix
+    
+    def encode(self, x:torch.Tensor)->torch.Tensor:
+        with torch.no_grad():
+            x_conv = self.conv(x.permute(0,2,1))
+            h_0 = Variable(torch.zeros(2, x.size()[0], self.lstm_dim)).to(x.device)
+            c_0 = Variable(torch.zeros(2, x.size()[0], self.lstm_dim)).to(x.device)
+
+            lstm_output, (h_n,c_n) = self.lstm(x_conv.permute(1,0,2), (h_0, c_0))
+            lstm_output = lstm_output.permute(1,0,2)
+            att = self.attention(lstm_output)
+            hidden = torch.bmm(att.permute(0,2,1), lstm_output).mean(dim = 1)
+            hidden = hidden.view(hidden.size()[0], -1)
+            
+        return hidden
 
     def forward(self, x : torch.Tensor)->torch.Tensor:
         # x : (batch, seq_len, col_dim)

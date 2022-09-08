@@ -6,6 +6,7 @@ from src.CustomDataset import DatasetFor0D
 from src.models.ts_transformer import TStransformer
 from src.utils.sampler import ImbalancedDatasetSampler
 from src.utils.utility import plot_learning_curve, generate_prob_curve_from_0D
+from src.visualization.visualize_latent_space import visualize_2D_latent_space
 from torch.utils.data import DataLoader
 from src.train import train
 from src.evaluate import evaluate
@@ -60,19 +61,19 @@ kstar_shot_list = pd.read_csv('./dataset/KSTAR_Disruption_Shot_List_extend.csv',
 # shot list
 shot_list = np.unique(df.shot.values).tolist()
 
-
 ts_train = df_train
 ts_valid = df_valid
 ts_test = df_test
 seq_len = 21
-dist = 3
+dist = 1
 dt = 1 / 210 * 4
 cols = ts_cols
 col_len = len(cols)
-save_best_dir = "./weights/ts_transformer_clip_21_dist_3_best.pt"
-save_last_dir = "./weights/ts_transformer_clip_21_dist_3_best.pt"
-save_txt = "./results/test_ts_transformer_clip_21_dist_3.txt"
-save_conf = "./results/test_ts_transformer_clip_21_dist_3_confusion_matrix.png"
+save_best_dir = "./weights/ts_transformer_clip_21_dist_1_best.pt"
+save_last_dir = "./weights/ts_transformer_clip_21_dist_1_best.pt"
+save_txt = "./results/test_ts_transformer_clip_21_dist_1.txt"
+save_conf = "./results/test_ts_transformer_clip_21_dist_1_confusion_matrix.png"
+save_latent_2d = "./results/ts_transformer_latent_2d.png"
 
 train_data = DatasetFor0D(ts_train, kstar_shot_list, seq_len = seq_len, cols = ts_cols, dist = dist, dt = 1.0 / 210 * 4)
 valid_data = DatasetFor0D(ts_valid, kstar_shot_list, seq_len = seq_len, cols = ts_cols, dist = dist, dt = 1.0 / 210 * 4)
@@ -136,6 +137,7 @@ if __name__ == "__main__":
     focal_gamma = 2.0
     loss_fn = FocalLoss(weight = per_cls_weights, gamma = focal_gamma)
 
+    '''
     train_loss,  train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train(
         train_loader,
         valid_loader,
@@ -151,6 +153,7 @@ if __name__ == "__main__":
         max_norm_grad = 1.0,
         criteria = "f1_score",
     )
+    '''
     
     model.load_state_dict(torch.load(save_best_dir))
 
@@ -178,4 +181,12 @@ if __name__ == "__main__":
         seq_len = seq_len,
         dist = dist,
         dt = dt
+    )
+    
+    # plot 2d latent space
+    visualize_2D_latent_space(
+        model,
+        train_loader,
+        device,
+        save_latent_2d
     )

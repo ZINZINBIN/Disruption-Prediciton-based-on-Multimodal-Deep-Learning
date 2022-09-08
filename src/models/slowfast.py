@@ -1,10 +1,8 @@
 import torch 
 import torch.nn as nn
+import torch.nn.functional as F
 from typing import Tuple, List
-from src.models.layer import *
-from src.models.transformer import *
 from src.models.resnet import *
-from src.models.abstract import *
 from pytorch_model_summary import summary
 
 # using slow-fast model : https://github.com/mbiparva/slowfast-networks-pytorch
@@ -212,7 +210,14 @@ class SlowFast(nn.Module):
         self.encoder.device_allocation(device)
         self.classifier.device_allocation(device)
         self.device = device
-
+    
+    def encode(self, x : torch.Tensor)->torch.Tensor:
+        with torch.no_grad():
+            x = self.encoder.forward(x)
+            batch = x.size()[0]
+            x = x.view(batch, -1)
+        return x
+            
     def forward(self, x : torch.Tensor) -> torch.Tensor:
         x = self.encoder.forward(x)
         x = self.classifier.forward(x)
