@@ -115,12 +115,12 @@ def crop(buffer, original_height, original_width, crop_size):
 
     mid_x, mid_y = original_height // 2, original_width // 2
     offset_x, offset_y = crop_size // 2, crop_size // 2
-
+    buffer = buffer[:, mid_x - offset_x:mid_x+offset_x, mid_y - offset_y: mid_y+ offset_y, :]
+    
+    # for random crop
     # height_index = np.random.randint(original_height - crop_size)
     # width_index = np.random.randint(original_width - crop_size)
     # buffer = buffer[:, height_index:height_index + crop_size, width_index:width_index + crop_size, :]
-
-    buffer = buffer[:, mid_x - offset_x:mid_x+offset_x, mid_y - offset_y: mid_y+ offset_y, :]
 
     return buffer
 

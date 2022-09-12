@@ -215,8 +215,8 @@ class ViViT(nn.Module):
 if __name__ == "__main__":
 
     model = ViViT(
-        image_size = 224,
-        patch_size = 16,
+        image_size = 128,
+        patch_size = 32,
         n_classes = 2,
         n_frames = 21
     )
