@@ -7,8 +7,8 @@
 <div>
     <p>This research aims to predict disruptive phase using KSTAR IVIS(video) for real experiment shot</p>
     <p float = "left">
-        <img src="/image/연구_소개_02.PNG"  width="450" height="224">
-        <img src="/image/연구_소개_03.PNG"  width="450" height="224">
+        <img src="/image/연구_소개_02.PNG"  width="320" height="196">
+        <img src="/image/연구_소개_03.PNG"  width="320" height="196">
     </p>
 </div>
 <div>
@@ -17,8 +17,8 @@
     <p>And this is the real-time disruption prediction using 0D data for shot 21310</p>
     <p>We can predict plasma disruption prior to 95.2ms(maximum prediction time) with 0D data</p>
     <p float = 'left'>
-        <img src="/image/연구_소개_05.PNG"  width="450" height="224">
-        <img src="/image/연구_소개_06.PNG"  width="450" height="224">
+        <img src="/image/연구_소개_05.PNG"  width="320" height="196">
+        <img src="/image/연구_소개_06.PNG"  width="320" height="196">
     </p>
 </div>
 
@@ -37,6 +37,7 @@ conda activate research-env
 ```
 # generate disruptive video data and normal video data from .avi
 python3 ./src/generate_video_data.py --fps 210 --duration 21 --distance 5 --save_path './dataset/'
+
 # train and test split with converting video as image sequences
 python3 ./src/preprocessing.py --test_ratio 0.2 --valid_ratio 0.2 --video_data_path './dataset/dur21_dis0' --save_path './dataset/dur21_dis0'
 ```
@@ -47,16 +48,27 @@ python3 ./src/preprocessing.py --test_ratio 0.2 --valid_ratio 0.2 --video_data_p
 python3 ./src/generate_numerical_data.py 
 ```
 
-### training
+### Training
+
+- Models for video data
 ```
 # ViViT model
-python3 train_vivit.py --batch_size {batch size} --gpu_num {gpu num} --model_name {model name} --use_LDAM {bool : use LDAM loss}
+python3 train_vivit.py --batch_size {batch size} --gpu_num {gpu num} --use_LDAM {bool : use LDAM loss}
 
 # slowfast model
-python3 train_slowfast.py --batch_size {batch size} --alpha {alpha} --gpu_num {gpu num} --model_name {model name} --use_LDAM {bool : use LDAM loss}
+python3 train_slowfast.py --batch_size {batch size} --alpha {alpha} --gpu_num {gpu num} --use_LDAM {bool : use LDAM loss}
 
 # R2Plus1D model
-python3 train_R2Plus1D.py --batch_size {batch size} --gpu_num {gpu num} --model_name {model name} --use_LDAM {bool : use LDAM loss}
+python3 train_R2Plus1D.py --batch_size {batch size} --gpu_num {gpu num} --use_LDAM {bool : use LDAM loss}
+```
+
+- Models for 0D data
+```
+# Conv-LSTM
+python3 train_conv_lstm.py --batch_size {batch size} --gpu_num {gpu num} --use_LDAM {bool : use LDAM loss}
+
+# Transformer
+python3 train_ts_transformer.py --batch_size {batch size} --alpha {alpha} --gpu_num {gpu num} --use_LDAM {bool : use LDAM loss}
 ```
 
 ### Experiment
@@ -74,8 +86,7 @@ python3 experiment.py --gpu_num {gpu_num} --loss_type {'CE', 'FOCAL', 'LDAM'}
 
 - 0D data encoder
 1. Transformer
-2. Self-Attention
-3. Conv1D-LSTM
+2. Conv1D-LSTM using self-attention
 
 ### technique or algorithm to use
 1. Solving imbalanced classificatio issue
@@ -87,6 +98,7 @@ python3 experiment.py --gpu_num {gpu_num} --loss_type {'CE', 'FOCAL', 'LDAM'}
 2. Analysis on physical characteristics of disruptive video data
 - CAM
 - Grad CAM
+- attention visualization
 
 3. Data augmentation
 - Video Mixup Algorithm for Data augmentation(done, not effective)
@@ -114,6 +126,5 @@ python3 experiment.py --gpu_num {gpu_num} --loss_type {'CE', 'FOCAL', 'LDAM'}
 - Slowfast : SlowFast Networks for Video Recognition
 - Multigrid : A Multigrid Method for Efficiently Training Video Models, Chao-Yuan Wu et al, 2020
 - Video Data Augmentation : VideoMix: Rethinking Data Augmentation for Video Classification
-- SITS-BERT : Self-Supervised pretraining of Transformers for Satellite Image Time Series Classification
 - UTAE : Panoptic Segmentation of Satellite Image Time Series with Convolutional Temporal Attention Networks
 - LDAM : Label-distribution-aware Margin Loss

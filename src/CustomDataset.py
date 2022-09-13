@@ -330,17 +330,7 @@ class CustomDataset(Dataset):
 
     # function for imbalanced dataset
     # used for LDAM loss and re-weighting
-    def get_img_num_per_cls(self):
-        
-        classes = np.unique(self.labels)
-        self.num_per_cls_dict = dict()
-
-        for cls in classes:
-            num = np.sum(np.where(self.labels == cls, 1, 0))
-            self.num_per_cls_dict[cls] = num
-         
     def get_num_per_cls(self):
-
         classes = np.unique(self.labels)
         self.num_per_cls_dict = dict()
 
@@ -427,6 +417,176 @@ class DatasetFor0D(Dataset):
     def __len__(self):
         return len(self.indices)
 
+    def get_num_per_cls(self):
+        classes = np.unique(self.labels)
+        self.num_per_cls_dict = dict()
+
+        for cls in classes:
+            num = np.sum(np.where(self.labels == cls, 1, 0))
+            self.num_per_cls_dict[cls] = num
+         
+    def get_cls_num_list(self):
+        cls_num_list = []
+        for i in range(self.n_classes):
+            cls_num_list.append(self.num_per_cls_dict[i])
+        return cls_num_list
+    
+class MultiModalDataset(Dataset):
+    def __init__(
+        self, 
+        root_dir : Optional[str] = "./dataset/dur21_dis0",
+        task : Literal["train", "valid", "test"] = "train", 
+        ts_data : Optional[pd.DataFrame] = None,
+        ts_cols : Optional[List] = None,
+        ts_disrupt : Optional[pd.DataFrame] = None,
+        dt : Optional[float] = 1.0 / 210 * 4,
+        distance : Optional[int] = 0,
+        resize_height : Optional[int] = 256,
+        resize_width : Optional[int] = 256,
+        crop_size : Optional[int] = 224,
+        seq_len : int = 21,
+        ):
+
+        self.root_dir = root_dir # video root directory
+        self.task = task # task : train / valid / test 
+        
+        # resize each frame from video
+        self.resize_height = resize_height
+        self.resize_width = resize_width
+        
+        # crop
+        self.crop_size = crop_size
+        
+        # video sequence length
+        # warning : 0D data and video data should have equal sequence length
+        self.seq_len = seq_len
+        
+        # use for 0D data prediction
+        self.distance = distance # prediction time
+        self.dt = dt # time difference of 0D data
+
+        # video_file_path : video file path : {database}/{shot_num}_{frame_start}_{frame_end}.avi
+        # indices : index for tabular data, shot == shot_num, index <- df[df.frame_idx == frame_start].index
+        self.video_file_path = []
+        self.indices = []
+        self.labels = []
+
+        self.folder = os.path.join(self.root_dir, task)
+        self.class_list = sorted(os.listdir(self.folder))
+        self.n_classes = len(self.class_list)
+
+        # ts_data : dataframe for 0D data 
+        if ts_data is None:
+            ts_data_path = "./dataset/KSTAR_Disruption_ts_data_extend.csv"
+            if os.path.exists(ts_data_path):
+                self.ts_data = pd.read_csv(ts_data_path)
+            else:
+                raise RuntimeError("ts_data is invalid, check the directory or input ts data as pd.DataFrame")
+
+        # ts_disrupt : dataframe for shot list data with thermal quench / current quench info
+        if ts_disrupt is None:
+            ts_disrupt_path = "./dataset/KSTAR_Disruption_Shot_List_extend.csv"
+            if os.path.exists(ts_disrupt_path):
+                self.ts_disrupt = pd.read_csv(ts_disrupt_path, encoding = "euc-kr")
+            else:
+                raise RuntimeError("ts_disrupt is invalid, check the directory or input ts disrupt as pd.DataFrame")
+        
+        # select columns for 0D data prediction
+        if ts_cols is None:
+            self.ts_cols = DEFAULT_TS_COLS
+
+        # video file path and label match
+        for cls in self.class_list:
+            for fname in os.listdir(os.path.join(self.folder, cls)):
+                self.video_file_path.append(os.path.join(self.folder, cls, fname))
+                self.labels.append(cls)
+        assert len(self.labels) == len(self.video_file_path), "video data and labels are not matched"
+
+        for video_path in tqdm(self.video_file_path, desc="index matching for tabular and video data"):
+            video_filename = video_path.split('/')[-1]
+            shot_num, frame_start, frame_end = int(video_filename.split('_')[0]), int(video_filename.split('_')[1]), int(video_filename.split('_')[2])
+            ts_data_shot = self.ts_data[self.ts_data.shot == shot_num]
+            idx = ts_data_shot[ts_data_shot.frame_idx == frame_start].index.item()
+            self.indices.append(idx)
+        assert len(self.indices) == len(self.video_file_path), "video data and tabular data are not matched"
+
+        # Prepare a mapping between the label names (strings) and indices (ints)
+        self.label2index = {label: index for index, label in enumerate(self.class_list)}
+        self.index2label = {index: label for index, label in enumerate(self.class_list)}
+        
+        # Convert the list of label names into an array of label indices
+        self.labels = np.array([self.label2index[label] for label in self.labels], dtype=int)
+
+    def load_frames(self, file_dir : str):
+        frames = sorted([os.path.join(file_dir, img) for img in os.listdir(file_dir)])
+        frame_count = len(frames)
+        buffer = np.empty((frame_count, self.resize_height, self.resize_width, 3), np.dtype('float32'))
+        for i, frame_name in enumerate(frames):
+            frame = np.array(cv2.imread(frame_name)).astype(np.float32)
+            buffer[i] = frame
+        return buffer
+    
+    def __len__(self):
+        return len(self.labels)
+
+    def __getitem__(self, idx : int):
+        label = torch.from_numpy(np.array(self.labels[idx]))
+        return self.get_video_data(idx), self.get_tabular_data(idx), label
+
+    def get_video_data(self, index : int):
+        buffer = self.load_frames(self.video_file_path[index])
+        if buffer.shape[0] < self.seq_len:
+            buffer = self.refill_temporal_slide(buffer)
+        buffer = self.crop(buffer, self.seq_len, self.crop_size)
+        buffer = self.normalize(buffer)
+        buffer = self.to_tensor(buffer)
+        return torch.from_numpy(buffer)
+    
+    def get_tabular_data(self, index : int):
+        ts_idx = self.indices[index]
+        data = self.ts_data[self.ts_cols].loc[ts_idx:ts_idx+self.seq_len].values
+        return torch.from_numpy(data)
+
+    def refill_temporal_slide(self, buffer:np.ndarray):
+        for _ in range(self.seq_len - buffer.shape[0]):
+            frame_new = buffer[-1].reshape(1, self.resize_height, self.resize_width, 3)
+            buffer = np.concatenate((buffer, frame_new))
+        return buffer
+
+    def normalize(self, buffer):
+        for i, frame in enumerate(buffer):
+            frame -= np.array([[[90.0, 98.0, 102.0]]])
+            buffer[i] = frame
+        return buffer
+
+    def to_tensor(self, buffer:Union[np.ndarray, torch.Tensor]):
+        return buffer.transpose((3, 0, 1, 2))
+
+    def crop(self, buffer : Union[np.ndarray, torch.Tensor], clip_len : int, crop_size : int, is_random : bool = False):
+        if buffer.shape[0] < clip_len :
+            time_index = np.random.randint(abs(buffer.shape[0] - clip_len))
+        elif buffer.shape[0] == clip_len :
+            time_index = 0
+        else :
+            time_index = np.random.randint(buffer.shape[0] - clip_len)
+
+        if not is_random:
+            original_height = self.resize_height
+            original_width = self.resize_width
+            mid_x, mid_y = original_height // 2, original_width // 2
+            offset_x, offset_y = crop_size // 2, crop_size // 2
+            buffer = buffer[time_index : time_index + clip_len, mid_x - offset_x:mid_x+offset_x, mid_y - offset_y: mid_y+ offset_y, :]
+        else:
+            height_index = np.random.randint(buffer.shape[1] - crop_size)
+            width_index = np.random.randint(buffer.shape[2] - crop_size)
+
+            buffer = buffer[time_index:time_index + clip_len,
+                    height_index:height_index + crop_size,
+                    width_index:width_index + crop_size, :]
+        return buffer
+
+    # function for imbalanced dataset
+    # used for LDAM loss and re-weighting
     def get_num_per_cls(self):
         classes = np.unique(self.labels)
         self.num_per_cls_dict = dict()
