@@ -152,6 +152,7 @@ class ViViT(nn.Module):
 
         self.dropout = nn.Dropout(embedd_dropout)
         self.pool = pool
+        self.dim = dim
 
         self.mlp = nn.Sequential(
             nn.LayerNorm(dim),
@@ -211,6 +212,79 @@ class ViViT(nn.Module):
         sample = torch.zeros((1, self.n_frames, self.in_channels, self.image_size, self.image_size), device = device)
         return summary(self, sample, show_input = show_input, show_hierarchical=show_hierarchical, print_summary = print_summary, show_parent_layers=show_parent_layers)
 
+
+class ViViTEncoder(nn.Module):
+    def __init__(
+        self, 
+        image_size : int, 
+        patch_size : int, 
+        n_frames : int, 
+        dim : int = 192, 
+        depth : int = 4, 
+        n_heads : int = 3, 
+        pool : str = 'cls', 
+        in_channels : int = 3, 
+        d_head :int = 64, 
+        dropout : float = 0.,
+        embedd_dropout : float = 0., 
+        scale_dim :int = 4, 
+        ):
+        super(ViViTEncoder, self).__init__()
+        
+        assert pool in {'cls', 'mean'}, 'pool type must be either cls(cls token) or mean(mean pooling)'
+        assert image_size % patch_size == 0, "Image dimension(height and width) must be divisible by the patch_size"
+
+        self.image_size = image_size
+        self.n_frames = n_frames
+        self.in_channels = in_channels
+
+        n_patches = (image_size // patch_size) ** 2
+        patch_dim = in_channels * patch_size ** 2
+
+        self.to_patch_embedding = nn.Sequential(
+            Rearrange('b t c (h p1) (w p2) -> b t (h w) (p1 p2 c)', p1 = patch_size, p2 = patch_size),
+            nn.Linear(patch_dim, dim)
+        )
+
+        self.pos_embedding = nn.Parameter(torch.randn(1, n_frames, n_patches + 1, dim))
+        self.space_token = nn.Parameter(torch.randn(1, 1, dim))
+        self.space_transformer = Transformer(
+            dim, depth, n_heads, d_head, dim * scale_dim, dropout
+        )
+
+        self.temporal_token = nn.Parameter(torch.randn(1,1,dim))
+        self.temporal_transformer = Transformer(
+            dim, depth, n_heads, d_head, dim * scale_dim, dropout
+        )
+
+        self.dropout = nn.Dropout(embedd_dropout)
+        self.pool = pool
+        self.dim = dim
+
+
+    def forward(self, x : torch.Tensor)->torch.Tensor:
+
+        if x.size()[1] == self.in_channels:
+            x = torch.permute(x, (0,2,1,3,4))
+            
+        x = self.to_patch_embedding(x)
+        b, t, n, _ = x.shape
+        cls_space_token = repeat(self.space_token, '() n d -> b t n d', b = b, t = t)
+        cls_temporal_token = repeat(self.temporal_token, '() n d -> b n d', b = b)
+
+        x = torch.cat((cls_space_token, x), dim = 2)
+        x += self.pos_embedding[:,:,:(n+1)]
+        x = self.dropout(x)
+
+        x = rearrange(x, 'b t n d -> (b t) n d')
+        x = self.space_transformer(x)
+        x = rearrange(x[:,0], '(b t) ... -> b t ...', b = b)
+
+        x = torch.cat((cls_temporal_token, x), dim = 1)
+        x = self.temporal_transformer(x)
+        x = x.mean(dim = 1) if self.pool == 'mean' else x[:, 0]
+
+        return x
 
 if __name__ == "__main__":
 

@@ -443,7 +443,7 @@ class MultiModalDataset(Dataset):
         distance : Optional[int] = 0,
         resize_height : Optional[int] = 256,
         resize_width : Optional[int] = 256,
-        crop_size : Optional[int] = 224,
+        crop_size : Optional[int] = 128,
         seq_len : int = 21,
         ):
 
