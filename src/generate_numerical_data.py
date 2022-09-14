@@ -1,8 +1,6 @@
-from re import T
 import pandas as pd
 import numpy as np
-import scipy as sp
-from typing import List, Tuple
+from typing import List
 from scipy.interpolate import interp1d
 from tqdm.auto import tqdm
 

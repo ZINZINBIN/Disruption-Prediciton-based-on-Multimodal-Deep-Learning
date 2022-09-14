@@ -193,7 +193,7 @@ if __name__ == "__main__":
     ts_shot_df = pd.read_csv(ts_data_path)
 
     # choose data columns (time series data)
-    ts_cols = ts_shot_df.columns[ts_shot_df.notna().any()].drop(['Unnamed: 0','shot','time']).tolist()
+    # ts_cols = ts_shot_df.columns[ts_shot_df.notna().any()].drop(['Unnamed: 0','shot','time']).tolist()
 
     # check directory
     check_directory(save_path)
