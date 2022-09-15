@@ -6,7 +6,7 @@ from src.CustomDataset import DatasetFor0D
 from src.models.ConvLSTM import ConvLSTM
 from src.utils.sampler import ImbalancedDatasetSampler
 from src.utils.utility import plot_learning_curve, generate_prob_curve_from_0D
-from src.visualization.visualize_latent_space import visualize_2D_latent_space
+from src.visualization.visualize_latent_space import visualize_2D_latent_space, visualize_3D_latent_space
 from torch.utils.data import DataLoader
 from src.train import train
 from src.evaluate import evaluate
@@ -73,7 +73,8 @@ save_best_dir = "./weights/ts_conv_lstm_clip_21_dist_3_best.pt"
 save_last_dir = "./weights/ts_conv_lstm_clip_21_dist_3_best.pt"
 save_txt = "./results/test_ts_conv_lstm_clip_21_dist_3.txt"
 save_conf = "./results/test_ts_conv_lstm_clip_21_dist_3_confusion_matrix.png"
-save_latent_2d = "./results/ts_conv_lstm_latent_2d.png"
+save_latent_2d = "./results/ts_conv_lstm_clip_21_dist_3_latent_2d.png"
+save_latent_3d = "./results/ts_conv_lstm_clip_21_dist_3_latent_3d.png"
 
 train_data = DatasetFor0D(ts_train, kstar_shot_list, seq_len = seq_len, cols = ts_cols, dist = dist, dt = 1.0 / 210 * 4)
 valid_data = DatasetFor0D(ts_valid, kstar_shot_list, seq_len = seq_len, cols = ts_cols, dist = dist, dt = 1.0 / 210 * 4)
@@ -130,21 +131,21 @@ if __name__ == "__main__":
     focal_gamma = 2.0
     loss_fn = FocalLoss(weight = per_cls_weights, gamma = focal_gamma)
 
-    train_loss,  train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train(
-        train_loader,
-        valid_loader,
-        model,
-        optimizer,
-        scheduler,
-        loss_fn,
-        device,
-        num_epoch,
-        verbose,
-        save_best_dir = save_best_dir,
-        save_last_dir = save_last_dir,
-        max_norm_grad = 1.0,
-        criteria = "f1_score",
-    )
+    # train_loss,  train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train(
+    #     train_loader,
+    #     valid_loader,
+    #     model,
+    #     optimizer,
+    #     scheduler,
+    #     loss_fn,
+    #     device,
+    #     num_epoch,
+    #     verbose,
+    #     save_best_dir = save_best_dir,
+    #     save_last_dir = save_last_dir,
+    #     max_norm_grad = 1.0,
+    #     criteria = "f1_score",
+    # )
     
     model.load_state_dict(torch.load(save_best_dir))
 
@@ -180,4 +181,12 @@ if __name__ == "__main__":
         train_loader,
         device,
         save_latent_2d
+    )
+    
+    # plot 3d latent space
+    visualize_3D_latent_space(
+        model,
+        train_loader,
+        device,
+        save_latent_3d
     )

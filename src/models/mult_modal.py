@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
-from ConvLSTM import ConvLSTMEncoder
-from ViViT import ViViTEncoder
+from src.models.ConvLSTM import ConvLSTMEncoder
+from src.models.ViViT import ViViTEncoder
 from typing import Dict
 from pytorch_model_summary import summary
 
@@ -29,8 +29,8 @@ class MultiModalModel(nn.Module):
         return output
     
     def summary(self, device : str = 'cpu', show_input : bool = True, show_hierarchical : bool = False, print_summary : bool = True, show_parent_layers : bool = False):
-        sample_video = torch.zeros((1, self.args_video["n_frames"], self.args_video["in_channels"], self.args_video["image_size"], self.args_video["image_size"]), device = device)
-        sample_0D = torch.zeros((1, self.args_0D["seq_len"], self.args_0D["col_dim"]), device = device)
+        sample_video = torch.zeros((8,  self.args_video["in_channels"], self.args_video["n_frames"], self.args_video["image_size"], self.args_video["image_size"]), device = device)
+        sample_0D = torch.zeros((8, self.args_0D["seq_len"], self.args_0D["col_dim"]), device = device)
         return summary(self, sample_video, sample_0D, show_input = show_input, show_hierarchical=show_hierarchical, print_summary = print_summary, show_parent_layers=show_parent_layers)
 
 

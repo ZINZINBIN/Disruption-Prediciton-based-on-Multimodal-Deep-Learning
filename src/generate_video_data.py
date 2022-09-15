@@ -135,40 +135,43 @@ def make_dataset(
         frame_num = 0
         disruption_bool = False
         save_start = True
+        out = None
 
         while cap.isOpened():
             ret, frame = cap.read()
+            
             if not ret:
                 break
 
             if frame_num < tftsrt:
                 pass
             else:
-                if save_start:
+                if save_start and (frame_num - start_frame)%duration == 0:
                     save_video = "{}_{}_{}.".format(shot_num, frame_num, frame_num+duration) + exe
                     out = cv2.VideoWriter(nom_path+save_video, fourcc, fps, (w, h))
                     save_start = False
-                
-                # disruption phase
-                if frame_num + duration == dis_frame: 
-                    out.release()
-                    save_video = "{}_{}_{}.".format(shot_num,frame_num, frame_num+duration) + exe
-                    out = cv2.VideoWriter(dis_path+save_video, fourcc, fps, (w, h))
-                    disruption_bool= True
-
-                # normal phase
-                elif (frame_num - start_frame)%duration == 0 and frame_num != start_frame: 
-                    if disruption_bool :
-                        break
-                    else:
+                else:
+                    # disruption phase
+                    if frame_num + duration == dis_frame: 
                         out.release()
-                        save_video = "{}_{}_{}.".format(shot_num, frame_num, frame_num+duration) +exe
-                        out = cv2.VideoWriter(nom_path+save_video, fourcc, fps, (w, h))
-                    
-                if is_flip:
-                    frame = cv2.flip(frame, 1)
+                        save_video = "{}_{}_{}.".format(shot_num,frame_num, frame_num+duration) + exe
+                        out = cv2.VideoWriter(dis_path+save_video, fourcc, fps, (w, h))
+                        disruption_bool= True
 
-                out.write(frame)
+                    # normal phase
+                    elif (frame_num - start_frame)%duration == 0 and frame_num != start_frame: 
+                        if disruption_bool :
+                            break
+                        else:
+                            out.release()
+                            save_video = "{}_{}_{}.".format(shot_num, frame_num, frame_num+duration) +exe
+                            out = cv2.VideoWriter(nom_path+save_video, fourcc, fps, (w, h))
+                        
+                    if is_flip:
+                        frame = cv2.flip(frame, 1)
+
+                    if out:
+                        out.write(frame)
                 
             frame_num+=1
 
