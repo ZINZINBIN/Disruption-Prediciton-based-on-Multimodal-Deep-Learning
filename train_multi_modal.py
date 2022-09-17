@@ -513,15 +513,16 @@ args_0D = {
 model = MultiModalModel(
     2, args_video, args_0D
 )
+
 model.summary('cpu')
 model.to(device)
 
 num_epoch = 64
 verbose = 4
-save_best_dir = "./weights/multi_modal_best.pt"
-save_last_dir = "./weights/multi_modal_last.pt"
-save_conf = "./results/test_multi_modal_clip_21_dist_confusion_matrix.png"
-save_txt = "./results/test_multi_modal_clip_21_dist_4.txt"
+save_best_dir = "./weights/multi_modal_clip_21_dist_8_best.pt"
+save_last_dir = "./weights/multi_modal_clip_21_dist_8_last.pt"
+save_conf = "./results/test_multi_modal_clip_21_dist_8_confusion_matrix.png"
+save_txt = "./results/test_multi_modal_clip_21_dist_8.txt"
 max_norm_grad = 1.0
 criteria = "f1_score"
 optimizer = torch.optim.AdamW(model.parameters(), lr = lr)

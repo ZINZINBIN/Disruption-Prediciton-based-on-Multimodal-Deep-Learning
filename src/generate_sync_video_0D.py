@@ -11,6 +11,7 @@ from CustomDataset import DEFAULT_TS_COLS
 parser = argparse.ArgumentParser(description="generate dataframe for multi-modal dataset from video and numerical data")
 
 # data directory
+parser.add_argument("--video_path", type = str, default = "./dataset/dur84_dis4")
 parser.add_argument("--seq_len", type = int, default = 21)
 parser.add_argument("--n_fps", type = int, default = 4)
 parser.add_argument("--fps", type = float, default = 210)
@@ -20,6 +21,7 @@ args = vars(parser.parse_args())
 seq_len = args['seq_len']
 n_fps = args['n_fps']
 fps = args['fps']
+video_path = args['video_path']
 
 def frame_calculator(time, fps=210, gap=0):
     frame_time = 1./fps
@@ -151,7 +153,6 @@ def sync_video_0D_data(
 if __name__ == '__main__':
     
     # video path list
-    video_path = "./dataset/dur84_dis4"
     video_path_list_train = glob2.glob(video_path + "/train/*/*")
     video_path_list_valid = glob2.glob(video_path + "/valid/*/*")
     video_path_list_test = glob2.glob(video_path + "/test/*/*")
