@@ -54,6 +54,7 @@ class Attention(nn.Module):
         self.n_heads = n_heads
         self.d_head = d_head
         self.dropout = dropout
+        self.att_mat = None
 
         project_out = not (n_heads == 1 and d_head == dim)
 
@@ -81,8 +82,10 @@ class Attention(nn.Module):
 
         # multply attention score * value
         out = torch.einsum('b h i j, b h j d -> b h i d', attn, v)
+        
         # rearrange as (b,n,h*d) => n_heads * d_head
         out = rearrange(out, 'b h n d -> b n (h d)')
+        
         out =  self.to_out(out)
 
         return out
@@ -129,6 +132,10 @@ class ViViT(nn.Module):
 
         self.image_size = image_size
         self.n_frames = n_frames
+        self.n_heads  = n_heads
+        self.d_head = d_head
+        self.depth = depth
+
         self.in_channels = in_channels
 
         n_patches = (image_size // patch_size) ** 2

@@ -33,6 +33,8 @@ class MultiModalModel(nn.Module):
         sample_0D = torch.zeros((8, self.args_0D["seq_len"], self.args_0D["col_dim"]), device = device)
         return summary(self, sample_video, sample_0D, show_input = show_input, show_hierarchical=show_hierarchical, print_summary = print_summary, show_parent_layers=show_parent_layers)
 
+# multi-modal deep learning
+# we have to consider parameter sharing for two different data streams
 
 if __name__ == "__main__":
     

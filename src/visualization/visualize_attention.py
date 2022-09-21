@@ -64,5 +64,32 @@ def add_mask_on_img_sequence(buffer: np.ndarray, masks : np.ndarray, h : int = 2
         buffer[seq_idx, :, :, :] = cam
     
     return buffer
-        
-        
+
+
+def rollout(attentions : List[torch.Tensor], discard_ratio : float, head_fusion : Literal['mean', 'max', 'min']):
+    # attentions : List which consist of [1, channels, height, width] size of attention data
+    result = torch.eye(attentions[0].size(-1))
+    with torch.no_grad():
+        for attention in attentions:
+            if head_fusion == 'mean':
+                attention_heads_fused = attention.mean(axis = 1)
+            elif head_fusion == 'max':
+                attention_heads_fused = attention.max(axis = 1)[0]
+            elif head_fusion == 'min':
+                attention_heads_fused = attention.min(axis = 1)[0]
+            
+            flat = attention_heads_fused.view(attention_heads_fused.size()[0], -1)
+            _, indices = flat.topk(int(flat.size(-1) * discard_ratio), dim = -1, largest = False)
+            indices = indices[indices != 0]
+            flat[0, indices] = 0
+            
+            I = torch.eye(attention_heads_fused.size(-1))
+            a = (attention_heads_fused + 1.0 * I) / 2.0
+            a = a / a.sum(dim = -1)
+            
+            result = torch.matmul(a, result)
+    
+    mask = result
+    mask = mask.numpy()
+    mask = mask / np.max(mask)
+    return mask
