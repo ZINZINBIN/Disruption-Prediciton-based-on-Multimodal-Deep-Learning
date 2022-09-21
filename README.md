@@ -71,6 +71,11 @@ python3 train_conv_lstm.py --batch_size {batch size} --gpu_num {gpu num} --use_L
 python3 train_ts_transformer.py --batch_size {batch size} --alpha {alpha} --gpu_num {gpu num} --use_LDAM {bool : use LDAM loss}
 ```
 
+- Models for MultiModal(video + 0D data)
+```
+python3 train_multi_modal.py --batch_size {batch size} --alpha {alpha} --gpu_num {gpu num --use_LDAM {bool : use LDAM loss}
+```
+
 ### Experiment
 ```
 # experiment with different learning algorithm and models
@@ -82,11 +87,13 @@ python3 experiment.py --gpu_num {gpu_num} --loss_type {'CE', 'FOCAL', 'LDAM'}
 - Video encoder
 1. R2Plus1D
 2. Slowfast
-3. ViViT : selected due to its efficiency
+3. ViViT (selected)
 
 - 0D data encoder
 1. Transformer
-2. Conv1D-LSTM using self-attention
+2. Conv1D-LSTM using self-attention (selected)
+
+- Multimodal Model : not done
 
 ### technique or algorithm to use
 1. Solving imbalanced classificatio issue
@@ -98,7 +105,7 @@ python3 experiment.py --gpu_num {gpu_num} --loss_type {'CE', 'FOCAL', 'LDAM'}
 2. Analysis on physical characteristics of disruptive video data
 - CAM
 - Grad CAM
-- attention visualization
+- attention rollout
 
 3. Data augmentation
 - Video Mixup Algorithm for Data augmentation(done, not effective)
@@ -106,6 +113,10 @@ python3 experiment.py --gpu_num {gpu_num} --loss_type {'CE', 'FOCAL', 'LDAM'}
 
 4. Training Process enhancement
 - Multigrid training algorithm : Fast training for SlowFast
+
+5. Generalization and Robustness
+- Add noise with image sequence and 0D data for robustness
+- Multimodality can also guarantee the robustness from noise of the data
 
 ### Additional Task
 - Multi-GPU distributed Learning : done
