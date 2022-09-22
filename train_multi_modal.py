@@ -384,12 +384,6 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, classification_report, f1_score
 from sklearn.metrics import roc_auc_score, roc_curve
 
-def MAE(pred, true):
-    return np.mean(np.abs(pred - true))
-
-def MSE(pred, true):
-    return np.mean((pred - true)**2)
-
 def evaluate(
     test_loader : DataLoader, 
     model : torch.nn.Module,
@@ -476,7 +470,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 lr = 1e-3
 
 from src.loss import FocalLoss
-from src.models.mult_modal import MultiModalModel
+from src.models.mult_modal import MultiModalModel, FusionNetwork
 
 train_data.get_num_per_cls()
 cls_num_list = train_data.get_cls_num_list()
@@ -489,7 +483,7 @@ args_video = {
     "image_size" : 128, 
     "patch_size" : 32, 
     "n_frames" : 21, 
-    "dim": 64, 
+    "dim": 64 * 2, 
     "depth" : 4, 
     "n_heads" : 8, 
     "pool" : 'cls', 
@@ -509,9 +503,20 @@ args_0D = {
     "conv_padding" : 1,
     "lstm_dim" : 64, 
 }
+
+args_fusion = {
+    "kernel_size" : 3,
+    "stride" : 2,
+    "maxpool_kernel" : 3,
+    "maxpool_stride" : 2,
+}
     
-model = MultiModalModel(
-    2, args_video, args_0D
+# model = MultiModalModel(
+#     2, args_video, args_0D
+# )
+
+model = FusionNetwork(
+    2, args_video, args_0D, args_fusion
 )
 
 model.summary('cpu')

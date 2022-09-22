@@ -289,7 +289,7 @@ class ViViTEncoder(nn.Module):
 
         x = torch.cat((cls_temporal_token, x), dim = 1)
         x = self.temporal_transformer(x)
-        x = x.mean(dim = 1) if self.pool == 'mean' else x[:, 0]
+        # x = x.mean(dim = 1) if self.pool == 'mean' else x[:, 0]
 
         return x
 

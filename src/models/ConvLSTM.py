@@ -4,6 +4,7 @@ import numpy as np
 from torch.autograd import Variable
 from torch.nn import functional as F
 from typing import List, Optional, Union, Tuple
+from pytorch_model_summary import summary
 
 class ConvLSTM(nn.Module):
     def __init__(
@@ -81,11 +82,17 @@ class ConvLSTM(nn.Module):
 
         lstm_output, (h_n,c_n) = self.lstm(x_conv.permute(1,0,2), (h_0, c_0))
         lstm_output = lstm_output.permute(1,0,2)
+        print("lstm_output : ", lstm_output.size())
         att = self.attention(lstm_output)
         hidden = torch.bmm(att.permute(0,2,1), lstm_output).mean(dim = 1)
+        print("hidden : ", hidden.size())
         hidden = hidden.view(hidden.size()[0], -1)
         output = self.classifier(hidden)
         return output
+    
+    def summary(self, device : str = 'cpu', show_input : bool = True, show_hierarchical : bool = True, print_summary : bool = True, show_parent_layers : bool = True)->None:
+        sample = torch.zeros((1, self.seq_len, self.col_dim), device = device)
+        return summary(self, sample, show_input = show_input, show_hierarchical=show_hierarchical, print_summary = print_summary, show_parent_layers=show_parent_layers)
 
 class ConvLSTMEncoder(nn.Module):
     def __init__(
@@ -140,6 +147,51 @@ class ConvLSTMEncoder(nn.Module):
         hidden = torch.bmm(att.permute(0,2,1), lstm_output).mean(dim = 1)
         hidden = hidden.view(hidden.size()[0], -1)
         return hidden
+    
+class ConvLSTMEncoderVer2(nn.Module):
+    def __init__(
+        self, 
+        seq_len : int = 21, 
+        col_dim : int = 10, 
+        conv_dim : int = 32, 
+        conv_kernel : int = 3,
+        conv_stride : int = 1, 
+        conv_padding : int = 1,
+        lstm_dim : int = 64, 
+        ):
+        
+        super(ConvLSTMEncoderVer2, self).__init__()
+        self.col_dim = col_dim
+        self.seq_len = seq_len
+        self.lstm_dim = lstm_dim
+
+        # spatio-conv encoder : analyze spatio-effect between variables
+        self.conv = nn.Sequential(
+            nn.Conv1d(in_channels = col_dim, out_channels = conv_dim, kernel_size = conv_kernel, stride = conv_stride, padding = conv_padding),
+            nn.BatchNorm1d(conv_dim), 
+            nn.ReLU(),
+            nn.Conv1d(in_channels = conv_dim, out_channels = conv_dim, kernel_size = conv_kernel, stride = conv_stride, padding = conv_padding),
+            nn.BatchNorm1d(conv_dim), 
+            nn.ReLU(),
+        )
+        
+        # temporl - lstm
+        self.lstm = nn.LSTM(conv_dim, lstm_dim, bidirectional = True, batch_first = False)
+
+    def forward(self, x : torch.Tensor)->torch.Tensor:
+        # x : (B, seq_len, col_dim)
+        x_conv = self.conv(x.permute(0,2,1)) # (B, conv_dim, L_out : seq_len)
+        h_0 = Variable(torch.zeros(2, x.size()[0], self.lstm_dim)).to(x.device)
+        c_0 = Variable(torch.zeros(2, x.size()[0], self.lstm_dim)).to(x.device)
+
+        lstm_output, (h_n,c_n) = self.lstm(x_conv.permute(2,0,1), (h_0, c_0))
+        lstm_output = lstm_output.permute(1,0,2) # (B, lstm_dim * 2, L_out)
+        hidden = lstm_output
+        return hidden
+    
+    def summary(self, device : str = 'cpu', show_input : bool = True, show_hierarchical : bool = True, print_summary : bool = True, show_parent_layers : bool = True)->None:
+        sample = torch.zeros((1, self.seq_len, self.col_dim), device = device)
+        return summary(self, sample, show_input = show_input, show_hierarchical=show_hierarchical, print_summary = print_summary, show_parent_layers=show_parent_layers)
 
 if __name__ == "__main__":
     # test
@@ -157,9 +209,15 @@ if __name__ == "__main__":
     )
 
     model.to(device)
-
-    sample_data = torch.zeros((batch_size, seq_len, col_len)).to(device)
-    sample_output = model(sample_data)
-
-    print("sample_data : ", sample_data.size())
-    print("sample_output : ", sample_output.size())
+    model.summary(device, True,  True, True, False)
+    
+    model.cpu()
+    del model
+    
+    model = ConvLSTMEncoderVer2(
+        seq_len = seq_len,
+        col_dim = col_len
+    )
+    
+    model.to(device)
+    model.summary(device, True,  True, True, False)
