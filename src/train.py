@@ -13,7 +13,8 @@ def train_per_epoch(
     scheduler : Optional[torch.optim.lr_scheduler._LRScheduler],
     loss_fn : torch.nn.Module,
     device : str = "cpu",
-    max_norm_grad : Optional[float] = None
+    max_norm_grad : Optional[float] = None,
+    model_type : Literal["single","multi"] = "single"
     ):
 
     model.train()
@@ -28,10 +29,17 @@ def train_per_epoch(
 
     for batch_idx, (data, target) in enumerate(train_loader):
         optimizer.zero_grad()
-        data = data.to(device)
+        
+        if model_type == "single":
+            data = data.to(device)
+            output = model(data)
+        else:
+            data_video = data['video'].to(device)
+            data_0D = data['0D'].to(device)
+            output = model(data_video, data_0D)
+            
         target = target.to(device)
-    
-        output = model(data)
+        
         loss = loss_fn(output, target)
 
         loss.backward()
@@ -46,7 +54,7 @@ def train_per_epoch(
 
         pred = torch.nn.functional.softmax(output, dim = 1).max(1, keepdim = True)[1]
         train_acc += pred.eq(target.view_as(pred)).sum().item()
-        total_size += data.size(0) 
+        total_size += pred.size(0) 
         
         total_pred = np.concatenate((total_pred, pred.cpu().numpy().reshape(-1,)))
         total_label = np.concatenate((total_label, target.cpu().numpy().reshape(-1,)))
@@ -67,6 +75,7 @@ def valid_per_epoch(
     optimizer : torch.optim.Optimizer,
     loss_fn : torch.nn.Module,
     device : str = "cpu",
+    model_type : Literal["single","multi"] = "single"
     ):
 
     model.eval()
@@ -81,16 +90,23 @@ def valid_per_epoch(
     for batch_idx, (data, target) in enumerate(valid_loader):
         with torch.no_grad():
             optimizer.zero_grad()
-            data = data.to(device)
+            
+            if model_type == "single":
+                data = data.to(device)
+                output = model(data)
+                 
+            else:
+                data_video = data['video'].to(device)
+                data_0D = data['0D'].to(device)
+                output = model(data_video, data_0D)
+            
             target = target.to(device)
-            output = model(data)
-
             loss = loss_fn(output, target)
     
             valid_loss += loss.item()
             pred = torch.nn.functional.softmax(output, dim = 1).max(1, keepdim = True)[1]
             valid_acc += pred.eq(target.view_as(pred)).sum().item()
-            total_size += data.size(0) 
+            total_size += pred.size(0)
 
             total_pred = np.concatenate((total_pred, pred.cpu().numpy().reshape(-1,)))
             total_label = np.concatenate((total_label, target.cpu().numpy().reshape(-1,)))
@@ -116,6 +132,7 @@ def train(
     save_last_dir : str = "./weights/last.pt",
     max_norm_grad : Optional[float] = None,
     criteria : Literal["f1_score", "acc", "loss"] = "f1_score",
+    model_type : Literal["single","multi"] = "single"
     ):
 
     train_loss_list = []
@@ -141,7 +158,8 @@ def train(
             scheduler,
             loss_fn,
             device,
-            max_norm_grad
+            max_norm_grad,
+            model_type
         )
 
         valid_loss, valid_acc, valid_f1 = valid_per_epoch(
@@ -149,7 +167,8 @@ def train(
             model,
             optimizer,
             loss_fn,
-            device 
+            device,
+            model_type
         )
 
         train_loss_list.append(train_loss)
@@ -213,7 +232,8 @@ def train_DRW(
     max_norm_grad : Optional[float] = None,
     criteria : Literal["f1_score", "acc", "loss"] = "f1_score",
     cls_num_list : Optional[List] = None,
-    betas : List = [0, 0.25, 0.75, 0.9]
+    betas : List = [0, 0.25, 0.75, 0.9],
+    model_type : Literal['single','multi'] = 'single'
     ):
 
     train_loss_list = []

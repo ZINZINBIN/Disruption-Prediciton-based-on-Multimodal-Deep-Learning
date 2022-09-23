@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
-from typing import Optional
+from typing import Optional, Literal
 import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, classification_report, f1_score
@@ -22,6 +22,7 @@ def evaluate(
     save_conf : Optional[str] = "./results/confusion_matrix.png",
     save_txt : Optional[str] = None,
     threshold : float = 0.5,
+    model_type : Literal["single","multi"] = "single"
     ):
 
     test_loss = 0
@@ -41,10 +42,15 @@ def evaluate(
     for idx, (data, target) in enumerate(test_loader):
         with torch.no_grad():
             optimizer.zero_grad()
-            data = data.to(device)
+            if model_type == "single":
+                data = data.to(device)
+                output = model(data)
+            else:
+                data_video = data['video'].to(device)
+                data_0D = data['0D'].to(device)
+                output = model(data_video, data_0D)
+                
             target = target.to(device)
-            output = model.forward(data)
-
             loss = loss_fn(output, target)
     
             test_loss += loss.item()
@@ -52,7 +58,7 @@ def evaluate(
             pred = (pred > torch.FloatTensor([threshold]).to(device))
             test_acc += pred.eq(target.view_as(pred)).sum().item()
 
-            total_size += data.size(0)
+            total_size += pred.size(0)
             
             total_pred = np.concatenate((total_pred, pred.cpu().numpy().reshape(-1,)))
             total_label = np.concatenate((total_label, target.cpu().numpy().reshape(-1,)))
