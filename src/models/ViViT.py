@@ -166,7 +166,7 @@ class ViViT(nn.Module):
             nn.Linear(dim, n_classes)
         )
 
-    def forward(self, x : torch.Tensor)->torch.Tensor:
+    def forward(self, x : torch.Tensor):
 
         if x.size()[1] == self.in_channels:
             x = torch.permute(x, (0,2,1,3,4))
@@ -191,7 +191,7 @@ class ViViT(nn.Module):
 
         return x
     
-    def encode(self, x : torch.Tensor)->torch.Tensor:
+    def encode(self, x : torch.Tensor):
         with torch.no_grad():
             if x.size()[1] == self.in_channels:
                 x = torch.permute(x, (0,2,1,3,4))
@@ -215,9 +215,9 @@ class ViViT(nn.Module):
             
         return x
 
-    def summary(self, device : str = 'cpu', show_input : bool = True, show_hierarchical : bool = True, print_summary : bool = True, show_parent_layers : bool = True)->None:
+    def summary(self, device : str = 'cpu', show_input : bool = True, show_hierarchical : bool = True, print_summary : bool = False, show_parent_layers : bool = False)->None:
         sample = torch.zeros((1, self.n_frames, self.in_channels, self.image_size, self.image_size), device = device)
-        return summary(self, sample, show_input = show_input, show_hierarchical=show_hierarchical, print_summary = print_summary, show_parent_layers=show_parent_layers)
+        return print(summary(self, sample, show_input = show_input, show_hierarchical=show_hierarchical, print_summary = print_summary, show_parent_layers=show_parent_layers))
 
 
 class ViViTEncoder(nn.Module):

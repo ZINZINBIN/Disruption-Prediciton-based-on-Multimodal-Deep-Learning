@@ -28,7 +28,7 @@ class DeepCCA(nn.Module):
         loss = self.cca_loss(x1,x2)
         return loss
     
-def train_per_epoch(
+def _train_per_epoch(
     train_loader : DataLoader, 
     model : DeepCCA,
     optimizer : torch.optim.Optimizer,
@@ -67,7 +67,7 @@ def train_per_epoch(
 
     return train_loss
 
-def valid_per_epoch(
+def _valid_per_epoch(
     valid_loader : DataLoader, 
     model : torch.nn.Module,
     optimizer : torch.optim.Optimizer,
@@ -142,8 +142,8 @@ def train_cca(
 
     for epoch in tqdm(range(num_epoch), desc = "training CCA process"):
 
-        train_loss = train_per_epoch(train_loader,model,optimizer,loss_fn,scheduler,device,max_norm_grad)
-        valid_loss = valid_per_epoch(valid_loader, model,optimizer,loss_fn,device)
+        train_loss = _train_per_epoch(train_loader,model,optimizer,loss_fn,scheduler,device,max_norm_grad)
+        valid_loss = _valid_per_epoch(valid_loader, model,optimizer,loss_fn,device)
 
         train_loss_list.append(train_loss)
         valid_loss_list.append(valid_loss)

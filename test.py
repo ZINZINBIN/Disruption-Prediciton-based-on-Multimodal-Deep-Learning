@@ -12,7 +12,7 @@ from src.GradientBlending import GradientBlending, train_with_gradient_blending
 from src.models.mult_modal import MultiModalModel, FusionNetwork, MultiModalNetwork
 
 parser = argparse.ArgumentParser(description="training multimodal network for disruption classifier")
-parser.add_argument("--batch_size", type = int, default = 128)
+parser.add_argument("--batch_size", type = int, default = 32)
 parser.add_argument("--lr", type = float, default = 1e-3)
 parser.add_argument("--gamma", type = float, default = 0.95)
 parser.add_argument("--gpu_num", type = int, default = 0)
@@ -39,7 +39,7 @@ args = vars(parser.parse_args())
 # default argument
 args_video = {
     "image_size" : 128, 
-    "patch_size" : 32, 
+    "patch_size" : 16, 
     "n_frames" : 21, 
     "dim": 64 * 2, 
     "depth" : 4, 
@@ -49,7 +49,8 @@ args_video = {
     "d_head" : 64, 
     "dropout" : 0.25,
     "embedd_dropout":  0.25, 
-    "scale_dim" : 4
+    "scale_dim" : 4,
+    "n_classes" : 2,
 }
 
 args_0D = {
@@ -61,14 +62,6 @@ args_0D = {
     "conv_padding" : 1,
     "lstm_dim" : 64, 
 }
-
-args_fusion = {
-    "kernel_size" : 3,
-    "stride" : 2,
-    "maxpool_kernel" : 3,
-    "maxpool_stride" : 2,
-}
-
 # torch device state
 print("torch device avaliable : ", torch.cuda.is_available())
 print("torch current device : ", torch.cuda.current_device())
@@ -124,16 +117,43 @@ if __name__ == "__main__":
     
     if args['use_focal_loss']:
         focal_gamma = 2.0
-        loss_fn = FocalLoss(weight = per_cls_weights, gamma = focal_gamma)
+        loss_uni = FocalLoss(weight = per_cls_weights, gamma = focal_gamma)
+        loss_fn = GradientBlending(
+            FocalLoss(weight = per_cls_weights, gamma = focal_gamma),
+            FocalLoss(weight = per_cls_weights, gamma = focal_gamma),
+            FocalLoss(weight = per_cls_weights, gamma = focal_gamma),
+            0.2,
+            0.2,
+            0.6,
+            1.0
+        )
     elif args['use_LDAM_loss']:
         max_m = 0.5
         s = 1.0
-        loss_fn = LDAMLoss(cls_num_list, max_m = max_m, weight = per_cls_weights, s = s)
+        loss_uni = LDAMLoss(cls_num_list, max_m = max_m, weight = per_cls_weights, s = s)
+        loss_fn = GradientBlending(
+            LDAMLoss(cls_num_list, max_m = max_m, weight = per_cls_weights, s = s),
+            LDAMLoss(cls_num_list, max_m = max_m, weight = per_cls_weights, s = s),
+            LDAMLoss(cls_num_list, max_m = max_m, weight = per_cls_weights, s = s),
+            0.2,
+            0.2,
+            0.6,
+            1.0
+        )
     else: 
-        loss_fn = torch.nn.CrossEntropyLoss(reduction = "mean", weight = per_cls_weights)
-
-    model = FusionNetwork(
-        2, args_video, args_0D, args_fusion
+        loss_uni = torch.nn.CrossEntropyLoss(reduction = "mean", weight = per_cls_weights)
+        loss_fn = GradientBlending(
+            torch.nn.CrossEntropyLoss(reduction = "mean", weight = per_cls_weights),
+            torch.nn.CrossEntropyLoss(reduction = "mean", weight = per_cls_weights),
+            torch.nn.CrossEntropyLoss(reduction = "mean", weight = per_cls_weights),
+            0.2,
+            0.2,
+            0.6,
+            1.0
+        )
+    
+    model = MultiModalNetwork(
+        2, args_video, args_0D, 'multi'
     )
 
     model.summary('cpu')
@@ -147,21 +167,23 @@ if __name__ == "__main__":
     optimizer = torch.optim.AdamW(model.parameters(), lr = lr)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size = 4, gamma=args['gamma'])
 
-    train_loss, train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train(
+    train_loss, train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train_with_gradient_blending(
         train_loader,
         valid_loader,
         model,
         optimizer,
         scheduler,
         loss_fn,
+        loss_uni,
         device,
         num_epoch,
+        16,
+        4,
         verbose,
         args['save_best_dir'],
         args['save_last_dir'],
         max_norm_grad,
         criteria,
-        model_type = 'multi'
     )
 
     model.load_state_dict(torch.load(args['save_best_dir']))

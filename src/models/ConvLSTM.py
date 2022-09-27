@@ -55,12 +55,12 @@ class ConvLSTM(nn.Module):
     def compute_conv1d_output_dim(self, input_dim : int, kernel_size : int = 3, stride : int = 1, padding : int = 1, dilation : int = 1):
         return int((input_dim + 2 * padding - dilation * (kernel_size - 1) - 1) / stride + 1)
 
-    def attention(self, lstm_output : torch.Tensor)->torch.Tensor:
+    def attention(self, lstm_output : torch.Tensor):
         attn_weight_matrix = self.w_s2(torch.tanh(self.w_s1(lstm_output)))
         attn_weight_matrix = F.softmax(attn_weight_matrix, dim = 2)
         return attn_weight_matrix
     
-    def encode(self, x:torch.Tensor)->torch.Tensor:
+    def encode(self, x:torch.Tensor):
         with torch.no_grad():
             x_conv = self.conv(x.permute(0,2,1))
             h_0 = Variable(torch.zeros(2, x.size()[0], self.lstm_dim)).to(x.device)
@@ -74,7 +74,7 @@ class ConvLSTM(nn.Module):
             
         return hidden
 
-    def forward(self, x : torch.Tensor)->torch.Tensor:
+    def forward(self, x : torch.Tensor):
         # x : (batch, seq_len, col_dim)
         x_conv = self.conv(x.permute(0,2,1))
         h_0 = Variable(torch.zeros(2, x.size()[0], self.lstm_dim)).to(x.device)
@@ -82,17 +82,15 @@ class ConvLSTM(nn.Module):
 
         lstm_output, (h_n,c_n) = self.lstm(x_conv.permute(1,0,2), (h_0, c_0))
         lstm_output = lstm_output.permute(1,0,2)
-        print("lstm_output : ", lstm_output.size())
         att = self.attention(lstm_output)
         hidden = torch.bmm(att.permute(0,2,1), lstm_output).mean(dim = 1)
-        print("hidden : ", hidden.size())
         hidden = hidden.view(hidden.size()[0], -1)
         output = self.classifier(hidden)
         return output
     
-    def summary(self, device : str = 'cpu', show_input : bool = True, show_hierarchical : bool = True, print_summary : bool = True, show_parent_layers : bool = True)->None:
+    def summary(self, device : str = 'cpu', show_input : bool = True, show_hierarchical : bool = True, print_summary : bool = False, show_parent_layers : bool = False):
         sample = torch.zeros((1, self.seq_len, self.col_dim), device = device)
-        return summary(self, sample, show_input = show_input, show_hierarchical=show_hierarchical, print_summary = print_summary, show_parent_layers=show_parent_layers)
+        return print(summary(self, sample, show_input = show_input, show_hierarchical=show_hierarchical, print_summary = print_summary, show_parent_layers=show_parent_layers))
 
 class ConvLSTMEncoder(nn.Module):
     def __init__(
@@ -131,12 +129,12 @@ class ConvLSTMEncoder(nn.Module):
     def compute_conv1d_output_dim(self, input_dim : int, kernel_size : int = 3, stride : int = 1, padding : int = 1, dilation : int = 1):
         return int((input_dim + 2 * padding - dilation * (kernel_size - 1) - 1) / stride + 1)
 
-    def attention(self, lstm_output : torch.Tensor)->torch.Tensor:
+    def attention(self, lstm_output : torch.Tensor):
         attn_weight_matrix = self.w_s2(torch.tanh(self.w_s1(lstm_output)))
         attn_weight_matrix = F.softmax(attn_weight_matrix, dim = 2)
         return attn_weight_matrix
 
-    def forward(self, x : torch.Tensor)->torch.Tensor:
+    def forward(self, x : torch.Tensor):
         x_conv = self.conv(x.permute(0,2,1))
         h_0 = Variable(torch.zeros(2, x.size()[0], self.lstm_dim)).to(x.device)
         c_0 = Variable(torch.zeros(2, x.size()[0], self.lstm_dim)).to(x.device)
@@ -178,7 +176,7 @@ class ConvLSTMEncoderVer2(nn.Module):
         # temporl - lstm
         self.lstm = nn.LSTM(conv_dim, lstm_dim, bidirectional = True, batch_first = False)
 
-    def forward(self, x : torch.Tensor)->torch.Tensor:
+    def forward(self, x : torch.Tensor):
         # x : (B, seq_len, col_dim)
         x_conv = self.conv(x.permute(0,2,1)) # (B, conv_dim, L_out : seq_len)
         h_0 = Variable(torch.zeros(2, x.size()[0], self.lstm_dim)).to(x.device)
@@ -189,7 +187,7 @@ class ConvLSTMEncoderVer2(nn.Module):
         hidden = lstm_output
         return hidden
     
-    def summary(self, device : str = 'cpu', show_input : bool = True, show_hierarchical : bool = True, print_summary : bool = True, show_parent_layers : bool = True)->None:
+    def summary(self, device : str = 'cpu', show_input : bool = True, show_hierarchical : bool = True, print_summary : bool = True, show_parent_layers : bool = True):
         sample = torch.zeros((1, self.seq_len, self.col_dim), device = device)
         return summary(self, sample, show_input = show_input, show_hierarchical=show_hierarchical, print_summary = print_summary, show_parent_layers=show_parent_layers)
 

@@ -93,7 +93,8 @@ python3 experiment.py --gpu_num {gpu_num} --loss_type {'CE', 'FOCAL', 'LDAM'}
 1. Transformer
 2. Conv1D-LSTM using self-attention (selected)
 
-- Multimodal Model : not done
+- Multimodal Model
+1. Multimodal fusion model: video encoder + 0D data encoder
 
 ### technique or algorithm to use
 1. Solving imbalanced classificatio issue
@@ -101,6 +102,8 @@ python3 experiment.py --gpu_num {gpu_num} --loss_type {'CE', 'FOCAL', 'LDAM'}
 - Re-Sampling : ImbalancedWeightedSampler, Over-Sampling for minor classes
 - Re-Weighting : Define inverse class frequencies as weights to apply with loss function (CE, Focal Loss, LDAM Loss)
 - LDAM with DRW : Label-distribution-aware margin loss with deferred re-weighting scheduling
+- Multimodal Learning : Gradient Blending for avoiding sub-optimal due to large modalities
+- Multimodal Learning : CCA Learning for enhancement
 
 2. Analysis on physical characteristics of disruptive video data
 - CAM
@@ -117,6 +120,7 @@ python3 experiment.py --gpu_num {gpu_num} --loss_type {'CE', 'FOCAL', 'LDAM'}
 5. Generalization and Robustness
 - Add noise with image sequence and 0D data for robustness
 - Multimodality can also guarantee the robustness from noise of the data
+- Gradient Blending for avoiding sub-optimal states from multi-modal learning
 
 ### Additional Task
 - Multi-GPU distributed Learning : done

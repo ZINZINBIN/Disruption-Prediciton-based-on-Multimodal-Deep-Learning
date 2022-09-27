@@ -22,7 +22,7 @@ def evaluate(
     save_conf : Optional[str] = "./results/confusion_matrix.png",
     save_txt : Optional[str] = None,
     threshold : float = 0.5,
-    model_type : Literal["single","multi"] = "single"
+    model_type : Literal["single","multi","multi-GB"] = "single"
     ):
 
     test_loss = 0
@@ -42,16 +42,25 @@ def evaluate(
     for idx, (data, target) in enumerate(test_loader):
         with torch.no_grad():
             optimizer.zero_grad()
+            
             if model_type == "single":
                 data = data.to(device)
                 output = model(data)
-            else:
+            elif model_type == "multi":
                 data_video = data['video'].to(device)
                 data_0D = data['0D'].to(device)
                 output = model(data_video, data_0D)
+            elif model_type == "multi-GB":
+                data_video = data['video'].to(device)
+                data_0D = data['0D'].to(device)
+                output, output_vis, output_ts = model(data_video, data_0D)
                 
             target = target.to(device)
-            loss = loss_fn(output, target)
+            
+            if model_type == 'multi-GB':
+                loss = loss_fn(output, output_vis, output_ts, target)
+            else:
+                loss = loss_fn(output, target)
     
             test_loss += loss.item()
             pred = torch.nn.functional.softmax(output, dim = 1).max(1, keepdim = True)[1]

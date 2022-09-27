@@ -14,7 +14,7 @@ def train_per_epoch(
     loss_fn : torch.nn.Module,
     device : str = "cpu",
     max_norm_grad : Optional[float] = None,
-    model_type : Literal["single","multi"] = "single"
+    model_type : Literal["single","multi","multi-GB"] = "single"
     ):
 
     model.train()
@@ -33,14 +33,21 @@ def train_per_epoch(
         if model_type == "single":
             data = data.to(device)
             output = model(data)
-        else:
+        elif model_type == "multi":
             data_video = data['video'].to(device)
             data_0D = data['0D'].to(device)
             output = model(data_video, data_0D)
+        elif model_type == "multi-GB":
+            data_video = data['video'].to(device)
+            data_0D = data['0D'].to(device)
+            output, output_vis, output_ts = model(data_video, data_0D)
             
         target = target.to(device)
         
-        loss = loss_fn(output, target)
+        if model_type == 'multi-GB':
+            loss = loss_fn(output, output_vis, output_ts, target)
+        else:
+            loss = loss_fn(output, target)
 
         loss.backward()
 
@@ -75,7 +82,7 @@ def valid_per_epoch(
     optimizer : torch.optim.Optimizer,
     loss_fn : torch.nn.Module,
     device : str = "cpu",
-    model_type : Literal["single","multi"] = "single"
+    model_type : Literal["single","multi","multi-GB"] = "single"
     ):
 
     model.eval()
@@ -94,14 +101,21 @@ def valid_per_epoch(
             if model_type == "single":
                 data = data.to(device)
                 output = model(data)
-                 
-            else:
+            elif model_type == "multi":
                 data_video = data['video'].to(device)
                 data_0D = data['0D'].to(device)
                 output = model(data_video, data_0D)
-            
+            elif model_type == "multi-GB":
+                data_video = data['video'].to(device)
+                data_0D = data['0D'].to(device)
+                output, output_vis, output_ts = model(data_video, data_0D)
+                
             target = target.to(device)
-            loss = loss_fn(output, target)
+            
+            if model_type == 'multi-GB':
+                loss = loss_fn(output, output_vis, output_ts, target)
+            else:
+                loss = loss_fn(output, target)
     
             valid_loss += loss.item()
             pred = torch.nn.functional.softmax(output, dim = 1).max(1, keepdim = True)[1]
