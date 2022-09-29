@@ -8,8 +8,8 @@ from src.utils.sampler import ImbalancedDatasetSampler
 from src.train import train
 from src.evaluate import evaluate
 from src.loss import LDAMLoss, FocalLoss
-from src.GradientBlending import GradientBlending, train_with_gradient_blending
-from src.models.mult_modal import MultiModalModel, FusionNetwork, MultiModalNetwork
+from src.GradientBlending import GradientBlending, train_GB_dynamic, train_GB
+from src.models.MultiModal import MultiModalModel, FusionNetwork, MultiModalNetwork, TensorFusionNetwork
 
 parser = argparse.ArgumentParser(description="training multimodal network for disruption classifier")
 parser.add_argument("--batch_size", type = int, default = 32)
@@ -22,7 +22,7 @@ parser.add_argument("--pin_memory", type = bool, default = False)
 
 parser.add_argument("--use_sampler", type = bool, default = True)
 parser.add_argument("--num_epoch", type = int, default = 64)
-parser.add_argument("--verbose", type = int, default = 1)
+parser.add_argument("--verbose", type = int, default = 8)
 parser.add_argument("--save_best_dir", type = str, default = "./weights/multi_modal_clip_21_dist_8_best.pt")
 parser.add_argument("--save_last_dir", type = str, default = "./weights/multi_modal_clip_21_dist_8_last.pt")
 parser.add_argument("--save_result_dir", type = str, default = "./results/train_valid_loss_acc_multi_modal_clip_21_dist_8.png")
@@ -41,7 +41,7 @@ args_video = {
     "image_size" : 128, 
     "patch_size" : 16, 
     "n_frames" : 21, 
-    "dim": 64 * 2, 
+    "dim": 64, 
     "depth" : 4, 
     "n_heads" : 8, 
     "pool" : 'cls', 
@@ -60,7 +60,7 @@ args_0D = {
     "conv_kernel" : 3,
     "conv_stride" : 1, 
     "conv_padding" : 1,
-    "lstm_dim" : 64, 
+    "lstm_dim" : 32, 
 }
 # torch device state
 print("torch device avaliable : ", torch.cuda.is_available())
@@ -152,8 +152,12 @@ if __name__ == "__main__":
             1.0
         )
     
-    model = MultiModalNetwork(
-        2, args_video, args_0D, 'multi'
+    # model = MultiModalNetwork(
+    #     2, args_video, args_0D, 'multi'
+    # )
+    
+    model = TensorFusionNetwork(
+        2, args_video, args_0D
     )
 
     model.summary('cpu')
@@ -167,18 +171,34 @@ if __name__ == "__main__":
     optimizer = torch.optim.AdamW(model.parameters(), lr = lr)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size = 4, gamma=args['gamma'])
 
-    train_loss, train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train_with_gradient_blending(
+    # train_loss, train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train_GB_dynamic(
+    #     train_loader,
+    #     valid_loader,
+    #     model,
+    #     optimizer,
+    #     scheduler,
+    #     loss_fn,
+    #     loss_uni,
+    #     device,
+    #     num_epoch,
+    #     16,
+    #     4,
+    #     verbose,
+    #     args['save_best_dir'],
+    #     args['save_last_dir'],
+    #     max_norm_grad,
+    #     criteria,
+    # )
+    
+    train_loss, train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train_GB(
         train_loader,
         valid_loader,
         model,
         optimizer,
         scheduler,
         loss_fn,
-        loss_uni,
         device,
         num_epoch,
-        16,
-        4,
         verbose,
         args['save_best_dir'],
         args['save_last_dir'],
@@ -197,5 +217,5 @@ if __name__ == "__main__":
         device,
         save_conf = args['save_conf'],
         save_txt = args['save_txt'],
-        model_type = 'multi'
+        model_type = 'multi-GB'
     )

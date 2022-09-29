@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from torch.autograd import Variable
 import math
 from src.models.ConvLSTM import ConvLSTM, ConvLSTMEncoder, ConvLSTMEncoderVer2
 from src.models.ViViT import ViViTEncoder, ViViT
@@ -99,7 +100,7 @@ class MultiModalNetwork(nn.Module):
         if use_stream == "multi" or use_stream == "multi-GB":
             self.vis_hook = self.vis_model.mlp[0].register_forward_hook(self.get_vis_latent)
             self.ts_hook = self.ts_model.classifier[0].register_forward_hook(self.get_ts_latent)    
-        
+     
     def get_vis_latent(self, module:nn.Module, input : torch.Tensor, output : torch.Tensor):
         self.vis_latent = input
     
@@ -129,6 +130,83 @@ class MultiModalNetwork(nn.Module):
     
             return out_multi if self.use_stream == 'multi' else (out_multi, out_vis, out_ts)
             
+    def summary(self, device : str = 'cpu', show_input : bool = True, show_hierarchical : bool = False, print_summary : bool = True, show_parent_layers : bool = False):
+        sample_video = torch.zeros((8,  self.args_video["in_channels"], self.args_video["n_frames"], self.args_video["image_size"], self.args_video["image_size"]), device = device)
+        sample_0D = torch.zeros((8, self.args_0D["seq_len"], self.args_0D["col_dim"]), device = device)
+        return summary(self, sample_video, sample_0D, show_input = show_input, show_hierarchical=show_hierarchical, print_summary = print_summary, show_parent_layers=show_parent_layers)
+
+# Tensor Fusion Network
+# reference paper : https://arxiv.org/pdf/1707.07250.pdf
+# reference code: https://github.com/Justin1904/TensorFusionNetworks/blob/master/model.py
+# In this code, we also use Gradient Blending Method 
+
+class TensorFusionNetwork(nn.Module):
+    def __init__(self, n_classes : int, args_video : Dict, args_0D : Dict):
+        super(TensorFusionNetwork, self).__init__()
+        self.n_classes = n_classes
+        self.args_video = args_video
+        self.args_0D = args_0D
+        
+        # Modality Embedding SubNetwork
+        self.embedd_subnet = nn.ModuleDict({
+            "network_video" : ViViT(**args_video),
+            "network_0D" : ConvLSTM(**args_0D)
+            })
+        
+        self.network_0D_dims = self.embedd_subnet['network_0D'].lstm_dim * 2
+        self.network_video_dims = self.embedd_subnet['network_video'].dim
+        
+        self.fusion_input_dims = (self.network_0D_dims + 1) * (self.network_video_dims + 1)
+
+        # Tensor Fusion Layer as classifier
+        self.dropout = nn.Dropout(0)
+        self.classifier = nn.Sequential(
+            nn.Linear(self.fusion_input_dims, self.fusion_input_dims // 2),
+            nn.BatchNorm1d(self.fusion_input_dims // 2),
+            nn.ReLU(),
+            nn.Linear(self.fusion_input_dims // 2, n_classes)
+        )
+        
+        self.h_vis = None
+        self.h_0D = None
+        
+        self.vis_hook = self.embedd_subnet['network_video'].mlp[0].register_forward_hook(self.get_vis_latent)
+        self.ts_hook = self.embedd_subnet['network_0D'].classifier[0].register_forward_hook(self.get_ts_latent)    
+        
+    def remove_my_hooks(self):
+        self.vis_hook.remove()
+        self.ts_hook.remove()
+        
+    def get_vis_latent(self, module:nn.Module, input : torch.Tensor, output : torch.Tensor):
+        self.h_vis = input
+    
+    def get_ts_latent(self, module:nn.Module, input : torch.Tensor, output : torch.Tensor):
+        self.h_0D = input
+
+    def forward(self, x_vis : torch.Tensor, x_0D : torch.Tensor):
+        out_vis = self.embedd_subnet['network_video'](x_vis)
+        out_0D = self.embedd_subnet['network_0D'](x_0D)
+        
+        h_vis = self.h_vis[0]
+        h_0D = self.h_0D[0]
+        
+        batch_size = h_vis.size()[0]
+        
+        if h_vis.is_cuda:
+            DTYPE = torch.cuda.FloatTensor
+        else:
+            DTYPE = torch.FloatTensor
+
+        _h_vis = torch.cat((Variable(torch.ones(batch_size, 1).type(DTYPE), requires_grad=False), h_vis), dim=1)
+        _h_0D = torch.cat((Variable(torch.ones(batch_size, 1).type(DTYPE), requires_grad=False), h_0D), dim=1)
+    
+        fusion_tensor = torch.bmm(_h_vis.unsqueeze(2), _h_0D.unsqueeze(1))
+        fusion_tensor = fusion_tensor.view(batch_size, -1)
+        
+        out = self.classifier(self.dropout(fusion_tensor))
+  
+        return (out, out_vis, out_0D)
+
     def summary(self, device : str = 'cpu', show_input : bool = True, show_hierarchical : bool = False, print_summary : bool = True, show_parent_layers : bool = False):
         sample_video = torch.zeros((8,  self.args_video["in_channels"], self.args_video["n_frames"], self.args_video["image_size"], self.args_video["image_size"]), device = device)
         sample_0D = torch.zeros((8, self.args_0D["seq_len"], self.args_0D["col_dim"]), device = device)

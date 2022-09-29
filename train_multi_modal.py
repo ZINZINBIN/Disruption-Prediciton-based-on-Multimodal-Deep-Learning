@@ -8,8 +8,8 @@ from src.utils.sampler import ImbalancedDatasetSampler
 from src.train import train
 from src.evaluate import evaluate
 from src.loss import LDAMLoss, FocalLoss
-from src.GradientBlending import GradientBlending, train_with_gradient_blending
-from src.models.mult_modal import MultiModalModel, FusionNetwork, MultiModalNetwork
+from src.GradientBlending import GradientBlending, train_GB_dynamic
+from src.models.MultiModal import MultiModalModel, FusionNetwork, MultiModalNetwork
 
 parser = argparse.ArgumentParser(description="training multimodal network for disruption classifier")
 parser.add_argument("--batch_size", type = int, default = 128)
