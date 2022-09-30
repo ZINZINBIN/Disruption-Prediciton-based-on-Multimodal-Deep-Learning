@@ -14,6 +14,7 @@ from src.train import train, train_DRW
 from src.evaluate import evaluate
 from src.loss import LDAMLoss, FocalLoss
 from sklearn.preprocessing import RobustScaler, MinMaxScaler, StandardScaler
+from src.visualization.visualize_latent_space import visualize_3D_latent_space
 
 parser = argparse.ArgumentParser(description="experiment for ConvLSTM")
 parser.add_argument("--gpu_num", type = int, default = 0)
@@ -285,7 +286,7 @@ def process(args : Dict = DEFAULT_ARGS, dist : int = 0):
     )
     
     # visualize latent vector
-    visualize_2D_latent_space(
+    visualize_3D_latent_space(
         model, 
         train_loader,
         device,
