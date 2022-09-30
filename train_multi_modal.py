@@ -8,8 +8,9 @@ from src.utils.sampler import ImbalancedDatasetSampler
 from src.train import train
 from src.evaluate import evaluate
 from src.loss import LDAMLoss, FocalLoss
-from src.GradientBlending import GradientBlending, train_GB_dynamic
-from src.models.MultiModal import MultiModalModel, FusionNetwork, MultiModalNetwork
+from src.CCA import train_cca
+from src.GradientBlending import GradientBlending, train_GB_dynamic, train_GB
+from src.models.MultiModal import TensorFusionNetwork
 
 parser = argparse.ArgumentParser(description="training multimodal network for disruption classifier")
 parser.add_argument("--batch_size", type = int, default = 128)
@@ -33,6 +34,9 @@ parser.add_argument("--use_focal_loss", type = bool, default = True)
 parser.add_argument("--use_LDAM_loss", type = bool, default = False)
 parser.add_argument("--use_weight", type = bool, default = True)
 parser.add_argument("--root_dir", type = str, default = "./dataset/dur84_dis8")
+parser.add_argument("--use_cca_learning", type = bool, default = False)
+parser.add_argument("--model_type", type = Literal['TFN', ''], default = False)
+
 
 args = vars(parser.parse_args())
 

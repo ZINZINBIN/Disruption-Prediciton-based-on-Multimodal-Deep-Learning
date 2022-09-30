@@ -90,6 +90,10 @@ def spatio_rollout(attentions : List[torch.Tensor], discard_ratio : float, head_
             flat[0, indices] = 0
             
             I = torch.eye(attention.size(-1)).unsqueeze(0).repeat((seq_len,1,1))
+            
+            print("attention_heads_fused : ", attention_heads_fused.size())
+            print("I : ", I.size())
+            
             a = (attention_heads_fused + 1.0 * I) / 2.0
             
             result = torch.bmm(a, result)
@@ -129,7 +133,6 @@ def temporal_rollout(attentions : List[torch.Tensor], discard_ratio : float, hea
     mask = mask.numpy()
     mask = mask / np.max(mask)
     return mask
-
 
 # visualize attention rollout with image sequence
 def visualize_spatio_attention(shot : np.ndarray, att_map : np.ndarray, size : int = 128, save_dir = "./results/spatio_attention.png"):

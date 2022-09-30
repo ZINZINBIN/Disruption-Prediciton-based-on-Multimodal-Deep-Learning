@@ -139,7 +139,6 @@ class MultiModalNetwork(nn.Module):
 # reference paper : https://arxiv.org/pdf/1707.07250.pdf
 # reference code: https://github.com/Justin1904/TensorFusionNetworks/blob/master/model.py
 # In this code, we also use Gradient Blending Method 
-
 class TensorFusionNetwork(nn.Module):
     def __init__(self, n_classes : int, args_video : Dict, args_0D : Dict):
         super(TensorFusionNetwork, self).__init__()
@@ -162,6 +161,9 @@ class TensorFusionNetwork(nn.Module):
         self.dropout = nn.Dropout(0)
         self.classifier = nn.Sequential(
             nn.Linear(self.fusion_input_dims, self.fusion_input_dims // 2),
+            nn.BatchNorm1d(self.fusion_input_dims // 2),
+            nn.ReLU(),
+            nn.Linear(self.fusion_input_dims // 2, self.fusion_input_dims // 2),
             nn.BatchNorm1d(self.fusion_input_dims // 2),
             nn.ReLU(),
             nn.Linear(self.fusion_input_dims // 2, n_classes)

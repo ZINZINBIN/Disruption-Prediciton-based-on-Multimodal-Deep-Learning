@@ -41,8 +41,6 @@ def visualize_2D_latent_space(model : nn.Module, dataloader : DataLoader, device
     plt.legend()
     plt.savefig(save_dir)
     
-    
-
 def visualize_3D_latent_space(model : nn.Module, dataloader : DataLoader, device : str = 'cpu', save_dir : str = './results/latent_2d_space.png'):
     model.to(device)
     model.eval()

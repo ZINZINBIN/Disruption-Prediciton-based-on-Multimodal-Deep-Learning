@@ -139,22 +139,21 @@ if __name__ == "__main__":
     loss_fn = FocalLoss(weight = per_cls_weights, gamma = focal_gamma)
 
     
-    # train_loss,  train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train(
-    #     train_loader,
-    #     valid_loader,
-    #     model,
-    #     optimizer,
-    #     scheduler,
-    #     loss_fn,
-    #     device,
-    #     num_epoch,
-    #     verbose,
-    #     save_best_dir = save_best_dir,
-    #     save_last_dir = save_last_dir,
-    #     max_norm_grad = 1.0,
-    #     criteria = "f1_score",
-    # )
-    
+    train_loss,  train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train(
+        train_loader,
+        valid_loader,
+        model,
+        optimizer,
+        scheduler,
+        loss_fn,
+        device,
+        num_epoch,
+        verbose,
+        save_best_dir = save_best_dir,
+        save_last_dir = save_last_dir,
+        max_norm_grad = 1.0,
+        criteria = "f1_score",
+    )
     
     model.load_state_dict(torch.load(save_best_dir))
 
