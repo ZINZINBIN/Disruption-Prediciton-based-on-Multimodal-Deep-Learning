@@ -110,6 +110,55 @@ def GB_estimate(
     
     return w_dict
 
+def evaluate_GB(
+    test_loader : DataLoader, 
+    model : torch.nn.Module,
+    optimizer : Optional[torch.optim.Optimizer],
+    device : Optional[str] = "cpu",
+    threshold : float = 0.5,
+    ):
+    
+    total_pred_vis = np.array([])
+    total_pred_0D = np.array([])
+    total_pred = np.array([])
+    total_label = np.array([])
+
+    if device is None:
+        device = torch.device("cuda:0")
+
+    model.to(device)
+    model.eval()
+
+    total_size = 0
+
+    for idx, (data, target) in enumerate(test_loader):
+        with torch.no_grad():
+            optimizer.zero_grad()
+            data_video = data['video'].to(device)
+            data_0D = data['0D'].to(device)
+            output, output_vis, output_ts = model(data_video, data_0D)
+            target = target.to(device)
+            
+            pred = torch.nn.functional.softmax(output, dim = 1).max(1, keepdim = True)[1]
+            pred_vis = torch.nn.functional.softmax(output_vis, dim = 1).max(1, keepdim = True)[1]
+            pred_0D = torch.nn.functional.softmax(output_ts, dim = 1).max(1, keepdim = True)[1]
+            
+            pred = (pred > torch.FloatTensor([threshold]).to(device))
+            pred_vis = (pred_vis > torch.FloatTensor([threshold]).to(device))
+            pred_0D = (pred_0D > torch.FloatTensor([threshold]).to(device))
+            total_size += pred.size(0)
+            
+            total_pred = np.concatenate((total_pred, pred.cpu().numpy().reshape(-1,)))
+            total_pred_vis = np.concatenate((total_pred_vis, pred_vis.cpu().numpy().reshape(-1,)))
+            total_pred_0D = np.concatenate((total_pred_0D, pred_0D.cpu().numpy().reshape(-1,)))
+            total_label = np.concatenate((total_label, target.cpu().numpy().reshape(-1,)))
+
+    test_f1_fusion = f1_score(total_label, total_pred, average = "macro")
+    test_f1_vis = f1_score(total_label, total_pred_vis, average = "macro")
+    test_f1_0D = f1_score(total_label, total_pred_0D, average = "macro")
+    
+    return test_f1_fusion, test_f1_vis, test_f1_0D
+
 def train_GB(
     train_loader : DataLoader, 
     valid_loader : DataLoader,
@@ -172,12 +221,29 @@ def train_GB(
 
         train_f1_list.append(train_f1)
         valid_f1_list.append(valid_f1)
+        
+        # evaluate process : monitoring
+        train_f1_fusion, train_f1_vis, train_f1_0D = evaluate_GB(
+            train_loader,
+            model,
+            optimizer,
+            device,
+            0.5
+        )
+        
+        valid_f1_fusion, valid_f1_vis, valid_f1_0D = evaluate_GB(
+            valid_loader,
+            model,
+            optimizer,
+            device,
+            0.5
+        )
 
         if verbose:
             if epoch % verbose == 0:
-                print("epoch : {}, train loss : {:.3f}, valid loss : {:.3f}, train acc : {:.3f}, valid acc : {:.3f}, train f1 : {:.3f}, valid f1 : {:.3f}".format(
-                    epoch+1, train_loss, valid_loss, train_acc, valid_acc, train_f1, valid_f1
-                ))
+                print("# epoch: {}, train loss: {:.3f}, valid loss: {:.3f}".format(epoch+1, train_loss, valid_loss))
+                print("# train, fusion: {:.3f}, video: {:.3f}, 0D : {:.3f}".format(train_f1_fusion, train_f1_vis, train_f1_0D))
+                print("# valid, fusion: {:.3f}, video: {:.3f}, 0D : {:.3f}".format(valid_f1_fusion, valid_f1_vis, valid_f1_0D))
         
         # save the best parameters
         if criteria == "acc" and best_acc < valid_acc:
@@ -200,6 +266,8 @@ def train_GB(
             best_loss = valid_loss
             best_epoch  = epoch
             torch.save(model.state_dict(), save_best_dir)
+            
+        
 
         # save the last parameters
         torch.save(model.state_dict(), save_last_dir)

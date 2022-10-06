@@ -194,20 +194,33 @@ class TensorFusionNetwork(nn.Module):
         
         batch_size = h_vis.size()[0]
         
-        if h_vis.is_cuda:
-            DTYPE = torch.cuda.FloatTensor
-        else:
-            DTYPE = torch.FloatTensor
-
-        _h_vis = torch.cat((Variable(torch.ones(batch_size, 1).type(DTYPE), requires_grad=False), h_vis), dim=1)
-        _h_0D = torch.cat((Variable(torch.ones(batch_size, 1).type(DTYPE), requires_grad=False), h_0D), dim=1)
-    
+        _h_vis = torch.cat((Variable(torch.ones(batch_size, 1).float().to(x_vis.device), requires_grad=False), h_vis), dim=1)
+        _h_0D = torch.cat((Variable(torch.ones(batch_size, 1).float().to(x_0D.device), requires_grad=False), h_0D), dim=1)
+        
         fusion_tensor = torch.bmm(_h_vis.unsqueeze(2), _h_0D.unsqueeze(1))
         fusion_tensor = fusion_tensor.view(batch_size, -1)
         
         out = self.classifier(self.dropout(fusion_tensor))
-  
+        
         return (out, out_vis, out_0D)
+    
+    def encode(self, x_vis : torch.Tensor, x_0D : torch.Tensor):
+        with torch.no_grad():
+            latent_vis = self.embedd_subnet['network_video'].encode(x_vis)
+            latent_0D = self.embedd_subnet['network_0D'].encode(x_0D)
+            
+            h_vis = latent_vis
+            h_0D = latent_0D
+            
+            batch_size = h_vis.size()[0]
+
+            _h_vis = torch.cat((Variable(torch.ones(batch_size, 1).float().to(x_vis.device), requires_grad=False), h_vis), dim=1)
+            _h_0D = torch.cat((Variable(torch.ones(batch_size, 1).float().to(x_0D.device), requires_grad=False), h_0D), dim=1)
+        
+            fusion_tensor = torch.bmm(_h_vis.unsqueeze(2), _h_0D.unsqueeze(1))
+            fusion_tensor = fusion_tensor.view(batch_size, -1)
+
+        return (fusion_tensor, latent_vis, latent_0D)
 
     def summary(self, device : str = 'cpu', show_input : bool = True, show_hierarchical : bool = False, print_summary : bool = True, show_parent_layers : bool = False):
         sample_video = torch.zeros((8,  self.args_video["in_channels"], self.args_video["n_frames"], self.args_video["image_size"], self.args_video["image_size"]), device = device)

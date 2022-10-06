@@ -3,49 +3,48 @@ import pandas as pd
 import numpy as np
 import argparse
 from torch.utils.data import DataLoader
-from src.CustomDataset import DEFAULT_TS_COLS, MultiModalDataset
+from src.CustomDataset import DEFAULT_TS_COLS, MultiModalDataset, CustomDataset
 from src.utils.sampler import ImbalancedDatasetSampler
 from src.train import train
 from src.evaluate import evaluate
 from src.loss import LDAMLoss, FocalLoss
 from src.CCA import train_cca
 from src.GradientBlending import GradientBlending, train_GB_dynamic, train_GB
+from src.visualization.visualize_latent_space import visualize_3D_latent_space_multi
 from src.models.MultiModal import TensorFusionNetwork
 
 parser = argparse.ArgumentParser(description="training multimodal network for disruption classifier")
-parser.add_argument("--batch_size", type = int, default = 128)
+parser.add_argument("--batch_size", type = int, default = 32)
 parser.add_argument("--lr", type = float, default = 1e-3)
 parser.add_argument("--gamma", type = float, default = 0.95)
-parser.add_argument("--gpu_num", type = int, default = 0)
+parser.add_argument("--gpu_num", type = int, default = 1)
 
 parser.add_argument("--num_workers", type = int, default = 8)
 parser.add_argument("--pin_memory", type = bool, default = False)
 
 parser.add_argument("--use_sampler", type = bool, default = True)
-parser.add_argument("--num_epoch", type = int, default = 64)
-parser.add_argument("--verbose", type = int, default = 1)
+parser.add_argument("--num_epoch", type = int, default = 4)
+parser.add_argument("--verbose", type = int, default = 8)
 parser.add_argument("--save_best_dir", type = str, default = "./weights/multi_modal_clip_21_dist_8_best.pt")
 parser.add_argument("--save_last_dir", type = str, default = "./weights/multi_modal_clip_21_dist_8_last.pt")
 parser.add_argument("--save_result_dir", type = str, default = "./results/train_valid_loss_acc_multi_modal_clip_21_dist_8.png")
 parser.add_argument("--save_txt", type = str, default = "./results/test_multi_modal_clip_21_dist_8.txt")
 parser.add_argument("--save_conf", type = str, default = "./results/test_multi_modal_clip_21_dist_8_confusion_matrix.png")
-parser.add_argument("--save_latent_dir", type = str, default = "./results/multi_modal_clip_21_dist_8_2d_latent.png")
+parser.add_argument("--save_latent_dir", type = str, default = "./results/multi_modal_clip_21_dist_8_3d_latent.png")
 parser.add_argument("--use_focal_loss", type = bool, default = True)
 parser.add_argument("--use_LDAM_loss", type = bool, default = False)
 parser.add_argument("--use_weight", type = bool, default = True)
 parser.add_argument("--root_dir", type = str, default = "./dataset/dur84_dis8")
 parser.add_argument("--use_cca_learning", type = bool, default = False)
-parser.add_argument("--model_type", type = Literal['TFN', ''], default = False)
-
 
 args = vars(parser.parse_args())
 
 # default argument
 args_video = {
     "image_size" : 128, 
-    "patch_size" : 32, 
+    "patch_size" : 16, 
     "n_frames" : 21, 
-    "dim": 64 * 2, 
+    "dim": 64, 
     "depth" : 4, 
     "n_heads" : 8, 
     "pool" : 'cls', 
@@ -53,7 +52,8 @@ args_video = {
     "d_head" : 64, 
     "dropout" : 0.25,
     "embedd_dropout":  0.25, 
-    "scale_dim" : 4
+    "scale_dim" : 4,
+    "n_classes" : 2
 }
 
 args_0D = {
@@ -63,14 +63,7 @@ args_0D = {
     "conv_kernel" : 3,
     "conv_stride" : 1, 
     "conv_padding" : 1,
-    "lstm_dim" : 64, 
-}
-
-args_fusion = {
-    "kernel_size" : 3,
-    "stride" : 2,
-    "maxpool_kernel" : 3,
-    "maxpool_stride" : 2,
+    "lstm_dim" : 32, 
 }
 
 # torch device state
@@ -135,9 +128,9 @@ if __name__ == "__main__":
         loss_fn = LDAMLoss(cls_num_list, max_m = max_m, weight = per_cls_weights, s = s)
     else: 
         loss_fn = torch.nn.CrossEntropyLoss(reduction = "mean", weight = per_cls_weights)
-
-    model = FusionNetwork(
-        2, args_video, args_0D, args_fusion
+    
+    model = TensorFusionNetwork(
+        2, args_video, args_0D,
     )
 
     model.summary('cpu')
@@ -150,8 +143,8 @@ if __name__ == "__main__":
     
     optimizer = torch.optim.AdamW(model.parameters(), lr = lr)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size = 4, gamma=args['gamma'])
-
-    train_loss, train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train(
+    
+    train_loss, train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train_GB(
         train_loader,
         valid_loader,
         model,
@@ -165,7 +158,6 @@ if __name__ == "__main__":
         args['save_last_dir'],
         max_norm_grad,
         criteria,
-        model_type = 'multi'
     )
 
     model.load_state_dict(torch.load(args['save_best_dir']))
@@ -180,4 +172,12 @@ if __name__ == "__main__":
         save_conf = args['save_conf'],
         save_txt = args['save_txt'],
         model_type = 'multi'
+    )
+    
+    # plot the 3d latent space
+    visualize_3D_latent_space_multi(
+        model, 
+        train_loader,
+        device,
+        args["save_latent_dir"], 
     )

@@ -8,6 +8,7 @@ from src.utils.sampler import ImbalancedDatasetSampler
 from src.train import train
 from src.evaluate import evaluate
 from src.loss import LDAMLoss, FocalLoss
+from src.visualization.visualize_latent_space import visualize_3D_latent_space_multi
 from src.GradientBlending import GradientBlending, train_GB_dynamic, train_GB
 from src.models.MultiModal import MultiModalModel, FusionNetwork, MultiModalNetwork, TensorFusionNetwork
 
@@ -22,17 +23,17 @@ parser.add_argument("--pin_memory", type = bool, default = False)
 
 parser.add_argument("--use_sampler", type = bool, default = True)
 parser.add_argument("--num_epoch", type = int, default = 64)
-parser.add_argument("--verbose", type = int, default = 8)
-parser.add_argument("--save_best_dir", type = str, default = "./weights/multi_modal_clip_21_dist_8_best.pt")
-parser.add_argument("--save_last_dir", type = str, default = "./weights/multi_modal_clip_21_dist_8_last.pt")
-parser.add_argument("--save_result_dir", type = str, default = "./results/train_valid_loss_acc_multi_modal_clip_21_dist_8.png")
-parser.add_argument("--save_txt", type = str, default = "./results/test_multi_modal_clip_21_dist_8.txt")
-parser.add_argument("--save_conf", type = str, default = "./results/test_multi_modal_clip_21_dist_8_confusion_matrix.png")
-parser.add_argument("--save_latent_dir", type = str, default = "./results/multi_modal_clip_21_dist_8_2d_latent.png")
+parser.add_argument("--verbose", type = int, default = 4)
+parser.add_argument("--save_best_dir", type = str, default = "./weights/multi_modal_clip_21_dist_4_best.pt")
+parser.add_argument("--save_last_dir", type = str, default = "./weights/multi_modal_clip_21_dist_4_last.pt")
+parser.add_argument("--save_result_dir", type = str, default = "./results/train_valid_loss_acc_multi_modal_clip_21_dist_4.png")
+parser.add_argument("--save_txt", type = str, default = "./results/test_multi_modal_clip_21_dist_4.txt")
+parser.add_argument("--save_conf", type = str, default = "./results/test_multi_modal_clip_21_dist_4_confusion_matrix.png")
+parser.add_argument("--save_latent_dir", type = str, default = "./results/multi_modal_clip_21_dist_4_3d_latent.png")
 parser.add_argument("--use_focal_loss", type = bool, default = True)
 parser.add_argument("--use_LDAM_loss", type = bool, default = False)
 parser.add_argument("--use_weight", type = bool, default = True)
-parser.add_argument("--root_dir", type = str, default = "./dataset/dur84_dis8")
+parser.add_argument("--root_dir", type = str, default = "./dataset/dur84_dis4")
 
 args = vars(parser.parse_args())
 
@@ -83,9 +84,9 @@ if __name__ == "__main__":
     ts_data = pd.read_csv("./dataset/KSTAR_Disruption_ts_data_for_multi.csv")
     mult_info = pd.read_csv("./dataset/KSTAR_Disruption_multi_data.csv")
 
-    train_data = MultiModalDataset('train', ts_data, DEFAULT_TS_COLS, mult_info, dt = 1 / 210 * 4, distance = 8, seq_len = 21)
-    valid_data = MultiModalDataset('valid', ts_data, DEFAULT_TS_COLS, mult_info, dt = 1 / 210 * 4, distance = 8, seq_len = 21)
-    test_data = MultiModalDataset('test', ts_data, DEFAULT_TS_COLS, mult_info, dt = 1 / 210 * 4, distance = 8, seq_len = 21)
+    train_data = MultiModalDataset('train', ts_data, DEFAULT_TS_COLS, mult_info, dt = 1 / 210 * 4, distance = 4, seq_len = 21)
+    valid_data = MultiModalDataset('valid', ts_data, DEFAULT_TS_COLS, mult_info, dt = 1 / 210 * 4, distance = 4, seq_len = 21)
+    test_data = MultiModalDataset('test', ts_data, DEFAULT_TS_COLS, mult_info, dt = 1 / 210 * 4, distance = 4, seq_len = 21)
 
     batch_size = args["batch_size"]
     lr = args['lr']
@@ -122,9 +123,9 @@ if __name__ == "__main__":
             FocalLoss(weight = per_cls_weights, gamma = focal_gamma),
             FocalLoss(weight = per_cls_weights, gamma = focal_gamma),
             FocalLoss(weight = per_cls_weights, gamma = focal_gamma),
-            0.2,
-            0.2,
-            0.6,
+            0.1,
+            0.4,
+            0.5,
             1.0
         )
     elif args['use_LDAM_loss']:
@@ -135,9 +136,9 @@ if __name__ == "__main__":
             LDAMLoss(cls_num_list, max_m = max_m, weight = per_cls_weights, s = s),
             LDAMLoss(cls_num_list, max_m = max_m, weight = per_cls_weights, s = s),
             LDAMLoss(cls_num_list, max_m = max_m, weight = per_cls_weights, s = s),
-            0.2,
-            0.2,
-            0.6,
+            0.1,
+            0.4,
+            0.5,
             1.0
         )
     else: 
@@ -146,15 +147,11 @@ if __name__ == "__main__":
             torch.nn.CrossEntropyLoss(reduction = "mean", weight = per_cls_weights),
             torch.nn.CrossEntropyLoss(reduction = "mean", weight = per_cls_weights),
             torch.nn.CrossEntropyLoss(reduction = "mean", weight = per_cls_weights),
-            0.2,
-            0.2,
-            0.6,
+            0.1,
+            0.4,
+            0.5,
             1.0
         )
-    
-    # model = MultiModalNetwork(
-    #     2, args_video, args_0D, 'multi'
-    # )
     
     model = TensorFusionNetwork(
         2, args_video, args_0D
@@ -218,4 +215,12 @@ if __name__ == "__main__":
         save_conf = args['save_conf'],
         save_txt = args['save_txt'],
         model_type = 'multi-GB'
+    )
+    
+    # plot the 3d latent space
+    visualize_3D_latent_space_multi(
+        model, 
+        train_loader,
+        device,
+        args["save_latent_dir"], 
     )

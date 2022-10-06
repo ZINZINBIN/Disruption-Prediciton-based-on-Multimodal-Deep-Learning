@@ -286,12 +286,15 @@ def process(args : Dict = DEFAULT_ARGS, dist : int = 0):
     )
     
     # visualize latent vector
-    visualize_3D_latent_space(
-        model, 
-        train_loader,
-        device,
-        save_latent
-    )
+    try:
+        visualize_3D_latent_space(
+            model, 
+            train_loader,
+            device,
+            save_latent
+        )
+    except:
+        print("nan error occur")
 
     model.cpu()
 
