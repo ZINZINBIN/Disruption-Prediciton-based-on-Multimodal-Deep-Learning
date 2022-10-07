@@ -95,6 +95,7 @@ python3 experiment.py --gpu_num {gpu_num} --loss_type {'CE', 'FOCAL', 'LDAM'}
 
 - Multimodal Model
 1. Multimodal fusion model: video encoder + 0D data encoder
+2. Tensor Fusion Network
 
 ### technique or algorithm to use
 1. Solving imbalanced classificatio issue
@@ -131,10 +132,6 @@ python3 experiment.py --gpu_num {gpu_num} --loss_type {'CE', 'FOCAL', 'LDAM'}
 1. Disruption : disruptive state at t = tipminf (current-quench)
 2. Borderline : inter-plane region(not used)
 3. Normal : non-disruptive state
-
-### Code Structure
-```
-```
 
 ## Reference
 - R2Plus1D : A Spatial-temporal Attention Module for 3D Convolution Network in Action Recognition

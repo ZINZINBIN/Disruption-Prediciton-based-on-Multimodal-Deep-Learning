@@ -102,7 +102,7 @@ class Transformer(nn.Module):
                 PreNorm(dim, FeedForward(dim=dim, hidden_dim = mlp_dim, dropout = dropout))
             ]))
 
-    def forward(self, x : torch.Tensor)->torch.Tensor:
+    def forward(self, x : torch.Tensor):
         for attn, ff in self.layers:
             x = attn(x) + x
             x = ff(x) + x
@@ -113,8 +113,8 @@ class ViViT(nn.Module):
         self, 
         image_size : int, 
         patch_size : int, 
-        n_classes : int, 
-        n_frames : int, 
+        n_frames : int = 21, 
+        n_classes : int = 2, 
         dim : int = 192, 
         depth : int = 4, 
         n_heads : int = 3, 
@@ -215,7 +215,7 @@ class ViViT(nn.Module):
             
         return x
 
-    def summary(self, device : str = 'cpu', show_input : bool = True, show_hierarchical : bool = True, print_summary : bool = False, show_parent_layers : bool = False)->None:
+    def summary(self, device : str = 'cpu', show_input : bool = True, show_hierarchical : bool = True, print_summary : bool = False, show_parent_layers : bool = False):
         sample = torch.zeros((1, self.n_frames, self.in_channels, self.image_size, self.image_size), device = device)
         return print(summary(self, sample, show_input = show_input, show_hierarchical=show_hierarchical, print_summary = print_summary, show_parent_layers=show_parent_layers))
 
@@ -269,7 +269,7 @@ class ViViTEncoder(nn.Module):
         self.dim = dim
 
 
-    def forward(self, x : torch.Tensor)->torch.Tensor:
+    def forward(self, x : torch.Tensor):
 
         if x.size()[1] == self.in_channels:
             x = torch.permute(x, (0,2,1,3,4))
@@ -289,7 +289,7 @@ class ViViTEncoder(nn.Module):
 
         x = torch.cat((cls_temporal_token, x), dim = 1)
         x = self.temporal_transformer(x)
-        # x = x.mean(dim = 1) if self.pool == 'mean' else x[:, 0]
+        x = x.mean(dim = 1) if self.pool == 'mean' else x[:, 0]
 
         return x
 

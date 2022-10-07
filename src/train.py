@@ -288,7 +288,8 @@ def train_DRW(
             None,
             loss_fn,
             device,
-            max_norm_grad
+            max_norm_grad,
+            model_type
         )
 
         valid_loss, valid_acc, valid_f1 = valid_per_epoch(
@@ -296,7 +297,8 @@ def train_DRW(
             model,
             optimizer,
             loss_fn,
-            device 
+            device,
+            model_type
         )
 
         train_loss_list.append(train_loss)

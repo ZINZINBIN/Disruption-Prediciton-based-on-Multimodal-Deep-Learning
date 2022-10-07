@@ -8,9 +8,9 @@ import numpy as np
 from tqdm.auto import tqdm
 from sklearn.metrics import f1_score
 from torch.utils.data import DataLoader
-from typing import Optional, Literal, Dict
+from typing import Optional, Literal, Dict, Union
 from src.loss import LDAMLoss, FocalLoss
-from src.models.MultiModal import MultiModalNetwork, TensorFusionNetwork
+from src.models.MultiModal import TFN_GB, MultiModalModel_GB
 from src.train import train_per_epoch, valid_per_epoch
 
 # Gradient Bleding with weighted loss sum
@@ -162,7 +162,7 @@ def evaluate_GB(
 def train_GB(
     train_loader : DataLoader, 
     valid_loader : DataLoader,
-    model : TensorFusionNetwork,
+    model : Union[TFN_GB, MultiModalModel_GB],
     optimizer : torch.optim.Optimizer,
     scheduler : Optional[torch.optim.lr_scheduler._LRScheduler],
     loss_GB : GradientBlending,
@@ -267,8 +267,6 @@ def train_GB(
             best_epoch  = epoch
             torch.save(model.state_dict(), save_best_dir)
             
-        
-
         # save the last parameters
         torch.save(model.state_dict(), save_last_dir)
     
@@ -281,7 +279,7 @@ def train_GB(
 def train_GB_dynamic(
     train_loader : DataLoader, 
     valid_loader : DataLoader,
-    model : MultiModalNetwork,
+    model : Union[TFN_GB, MultiModalModel_GB],
     optimizer : torch.optim.Optimizer,
     scheduler : Optional[torch.optim.lr_scheduler._LRScheduler],
     loss_GB : GradientBlending,

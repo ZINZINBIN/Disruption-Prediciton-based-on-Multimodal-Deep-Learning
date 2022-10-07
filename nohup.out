@@ -1017,3 +1017,89 @@ attention_heads_fused :  torch.Size([21, 65, 65])
 I :  torch.Size([21, 65, 65])
 attention_heads_fused :  torch.Size([21, 65, 65])
 I :  torch.Size([21, 65, 65])
+torch device avaliable :  True
+torch current device :  0
+torch device num :  4
+------------------------------------------------------------------------------
+        Layer (type)              Input Shape         Param #     Tr. Param #
+==============================================================================
+      ViViTEncoder-1     [8, 3, 21, 128, 128]       1,452,800       1,452,800
+   ConvLSTMEncoder-2               [8, 21, 9]          21,344          21,344
+            Linear-3                [8, 4225]         540,928         540,928
+       BatchNorm1d-4                 [8, 128]             256             256
+              ReLU-5                 [8, 128]               0               0
+            Linear-6                 [8, 128]           8,256           8,256
+       BatchNorm1d-7                  [8, 64]             128             128
+              ReLU-8                  [8, 64]               0               0
+            Linear-9                  [8, 64]             130             130
+==============================================================================
+Total params: 2,023,842
+Trainable params: 2,023,842
+Non-trainable params: 0
+------------------------------------------------------------------------------
+training process:   0%|          | 0/64 [00:00<?, ?it/s]training process:   2%|▏         | 1/64 [00:13<14:36, 13.91s/it]epoch : 1, train loss : 0.036, valid loss : 0.026, train acc : 0.521, valid acc : 0.108, train f1 : 0.429, valid f1 : 0.108
+training process:   3%|▎         | 2/64 [00:29<15:38, 15.13s/it]training process:   5%|▍         | 3/64 [00:44<15:12, 14.97s/it]training process:   6%|▋         | 4/64 [00:59<14:48, 14.81s/it]training process:   8%|▊         | 5/64 [01:13<14:27, 14.70s/it]training process:   9%|▉         | 6/64 [01:28<14:07, 14.61s/it]torch device avaliable :  True
+torch current device :  0
+torch device num :  4
+------------------------------------------------------------------------------
+        Layer (type)              Input Shape         Param #     Tr. Param #
+==============================================================================
+      ViViTEncoder-1     [8, 3, 21, 128, 128]       1,452,800       1,452,800
+   ConvLSTMEncoder-2               [8, 21, 9]          21,344          21,344
+            Linear-3                [8, 4225]         540,928         540,928
+       BatchNorm1d-4                 [8, 128]             256             256
+              ReLU-5                 [8, 128]               0               0
+            Linear-6                 [8, 128]           8,256           8,256
+       BatchNorm1d-7                  [8, 64]             128             128
+              ReLU-8                  [8, 64]               0               0
+            Linear-9                  [8, 64]             130             130
+==============================================================================
+Total params: 2,023,842
+Trainable params: 2,023,842
+Non-trainable params: 0
+------------------------------------------------------------------------------
+training process - Deferred Re-weighting:   0%|          | 0/64 [00:00<?, ?it/s]training process:  11%|█         | 7/64 [01:43<13:58, 14.71s/it]training process - Deferred Re-weighting:   2%|▏         | 1/64 [00:18<19:27, 18.53s/it]epoch : 1, train loss : 0.171, valid loss : 0.137, train f1 : 0.658, valid f1 : 0.479
+training process:  12%|█▎        | 8/64 [01:58<13:55, 14.91s/it]training process - Deferred Re-weighting:   3%|▎         | 2/64 [00:33<17:00, 16.46s/it]training process:  14%|█▍        | 9/64 [02:14<14:06, 15.39s/it]epoch : 9, train loss : 0.007, valid loss : 0.026, train acc : 0.819, valid acc : 0.676, train f1 : 0.812, valid f1 : 0.496
+training process - Deferred Re-weighting:   5%|▍         | 3/64 [00:48<15:51, 15.60s/it]torch device avaliable :  True
+torch current device :  0
+torch device num :  4
+------------------------------------------------------------------------------
+        Layer (type)              Input Shape         Param #     Tr. Param #
+==============================================================================
+      ViViTEncoder-1     [8, 3, 21, 128, 128]       1,452,800       1,452,800
+   ConvLSTMEncoder-2               [8, 21, 9]          21,344          21,344
+            Linear-3                [8, 4225]         540,928         540,928
+       BatchNorm1d-4                 [8, 128]             256             256
+              ReLU-5                 [8, 128]               0               0
+            Linear-6                 [8, 128]           8,256           8,256
+       BatchNorm1d-7                  [8, 64]             128             128
+              ReLU-8                  [8, 64]               0               0
+            Linear-9                  [8, 64]             130             130
+==============================================================================
+Total params: 2,023,842
+Trainable params: 2,023,842
+Non-trainable params: 0
+------------------------------------------------------------------------------
+training process:   0%|          | 0/64 [00:00<?, ?it/s]training process:  16%|█▌        | 10/64 [02:32<14:27, 16.07s/it]training process - Deferred Re-weighting:   6%|▋         | 4/64 [01:03<15:25, 15.43s/it]training process:   2%|▏         | 1/64 [00:21<22:26, 21.37s/it]epoch : 1, train loss : 0.069, valid loss : 0.038, train acc : 0.581, valid acc : 0.074, train f1 : 0.564, valid f1 : 0.073
+training process:  17%|█▋        | 11/64 [02:52<15:08, 17.13s/it]training process - Deferred Re-weighting:   8%|▊         | 5/64 [01:18<15:12, 15.46s/it]torch device avaliable :  True
+torch current device :  0
+torch device num :  4
+------------------------------------------------------------------------------
+        Layer (type)              Input Shape         Param #     Tr. Param #
+==============================================================================
+      ViViTEncoder-1     [8, 3, 21, 128, 128]       1,452,800       1,452,800
+   ConvLSTMEncoder-2               [8, 21, 9]          21,344          21,344
+            Linear-3                [8, 4225]         540,928         540,928
+       BatchNorm1d-4                 [8, 128]             256             256
+              ReLU-5                 [8, 128]               0               0
+            Linear-6                 [8, 128]           8,256           8,256
+       BatchNorm1d-7                  [8, 64]             128             128
+              ReLU-8                  [8, 64]               0               0
+            Linear-9                  [8, 64]             130             130
+==============================================================================
+Total params: 2,023,842
+Trainable params: 2,023,842
+Non-trainable params: 0
+------------------------------------------------------------------------------
+training process - Deferred Re-weighting:   0%|          | 0/64 [00:00<?, ?it/s]training process:   3%|▎         | 2/64 [00:41<21:27, 20.77s/it]training process - Deferred Re-weighting:   9%|▉         | 6/64 [01:37<16:09, 16.71s/it]training process:  19%|█▉        | 12/64 [03:12<15:51, 18.30s/it]training process:   5%|▍         | 3/64 [01:04<22:10, 21.81s/it]training process - Deferred Re-weighting:   2%|▏         | 1/64 [00:24<25:20, 24.14s/it]epoch : 1, train loss : 0.168, valid loss : 0.109, train f1 : 0.685, valid f1 : 0.558
+training process - Deferred Re-weighting:  11%|█         | 7/64 [01:58<17:00, 17.91s/it]training process:  20%|██        | 13/64 [03:34<16:23, 19.29s/it]training process - Deferred Re-weighting:   3%|▎         | 2/64 [00:45<23:29, 22.73s/it]training process:   6%|▋         | 4/64 [01:27<22:09, 22.16s/it]training process - Deferred Re-weighting:  12%|█▎        | 8/64 [02:18<17:21, 18.60s/it]training process:  22%|██▏       | 14/64 [03:56<16:46, 20.12s/it]
