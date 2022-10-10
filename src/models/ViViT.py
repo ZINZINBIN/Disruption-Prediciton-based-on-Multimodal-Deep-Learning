@@ -216,7 +216,7 @@ class ViViT(nn.Module):
         return x
 
     def summary(self, device : str = 'cpu', show_input : bool = True, show_hierarchical : bool = True, print_summary : bool = False, show_parent_layers : bool = False):
-        sample = torch.zeros((1, self.n_frames, self.in_channels, self.image_size, self.image_size), device = device)
+        sample = torch.zeros((8, self.n_frames, self.in_channels, self.image_size, self.image_size), device = device)
         return print(summary(self, sample, show_input = show_input, show_hierarchical=show_hierarchical, print_summary = print_summary, show_parent_layers=show_parent_layers))
 
 

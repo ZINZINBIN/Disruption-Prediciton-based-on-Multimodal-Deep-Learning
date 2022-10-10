@@ -73,7 +73,7 @@ ts_valid = df_valid
 ts_test = df_test
 
 DEFAULT_ARGS = {
-    "batch_size":64,
+    "batch_size":32,
     "lr" : 1e-3,
     "gamma" : 0.95,
     "gpu_num" : args['gpu_num'],
@@ -91,11 +91,11 @@ DEFAULT_ARGS = {
     "use_sampler" : True,
     "num_epoch" : 64,
     "verbose" : 8,
-    "save_best_dir" : "./weights/ConvLSTM_clip_21_dist_5_best.pt",
-    "save_last_dir" : "./weights/ConvLSTM_clip_21_dist_5_last.pt",
-    "save_result_dir" : "./results/train_valid_loss_acc_ConvLSTM_clip_21_dist_5.png",
-    "save_txt" : "./results/test_ConvLSTM_clip_21_dist_5.txt",
-    "save_conf" : "./results/test_ConvLSTM_clip_21_dist_5_confusion_matrix.png",
+    "save_best_dir" : "./weights/ConvLSTM_clip_21_dist_3_best.pt",
+    "save_last_dir" : "./weights/ConvLSTM_clip_21_dist_3_last.pt",
+    "save_result_dir" : "./results/train_valid_loss_acc_ConvLSTM_clip_21_dist_3.png",
+    "save_txt" : "./results/test_ConvLSTM_clip_21_dist_3.txt",
+    "save_conf" : "./results/test_ConvLSTM_clip_21_dist_3_confusion_matrix.png",
     "save_latent" : "./results/test_ConvLSTM_clip_21_dist_3_latent.png",
     "use_focal_loss" : True if args['loss_type'] == 'FOCAL' else False,
     "use_LDAM_loss" : True if args['loss_type'] == 'LDAM' else False,
@@ -121,11 +121,30 @@ def scheduling(args : Dict, idx : int, loss_type : str):
         os.mkdir(result_path)
 
     if idx == 0:
+        args['use_sampler'] = False
+        args['use_weight'] = False
+        args['use_DRW'] = False
+        title = "ERM"
+    elif idx == 1:
+        args['use_sampler'] = True
+        args['use_weight'] = False
+        args['use_DRW'] = False
+        title = "RS"
+    elif idx == 2:
+        args['use_sampler'] = False
+        args['use_weight'] = True
+        args['use_DRW'] = False
+        title = "RW"
+    elif idx == 3:
         args['use_sampler'] = True
         args['use_weight'] = True
         args['use_DRW'] = False
         title = "RS_RW"
-    
+    elif idx == 4:
+        args['use_sampler'] = False
+        args['use_weight'] = False
+        args['use_DRW'] = True
+        title = "DRW"
     else:
         args['use_sampler'] = True
         args['use_weight'] = False
@@ -229,7 +248,6 @@ def process(args : Dict = DEFAULT_ARGS, dist : int = 0):
     if args['use_focal_loss']:
         focal_gamma = 2.0
         loss_fn = FocalLoss(weight = per_cls_weights, gamma = focal_gamma)
-
     elif args['use_LDAM_loss']:
         max_m = 0.5
         s = 1.0
@@ -287,12 +305,13 @@ def process(args : Dict = DEFAULT_ARGS, dist : int = 0):
     
     # visualize latent vector
     try:
-        visualize_3D_latent_space(
-            model, 
-            train_loader,
-            device,
-            save_latent
-        )
+        pass
+        # visualize_3D_latent_space(
+        #     model, 
+        #     train_loader,
+        #     device,
+        #     save_latent
+        # )
     except:
         print("nan error occur")
 
@@ -303,12 +322,21 @@ def process(args : Dict = DEFAULT_ARGS, dist : int = 0):
     del train_loader, valid_loader, test_loader
     del model, optimizer, scheduler
 
-root_dir_list = ["dur21_dis0", "dur21_dis1", "dur21_dis2", "dur21_dis3", "dur21_dis4", "dur21_dis5", "dur21_dis6"]
-dist_list = [0,1,2,3,4,5,6]
+# root_dir_list = ["dur21_dis0", "dur21_dis1", "dur21_dis2", "dur21_dis3", "dur21_dis4", "dur21_dis5", "dur21_dis6"]
+# dist_list = [0,1,2,3,4,5,6]
+
+root_dir_list = ["dur21_dis3"]
+dist_list = [3]
+
 if __name__ == "__main__":
 
     kwargs = DEFAULT_ARGS
-
+    
+    if args['loss_type'] not in ['LDAM', 'FOCAL']:
+        process_idx = [0,1,2,3]
+    else:
+        process_idx = [0,1,2,3,4,5]
+    
     for root_dir, dist in zip(root_dir_list, dist_list):
 
         kwargs['root'] = root_dir

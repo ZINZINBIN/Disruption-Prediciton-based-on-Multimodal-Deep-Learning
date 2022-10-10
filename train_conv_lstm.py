@@ -65,25 +65,26 @@ ts_train = df_train
 ts_valid = df_valid
 ts_test = df_test
 seq_len = 21
-dist = 3
+gpu_num = 2
+dist = 5
 dt = 1 / 210 * 4
 cols = ts_cols
 col_len = len(cols)
-save_best_dir = "./weights/ts_conv_lstm_clip_21_dist_3_best.pt"
-save_last_dir = "./weights/ts_conv_lstm_clip_21_dist_3_best.pt"
-save_txt = "./results/test_ts_conv_lstm_clip_21_dist_3.txt"
-save_conf = "./results/test_ts_conv_lstm_clip_21_dist_3_confusion_matrix.png"
-save_latent_2d = "./results/ts_conv_lstm_clip_21_dist_3_latent_2d.png"
-save_latent_3d = "./results/ts_conv_lstm_clip_21_dist_3_latent_3d.png"
+save_best_dir = "./weights/ts_conv_lstm_clip_21_dist_5_best.pt"
+save_last_dir = "./weights/ts_conv_lstm_clip_21_dist_5_best.pt"
+save_txt = "./results/test_ts_conv_lstm_clip_21_dist_5.txt"
+save_conf = "./results/test_ts_conv_lstm_clip_21_dist_5_confusion_matrix.png"
+save_latent_2d = "./results/ts_conv_lstm_clip_21_dist_5_latent_2d.png"
+save_latent_3d = "./results/ts_conv_lstm_clip_21_dist_5_latent_3d.png"
 
-train_data = DatasetFor0D(ts_train, kstar_shot_list, seq_len = seq_len, cols = ts_cols, dist = dist, dt = 1.0 / 210 * 4)
-valid_data = DatasetFor0D(ts_valid, kstar_shot_list, seq_len = seq_len, cols = ts_cols, dist = dist, dt = 1.0 / 210 * 4)
-test_data = DatasetFor0D(ts_test, kstar_shot_list, seq_len = seq_len, cols = ts_cols, dist = dist, dt = 1.0 / 210 * 4)
+train_data = DatasetFor0D(ts_train, kstar_shot_list, seq_len = seq_len, cols = ts_cols, dist = dist, dt = dt)
+valid_data = DatasetFor0D(ts_valid, kstar_shot_list, seq_len = seq_len, cols = ts_cols, dist = dist, dt = dt)
+test_data = DatasetFor0D(ts_test, kstar_shot_list, seq_len = seq_len, cols = ts_cols, dist = dist, dt = dt)
 
 from torch.utils.data import DataLoader
 from src.utils.sampler import ImbalancedDatasetSampler
 
-batch_size = 128
+batch_size = 64
 lr = 1e-3
 gamma = 0.95
 num_epoch = 64
@@ -105,7 +106,7 @@ torch.cuda.empty_cache()
 
 # device allocation
 if(torch.cuda.device_count() >= 1):
-    device = "cuda:0"
+    device = "cuda:{}".format(gpu_num)
 else:
     device = 'cpu'
     

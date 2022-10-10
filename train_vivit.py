@@ -5,38 +5,38 @@ from src.CustomDataset import CustomDataset
 from src.models.ViViT import ViViT
 from src.utils.sampler import ImbalancedDatasetSampler
 from src.utils.utility import show_data_composition, plot_learning_curve
-from src.visualization.visualize_latent_space import visualize_2D_latent_space
+from src.visualization.visualize_latent_space import visualize_2D_latent_space, visualize_3D_latent_space
 from torch.utils.data import DataLoader
 from src.train import train
 from src.evaluate import evaluate
 from src.loss import LDAMLoss, FocalLoss
 
 parser = argparse.ArgumentParser(description="training ViViT for disruption classifier")
-parser.add_argument("--batch_size", type = int, default = 128)
+parser.add_argument("--batch_size", type = int, default = 32)
 parser.add_argument("--lr", type = float, default = 1e-3)
 parser.add_argument("--gamma", type = float, default = 0.95)
-parser.add_argument("--gpu_num", type = int, default = 0)
+parser.add_argument("--gpu_num", type = int, default = 2)
 
 parser.add_argument("--image_size", type = int, default = 128)
-parser.add_argument("--patch_size", type = int, default = 32)
+parser.add_argument("--patch_size", type = int, default = 16)
 
 parser.add_argument("--num_workers", type = int, default = 8)
 parser.add_argument("--pin_memory", type = bool, default = False)
 
 parser.add_argument("--seq_len", type = int, default = 21)
 parser.add_argument("--use_sampler", type = bool, default = True)
-parser.add_argument("--num_epoch", type = int, default = 32)
-parser.add_argument("--verbose", type = int, default = 1)
+parser.add_argument("--num_epoch", type = int, default = 64)
+parser.add_argument("--verbose", type = int, default = 4)
+parser.add_argument("--root_dir", type = str, default = "./dataset/dur21_dis4")
 parser.add_argument("--save_best_dir", type = str, default = "./weights/ViViT_clip_21_dist_4_best.pt")
 parser.add_argument("--save_last_dir", type = str, default = "./weights/ViViT_clip_21_dist_4_last.pt")
 parser.add_argument("--save_result_dir", type = str, default = "./results/train_valid_loss_acc_ViViT_clip_21_dist_4.png")
 parser.add_argument("--save_txt", type = str, default = "./results/test_ViViT_clip_21_dist_4.txt")
 parser.add_argument("--save_conf", type = str, default = "./results/test_ViViT_clip_21_dist_4_confusion_matrix.png")
-parser.add_argument("--save_latent_dir", type = str, default = "./results/ViViT_clip_21_dist_4_2d_latent.png")
+parser.add_argument("--save_latent_dir", type = str, default = "./results/ViViT_clip_21_dist_4_3d_latent.png")
 parser.add_argument("--use_focal_loss", type = bool, default = True)
 parser.add_argument("--use_LDAM_loss", type = bool, default = False)
 parser.add_argument("--use_weight", type = bool, default = True)
-parser.add_argument("--root_dir", type = str, default = "./dataset/dur21_dis4")
 
 args = vars(parser.parse_args())
 
@@ -170,8 +170,8 @@ if __name__ == "__main__":
         save_txt = save_txt
     )
     
-    # plot the 2d latent space
-    visualize_2D_latent_space(
+    # plot the 3d latent space
+    visualize_3D_latent_space(
         model, 
         train_loader,
         device,
