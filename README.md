@@ -15,7 +15,7 @@
     <p>We can proceed real-time disruption prediction using video data for shot 21310</p>
     <p float = 'left'>
         <img src="/image/연구_소개_04.PNG"  width="320" height="200">
-        <img src="/result/real_time_disruption_prediction_21310.gif"  width="320" height="200">
+        <img src="/results/real_time_disruption_prediction_21310.gif"  width="320" height="200">
     </p>
     <p>And this is the real-time disruption prediction using 0D data for shot 21310</p>
     <p>We can predict plasma disruption prior to 95.2ms(maximum prediction time) with 0D data</p>
