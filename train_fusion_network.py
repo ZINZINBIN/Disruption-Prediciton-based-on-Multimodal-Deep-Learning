@@ -30,6 +30,7 @@ parser.add_argument("--num_epoch", type = int, default = 64)
 parser.add_argument("--verbose", type = int, default = 8)
 parser.add_argument("--dist", type = int, default = 4)
 parser.add_argument("--seq_len", type = int, default = 21)
+parser.add_argument("--n_fps", type = int, default = 4)
 
 parser.add_argument("--use_focal_loss", type = bool, default = True)
 parser.add_argument("--use_LDAM_loss", type = bool, default = False)
@@ -87,7 +88,8 @@ if __name__ == "__main__":
     dist = args['dist']
     seq_len = args['seq_len']
     tag = args['tag']
-    args['root_dir'] = "./dataset/dur{}_dis4{}".format(seq_len * 4, dist)
+    n_fps = args['n_fps']
+    args['root_dir'] = "./dataset/dur{}_dis4{}".format(seq_len * n_fps, dist)
     args['save_best_dir'] = "./weights/multi_modal_{}_clip_{}_dist_{}_best.pt".format(tag,seq_len, dist)
     args['save_last_dir'] = "./weights/multi_modal_{}_clip_{}_dist_{}_last.pt".format(tag, seq_len, dist)
     args['save_result_dir'] = "./results/loss_curve_multi_modal_{}_clip_{}_dist_{}.png".format(tag, seq_len, dist)
