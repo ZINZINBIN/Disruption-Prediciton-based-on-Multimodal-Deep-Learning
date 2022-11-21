@@ -144,6 +144,41 @@ class VideoDataset(Dataset):
 
         return buffer
     
+class DatasetFor0D(Dataset):
+    def __init__(
+        self, 
+        ts_data : pd.DataFrame, 
+        cols : List, 
+        seq_len : int = 21, 
+        dist:int = 3, 
+        dt : float = 1.0 / 210 * 4,
+        ):
+        
+        self.ts_data = ts_data
+        self.seq_len = seq_len
+        self.dt = dt
+        self.cols = cols
+        self.dist = dist
+        self.indices = [idx for idx in range(0, len(self.ts_data) - seq_len - dist)]
+        
+        from sklearn.preprocessing import RobustScaler
+        self.scaler = RobustScaler()
+        self.ts_data[cols] = self.scaler.fit_transform(self.ts_data[cols].values)
+   
+    def __len__(self):
+        return len(self.indices)
+
+    def __getitem__(self, idx : int):
+        return self.get_data(idx)
+
+    def get_data(self, idx : int):
+        idx_srt = self.indices[idx]
+        idx_end = idx_srt + self.seq_len
+        
+        data = self.ts_data[self.cols].iloc[idx_srt : idx_end].values
+        data = torch.from_numpy(data)
+        return data
+    
     
 TS_COLS = [
     '\\q95', '\\ipmhd', '\\kappa', 
@@ -245,7 +280,7 @@ def generate_real_time_experiment(
     idx_interval = 0
     indices = []
     
-    for idx in range(0, len(prob_list)):
+    for idx in range(0, min(len(prob_list), frame_end - frame_srt + fps)):
         
         if idx_interval > idx_distance:
             indices.append(idx)
@@ -309,6 +344,184 @@ def generate_real_time_experiment(
         if idx % int(len(prob_list) / 10) == 0:
             end_time = time.time()
             print("# convert to gif | {:.3f} percent complete | time : {:.3f}".format(frame_idx/(frame_end + fps)* 100, end_time - start_time))
+
+    from matplotlib import animation
+    
+    ani = animation.FuncAnimation(fig, replay, frames = indices)
+    writergif = animation.PillowWriter(fps = plot_freq)
+    ani.save(save_dir, writergif)
+    return 
+
+
+def generate_real_time_experiment_0D(
+    file_path : str,
+    model : torch.nn.Module, 
+    device : str = "cpu", 
+    save_dir : Optional[str] = "./results/real_time_disruption_prediction.gif",
+    shot_list_dir : Optional[str] = "./dataset/KSTAR_Disruption_Shot_List.csv",
+    ts_data_dir : Optional[str] = "./dataset/KSTAR_Disruption_ts_data_extend.csv",
+    ts_cols : List = TS_COLS,
+    shot_num : Optional[int] = None,
+    clip_len : Optional[int] = None,
+    dist_frame : Optional[int] = None,
+    plot_freq : int = 100,
+    ):
+    
+    # obtain tTQend, tipmin and tftsrt
+    shot_list_dir = pd.read_csv(shot_list_dir, encoding = "euc-kr")
+    tTQend = shot_list_dir[shot_list_dir.shot == shot_num].tTQend.values[0]
+    tftsrt = shot_list_dir[shot_list_dir.shot == shot_num].tftsrt.values[0]
+    tipminf = shot_list_dir[shot_list_dir.shot == shot_num].tipminf.values[0]
+    
+    frame_srt = shot_list_dir[shot_list_dir.shot == shot_num].frame_startup.values[0]
+    frame_end = shot_list_dir[shot_list_dir.shot == shot_num].frame_cutoff.values[0]
+
+    # input data generation
+    ts_data = pd.read_csv(ts_data_dir).reset_index()
+
+    for col in ts_cols:
+        ts_data[col] = ts_data[col].astype(np.float32)
+
+    ts_data.interpolate(method = 'linear', limit_direction = 'forward')
+    
+    ts_data_0D = ts_data[ts_data['shot'] == shot_num]
+    
+    t = ts_data_0D.time
+    ip = ts_data_0D['\\ipmhd'] * (-1)
+    kappa = ts_data_0D['\\kappa']
+    betap = ts_data_0D['\\betap']
+    betan = ts_data_0D['\\betan']
+    li = ts_data_0D['\\li']
+    Bc = ts_data_0D['\\bcentr']
+    q95 = ts_data_0D['\\q95']
+    tritop = ts_data_0D['\\tritop']
+    tribot = ts_data_0D['\\tribot']
+    W_tot = ts_data_0D['\\WTOT_DLM03']
+    ne = ts_data_0D['\\ne_inter01']
+    te = ts_data_0D['\\TS_CORE10:CORE10_TE']
+    
+    # video data
+    dataset = DatasetFor0D(ts_data_0D, ts_cols, clip_len, dist_frame, dt = dist_frame * 4)
+
+    prob_list = []
+    is_disruption = []
+
+    model.to(device)
+    model.eval()
+    
+    from tqdm.auto import tqdm
+    
+    for idx in tqdm(range(dataset.__len__())):
+        with torch.no_grad():
+            data = dataset.__getitem__(idx)
+            data = data.to(device).unsqueeze(0)
+            output = model(data)
+            probs = torch.nn.functional.softmax(output, dim = 1)[:,0]
+            probs = probs.cpu().detach().numpy().tolist()
+
+            prob_list.extend(
+                probs
+            )
+            
+            is_disruption.extend(
+                torch.nn.functional.softmax(output, dim = 1).max(1, keepdim = True)[1].cpu().detach().numpy().tolist()
+            )
+            
+    interval = 4
+    
+    t_disrupt = tTQend
+    t_current = tipminf
+    
+    if t_disrupt < 5:
+        fps = 210    
+    elif t_disrupt > 5 and t_disrupt < 10:
+        fps = 207
+    elif t_disrupt > 10  and t_disrupt < 15:
+        fps = 204
+    else:
+        fps = 200
+    
+    prob_list = [0] * clip_len + prob_list
+    
+    # correction for startup peaking effect : we will soon solve this problem
+    for idx, prob in enumerate(prob_list):
+        
+        if idx < fps and prob >= 0.5:
+            prob_list[idx] = 0
+
+    from scipy.interpolate import interp1d
+    prob_x = np.linspace(0, len(prob_list) * interval, num = len(prob_list), endpoint = True)
+    prob_y = np.array(prob_list)
+    f_prob = interp1d(prob_x, prob_y, kind = 'cubic')
+    
+    prob_list = f_prob(np.linspace(0, len(prob_list) * interval, num = len(prob_list) * interval, endpoint = False))
+
+    # for good performance, we use slight index different where the disruption occurs
+    idx_distance = clip_len
+    idx_interval = 0
+    indices = []
+    
+    for idx in range(0, min(len(prob_list), frame_end - frame_srt + fps)):
+        
+        if idx > frame_end - int(1.4 * fps/10) and idx_distance > 0 and idx < frame_end: 
+            idx_distance = 0
+            
+        elif idx > frame_end and idx_distance == 0:
+            idx_distance = clip_len
+        
+        if idx_interval > idx_distance:
+            indices.append(idx)
+            idx_interval = 1
+        else:
+            idx_interval += 1
+    
+    frame_indices = range(frame_srt, frame_end + fps)
+    prob_indices = range(0, frame_end + fps - frame_srt)
+    time_x = np.arange(0, len(prob_list) + fps) * (1/fps)
+    
+    print("probability : ", len(prob_list))
+    print("frame : ", len(frame_indices))
+    print("thermal quench : ", tTQend)
+    print("current quench: ", tipminf)
+    
+    # generate gif file using animation
+    fig, axes = plt.subplots(nrows = 1, ncols=3, figsize = (18,6))
+    prob_points = axes[1].plot([],[], label = 'disrupt prob')[0]
+    time_text = axes[1].text(0.1, 0.9, s = "", fontsize = 12, transform = axes[1].transAxes)
+    
+    threshold_line = [0.5] * len(time_x)
+    axes[1].plot(time_x, threshold_line, 'k', label = "threshold(p = 0.5)")
+    
+    video_paths = sorted(glob2.glob(os.path.join(file_path, "*")))
+    
+    frame = cv2.imread(video_paths[frame_srt])
+    axes[0].imshow(frame)
+    
+    axes[1].axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed", label = "thermal quench")
+    axes[1].axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed", label = "current quench")
+    
+    axes[1].set_ylabel("probability")
+    axes[1].set_xlabel("time(unit : s)")
+    axes[1].set_ylim([0,1])
+    axes[1].set_xlim([0,max(time_x)])
+    axes[1].legend(loc = 'upper right')
+    
+    import time
+    start_time = time.time()
+
+    def replay(idx : int):
+        
+        frame_idx = frame_indices[idx]
+        prob_idx = prob_indices[idx]
+        
+        prob_points.set_data(time_x[:idx], prob_list[:prob_idx])
+        time_text.set_text("t={:.3f}".format(time_x[idx]))
+        frame = cv2.imread(video_paths[frame_idx])
+        axes[0].imshow(frame)
+        
+        if frame_idx % int(max(frame_indices) / 10) == 0:
+            end_time = time.time()
+            print("# convert to gif | {:.3f} percent complete | time : {:.3f}".format(frame_idx/(max(frame_indices))* 100, end_time - start_time))
 
     from matplotlib import animation
     

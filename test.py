@@ -3,11 +3,19 @@ import torch
 import os
 import numpy as np
 from src.models.ViViT import ViViT
-from src.visualization.visualize_application import generate_real_time_experiment, video2img, VideoDataset
+from src.models.ConvLSTM import ConvLSTM
+from src.visualization.visualize_application import generate_real_time_experiment, video2img, VideoDataset, generate_real_time_experiment_0D
+
+ts_cols = [
+    '\\q95', '\\ipmhd', '\\kappa', 
+    '\\tritop', '\\tribot','\\betap','\\betan',
+    '\\li', '\\WTOT_DLM03'
+]
 
 args = {
     "seq_len" : 21,
-    "save_best_dir" : "./weights/ViViT_clip_21_dist_3_best.pt",
+    "vis_save_best_dir" : "./weights/ViViT_clip_21_dist_3_best.pt",
+    "0D_save_best_dir" : "./weights/ts_conv_lstm_clip_21_dist_3_best.pt",
     "image_size" : 128,
     "patch_size" : 16,
     "dist" : 3,
@@ -48,9 +56,9 @@ if __name__ == "__main__":
     )
 
     model.to(device)
-    model.load_state_dict(torch.load(args['save_best_dir']))
+    model.load_state_dict(torch.load(args['vis_save_best_dir']))
     
-    shot_num = 21310
+    shot_num = 21274
     file_path = os.path.join("./dataset/raw_videos/raw_videos/", "%06dtv01.avi"%shot_num)
     img_file_path = os.path.join("./dataset/test-shot")
     video2img(file_path, 256, 256, True, img_file_path)
@@ -70,3 +78,28 @@ if __name__ == "__main__":
         plot_freq = 7,
     )
     
+    model.cpu()
+    
+    del model
+    
+    # 0D data
+    model = ConvLSTM(
+        seq_len = args['seq_len'],
+        col_dim = len(ts_cols),
+    )
+
+    model.to(device)
+    model.load_state_dict(torch.load(args['0D_save_best_dir']))
+    
+    generate_real_time_experiment_0D(
+        img_file_path,
+        model, 
+        device, 
+        save_dir = "./results/real_time_disruption_prediction_0D_{}.gif".format(shot_num),
+        shot_list_dir = "./dataset/KSTAR_Disruption_Shot_List_extend.csv",
+        ts_data_dir = "./dataset/KSTAR_Disruption_ts_data_extend.csv",
+        shot_num = shot_num,
+        clip_len = args['seq_len'],
+        dist_frame = args['dist'],
+        plot_freq = 7,
+    )

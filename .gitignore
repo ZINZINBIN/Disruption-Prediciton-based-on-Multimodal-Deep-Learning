@@ -9,3 +9,4 @@ dataset/*
 # ignore weight and zip file
 *.pt
 *.zip
+*.csv
