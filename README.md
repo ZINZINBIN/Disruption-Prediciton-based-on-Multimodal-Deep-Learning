@@ -1,32 +1,41 @@
 # Disruptive prediction model using KSTAR video and numerical data via Deep Learning
 ## Introduction
+- This is git repository for research about predicting tokamak disruption prediction from video and 0D data using Deep Learning
+- We used KSTAR IVIS dataset and 0D parameters from iKSTAR and finally we implemented the multi-modal model for (semi) real-time prediction
+- Since video data have spatial-temporal information directly from the IVIS, the real-time prediction during the plasma operation can be possible without
+any specific data preprocessing.
+- We labeled the video data as a sequence of image data with different duration and distance (prediciton time) 
 <div>
-    <p>Research for predicting tokamak plasma disruption from video and numerical data via Deep Learning</p>
-    <img src="/image/연구_소개_01.PNG"  width="900" height="224">
+    <img src="/image/연구_소개_01.PNG"  width="640" height="196">
 </div>
+
+- We can proceed real-time disruption prediction using video data(left) and 0D data(right) for shot 21310. 
 <div>
-    <p>This research aims to predict disruptive phase using KSTAR IVIS(video) for real experiment shot</p>
-    <p float = "left">
-        <img src="/image/연구_소개_02.PNG"  width="320" height="196">
-        <img src="/image/연구_소개_03.PNG"  width="320" height="196">
-    </p>
-</div>
-<div>
-    <p>We can proceed real-time disruption prediction using video data(left) and 0D data(right) for shot 21310</p>
     <p float = 'left'>
         <img src="/results/real_time_disruption_prediction_21310.gif"  width="320" height="200">
         <img src="/results/real_time_disruption_prediction_0D_21310.gif"  width="320" height="200">
     </p>
-    <p>And this is the real-time disruption prediction using 0D data for shot 21310</p>
-    <p>We can predict plasma disruption prior to 95.2ms(maximum prediction time) with 0D data</p>
-    <p float = 'left'>
-        <img src="/image/연구_소개_05.PNG"  width="320" height="196">
-        <img src="/image/연구_소개_06.PNG"  width="320" height="196">
+</div>
+
+- We also analyze the trained model by visualizing the latent vectors that the neural networks generate by compressing the data
+- We can see that the prediction time is longer, the separation between disruptive and non-disruptive data decreases
+<div>
+    <p float = "left">
+        <img src="/image/연구_소개_02.PNG"  width="640" height="224">
     </p>
 </div>
 
-- Video data would be helpful to detect VDE(Vertical Displacement Error) and time-varying shape characteristcs
-- In future, we will try to predict disruption using multimodal data(video + 0D data)</p>
+- We also used attention rollout to visualize the attention matrix of the Video Vision Transformers to understand the importance of the video image to predict the disruption
+- But, there would be no effective / important difference between two cases below. 
+
+<div>
+    <p float = 'left'>
+        <img src="/image/연구_소개_03.PNG"  width="640" height="224">
+    </p>
+</div>
+
+- We tried to show that video data would be helpful to detect VDE(Vertical Displacement Error) and time-varying shape characteristics.
+- This means that we can effectivly predict the disruption with low false positive alarms with both video and 0D data since multi-modal learning is robust for data noise due to multi-modality
 
 ## How to Run
 ### setting
@@ -88,53 +97,53 @@ python3 experiment.py --gpu_num {gpu_num} --loss_type {'CE', 'FOCAL', 'LDAM'}
 ## Detail
 ### model to use
 - Video encoder
-1. R2Plus1D
-2. Slowfast
-3. ViViT (selected)
+    - R2Plus1D
+    - Slowfast
+    - ViViT (selected)
 
 - 0D data encoder
-1. Transformer
-2. Conv1D-LSTM using self-attention (selected)
+    - Transformer
+    - Conv1D-LSTM using self-attention (selected)
 
 - Multimodal Model
-1. Multimodal fusion model: video encoder + 0D data encoder
-2. Tensor Fusion Network
+    - Multimodal fusion model: video encoder + 0D data encoder
+    - Tensor Fusion Network
 
 ### technique or algorithm to use
-1. Solving imbalanced classificatio issue
-- Adversarial Training 
-- Re-Sampling : ImbalancedWeightedSampler, Over-Sampling for minor classes
-- Re-Weighting : Define inverse class frequencies as weights to apply with loss function (CE, Focal Loss, LDAM Loss)
-- LDAM with DRW : Label-distribution-aware margin loss with deferred re-weighting scheduling
-- Multimodal Learning : Gradient Blending for avoiding sub-optimal due to large modalities
-- Multimodal Learning : CCA Learning for enhancement
+- Solving imbalanced classificatio issue
+    - Re-Sampling : ImbalancedWeightedSampler, Over-Sampling for minor classes
+    - Re-Weighting : Define inverse class frequencies as weights to apply with loss function (CE, Focal Loss, LDAM Loss)
+    - LDAM with DRW : Label-distribution-aware margin loss with deferred re-weighting scheduling
+    - Multimodal Learning : Gradient Blending for avoiding sub-optimal due to large modalities
+    - Multimodal Learning : CCA Learning for enhancement
 
-2. Analysis on physical characteristics of disruptive video data
-- CAM
-- Grad CAM
-- attention rollout
+- Analysis on physical characteristics of disruptive video data
+    - CAM
+    - Grad CAM
+    - attention rollout (selected)
 
-3. Data augmentation
-- Video Mixup Algorithm for Data augmentation(done, not effective)
-- Conventional Image Augmentation(Flip, Brightness, Contrast, Blur, shift)
+- Data augmentation
+    - Video Mixup Algorithm for Data augmentation(done, not effective)
+    - Conventional Image Augmentation(Flip, Brightness, Contrast, Blur, shift)
 
-4. Training Process enhancement
-- Multigrid training algorithm : Fast training for SlowFast
+- Training Process enhancement
+    - Multigrid training algorithm : Fast training for SlowFast
+    - Deep CCA : Deep cannonical correlation analysis to train multi-modal representation
 
-5. Generalization and Robustness
-- Add noise with image sequence and 0D data for robustness
-- Multimodality can also guarantee the robustness from noise of the data
-- Gradient Blending for avoiding sub-optimal states from multi-modal learning
+- Generalization and Robustness
+    - Add noise with image sequence and 0D data for robustness
+    - Multimodality can also guarantee the robustness from noise of the data
+    - Gradient Blending for avoiding sub-optimal states from multi-modal learning
 
 ### Additional Task
 - Multi-GPU distributed Learning : done
 - Database contruction : Tabular dataset(IKSTAR) + Video dataset, done
-- ML Pipeline : Tensorboard
+- ML Pipeline : Tensorboard (not yet)
 
 ### Dataset
-1. Disruption : disruptive state at t = tipminf (current-quench)
-2. Borderline : inter-plane region(not used)
-3. Normal : non-disruptive state
+- Disruption : disruptive state at t = tipminf (current-quench)
+- Borderline : inter-plane region (not used)
+- Normal : non-disruptive state
 
 ## Reference
 - R2Plus1D : A Spatial-temporal Attention Module for 3D Convolution Network in Action Recognition
