@@ -1,10 +1,12 @@
 from typing import Optional, List, Literal, Union
 from src.loss import LDAMLoss, FocalLoss
+import os
 import torch
 import numpy as np
 from tqdm.auto import tqdm
 from torch.utils.data import DataLoader
 from sklearn.metrics import f1_score
+from torch.utils.tensorboard import SummaryWriter
 
 def train_per_epoch(
     train_loader : DataLoader, 
@@ -144,6 +146,7 @@ def train(
     verbose : Optional[int] = 8,
     save_best_dir : str = "./weights/best.pt",
     save_last_dir : str = "./weights/last.pt",
+    exp_dir : str = './results',
     max_norm_grad : Optional[float] = None,
     criteria : Literal["f1_score", "acc", "loss"] = "f1_score",
     model_type : Literal["single","multi"] = "single"
@@ -162,6 +165,12 @@ def train(
     best_epoch = 0
     best_f1 = 0
     best_loss = torch.inf
+    
+    if not os.path.isdir(exp_dir):
+        os.mkdir(exp_dir)
+    
+    # tensorboard
+    writer = SummaryWriter(exp_dir)
 
     for epoch in tqdm(range(num_epoch), desc = "training process"):
 
@@ -193,6 +202,13 @@ def train(
 
         train_f1_list.append(train_f1)
         valid_f1_list.append(valid_f1)
+        
+        # tensorboard recording : loss and score
+        writer.add_scalar('Loss/train', train_loss, epoch)
+        writer.add_scalar('Loss/valid', valid_loss, epoch)
+        
+        writer.add_scalar('F1_score/train', train_f1, epoch)
+        writer.add_scalar('F1_score/valid', valid_f1, epoch)
 
         if verbose:
             if epoch % verbose == 0:
@@ -201,19 +217,20 @@ def train(
                 ))
 
         # save the best parameters
-        
         if criteria == "acc" and best_acc < valid_acc:
             best_acc = valid_acc
             best_f1 = valid_f1
             best_loss = valid_loss
             best_epoch  = epoch
             torch.save(model.state_dict(), save_best_dir)
+            
         elif criteria == "f1_score" and best_f1 < valid_f1:
             best_acc = valid_acc
             best_f1 = valid_f1
             best_loss = valid_loss
             best_epoch  = epoch
             torch.save(model.state_dict(), save_best_dir)
+            
         elif criteria == "loss" and best_loss > valid_loss:
             best_acc = valid_acc
             best_f1 = valid_f1
@@ -243,6 +260,7 @@ def train_DRW(
     verbose : int = 1,
     save_best_dir : str = "./weights/best.pt",
     save_last_dir : str = "./weights/last.pt",
+    exp_dir : str = './results',
     max_norm_grad : Optional[float] = None,
     criteria : Literal["f1_score", "acc", "loss"] = "f1_score",
     cls_num_list : Optional[List] = None,
@@ -263,16 +281,22 @@ def train_DRW(
     best_acc = 0
     best_epoch = 0
     best_loss = torch.inf
+    
+    if not os.path.isdir(exp_dir):
+        os.mkdir(exp_dir)
 
     # class per weight update
-    def _update_per_cls_weights(epoch : int, betas : List, cls_num_list : List)->torch.Tensor:
+    def _update_per_cls_weights(epoch : int, betas : List, cls_num_list : List):
         idx = epoch // int(num_epoch / len(betas))
         beta = betas[idx]
         effective_num = 1.0 - np.power(beta, cls_num_list)
         per_cls_weights = (1.0 - beta) / np.array(effective_num)
         per_cls_weights = per_cls_weights / np.sum(per_cls_weights) * len(cls_num_list)
         per_cls_weights = torch.FloatTensor(per_cls_weights).to(device)
-        return per_cls_weights      
+        return per_cls_weights    
+    
+    # tensorboard
+    writer = SummaryWriter(exp_dir)  
     
     for epoch in tqdm(range(num_epoch), desc = "training process - Deferred Re-weighting"):
 
@@ -309,6 +333,13 @@ def train_DRW(
 
         train_acc_list.append(train_acc)
         valid_acc_list.append(valid_acc)
+        
+        # tensorboard recording : loss and score
+        writer.add_scalar('Loss/train', train_loss, epoch)
+        writer.add_scalar('Loss/valid', valid_loss, epoch)
+        
+        writer.add_scalar('F1_score/train', train_f1, epoch)
+        writer.add_scalar('F1_score/valid', valid_f1, epoch)
 
         if verbose:
             if epoch % verbose == 0:

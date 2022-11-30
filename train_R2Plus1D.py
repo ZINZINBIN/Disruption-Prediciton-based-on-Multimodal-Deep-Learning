@@ -1,7 +1,7 @@
 import torch
 import argparse
 import numpy as np
-from src.CustomDataset import CustomDataset
+from src.CustomDataset import DatasetForVideo
 from torch.utils.data import DataLoader
 from src.models.R2Plus1D import  R2Plus1DClassifier
 from src.utils.sampler import ImbalancedDatasetSampler
@@ -78,10 +78,14 @@ if __name__ == "__main__":
         "resize_width" : 256,
     }
 
-    train_data = CustomDataset(root_dir = root_dir, task = 'train', ts_data = None, augmentation = False, crop_size = image_size, seq_len = seq_len, mode = 'video', **kwargs)
-    valid_data = CustomDataset(root_dir = root_dir, task = 'valid', ts_data = None, augmentation = False, crop_size = image_size, seq_len = seq_len, mode = 'video', **kwargs)
-    test_data = CustomDataset(root_dir = root_dir, task = 'test', ts_data = None, augmentation = False, crop_size = image_size, seq_len = seq_len, mode = 'video', **kwargs)
+    train_data = DatasetForVideo(root_dir = root_dir, task = 'train', augmentation = True, crop_size = image_size, seq_len = seq_len)
+    valid_data = DatasetForVideo(root_dir = root_dir, task = 'valid', augmentation = True, crop_size = image_size, seq_len = seq_len)
+    test_data = DatasetForVideo(root_dir = root_dir, task = 'test', augmentation = True, crop_size = image_size, seq_len = seq_len)
 
+    print("train data : ", train_data.__len__())
+    print("valid data : ", valid_data.__len__())
+    print("test data : ", test_data.__len__())
+    
     if args["use_sampler"]:
         train_sampler = ImbalancedDatasetSampler(train_data)
         valid_sampler = None

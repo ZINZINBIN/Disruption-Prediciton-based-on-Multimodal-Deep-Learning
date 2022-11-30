@@ -14,7 +14,7 @@ class Residule(nn.Module):
     def __init__(self, fn):
         super(Residule, self).__init__()
         self.fn = fn
-    def forward(self, x : torch.Tensor, **kwargs)->torch.Tensor:
+    def forward(self, x : torch.Tensor, **kwargs):
         return self.fn(x, **kwargs) + x
 
 # PreNorm module
@@ -25,7 +25,7 @@ class PreNorm(nn.Module):
         self.fn = fn
         self.norm = nn.LayerNorm(dim)
     
-    def forward(self, x : torch.Tensor, **kwargs)->torch.Tensor:
+    def forward(self, x : torch.Tensor, **kwargs):
         return self.fn(self.norm(x), **kwargs)
 
 # FeedForward module
@@ -43,7 +43,7 @@ class FeedForward(nn.Module):
             nn.Dropout(dropout)
         )
     
-    def forward(self, x : torch.Tensor)->torch.Tensor:
+    def forward(self, x : torch.Tensor):
         return self.net(x)
 
 # Attention
@@ -68,7 +68,7 @@ class Attention(nn.Module):
             nn.Dropout(dropout)
         ) if project_out else nn.Identity()
 
-    def forward(self, x : torch.Tensor)->torch.Tensor:
+    def forward(self, x : torch.Tensor):
         b, n, _, h = *x.shape, self.n_heads
 
         qkv = self.to_qkv(x)

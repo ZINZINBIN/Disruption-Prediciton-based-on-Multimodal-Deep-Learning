@@ -5,6 +5,7 @@ from torch.autograd import Variable
 from torch.nn import functional as F
 from typing import List, Optional, Union, Tuple
 from pytorch_model_summary import summary
+from src.models.NoiseLayer import NoiseLayer
 
 class ConvLSTM(nn.Module):
     def __init__(
@@ -24,6 +25,8 @@ class ConvLSTM(nn.Module):
         self.col_dim = col_dim
         self.seq_len = seq_len
         self.lstm_dim = lstm_dim
+        
+        self.noise = NoiseLayer(mean = 0, std = 1e-2)
 
         # spatio-conv encoder : analyze spatio-effect between variables
         self.conv = nn.Sequential(
@@ -62,6 +65,7 @@ class ConvLSTM(nn.Module):
     
     def encode(self, x:torch.Tensor):
         with torch.no_grad():
+            x = self.noise(x)
             x_conv = self.conv(x.permute(0,2,1))
             h_0 = Variable(torch.zeros(2, x.size()[0], self.lstm_dim)).to(x.device)
             c_0 = Variable(torch.zeros(2, x.size()[0], self.lstm_dim)).to(x.device)
@@ -76,6 +80,7 @@ class ConvLSTM(nn.Module):
 
     def forward(self, x : torch.Tensor):
         # x : (batch, seq_len, col_dim)
+        x = self.noise(x)
         x_conv = self.conv(x.permute(0,2,1))
         h_0 = Variable(torch.zeros(2, x.size()[0], self.lstm_dim)).to(x.device)
         c_0 = Variable(torch.zeros(2, x.size()[0], self.lstm_dim)).to(x.device)
@@ -88,7 +93,7 @@ class ConvLSTM(nn.Module):
         output = self.classifier(hidden)
         return output
     
-    def summary(self, device : str = 'cpu', show_input : bool = True, show_hierarchical : bool = True, print_summary : bool = False, show_parent_layers : bool = False):
+    def summary(self, device : str = 'cpu', show_input : bool = True, show_hierarchical : bool = False, print_summary : bool = False, show_parent_layers : bool = False):
         sample = torch.zeros((1, self.seq_len, self.col_dim), device = device)
         return print(summary(self, sample, show_input = show_input, show_hierarchical=show_hierarchical, print_summary = print_summary, show_parent_layers=show_parent_layers))
 

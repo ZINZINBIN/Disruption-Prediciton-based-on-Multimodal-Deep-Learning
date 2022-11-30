@@ -121,10 +121,12 @@ def plot_roc_curve(y_true : np.ndarray, y_pred : np.ndarray, save_dir : str, tit
     plt.ylim([0.0, 1.05])
     plt.xlabel("False Positive Rate")
     plt.ylabel("True Positive Rate")
+    
     if title is not None:
         plt.title(title)
     else:
         plt.title("Receiver operating characteristic")
+        
     plt.legend(loc="lower right")
     plt.show()
     plt.savefig(save_dir)

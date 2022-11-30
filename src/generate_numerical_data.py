@@ -8,13 +8,17 @@ def ts_interpolate(df : pd.DataFrame, cols : List, df_disruption : pd.DataFrame,
     
     df_interpolate = pd.DataFrame()
     shot_list = np.unique(df_disruption.shot.values).tolist()
-
-    for shot in tqdm(shot_list):
+    
+    for shot in tqdm(shot_list, desc = 'interpolation process'):
+        
         if shot not in df.shot.values:
+            print("shot : {} not exist".format(shot))
             continue
 
         # ts data with shot number = shot
         df_shot = df[df.shot == shot]
+        df_shot.fillna(method = 'ffill')
+        
         dict_extend = {}
         t = df_shot.time.values.reshape(-1,)
 
@@ -35,7 +39,7 @@ def ts_interpolate(df : pd.DataFrame, cols : List, df_disruption : pd.DataFrame,
 
         for col in cols:
             data = df_shot[col].values.reshape(-1,)
-            interp = interp1d(t, data, fill_value = 'extrapolate')
+            interp = interp1d(t, data, kind = 'cubic', fill_value = 'extrapolate')
             data_extend = interp(t_extend).reshape(-1,)
             dict_extend[col] = data_extend
 
@@ -46,8 +50,9 @@ def ts_interpolate(df : pd.DataFrame, cols : List, df_disruption : pd.DataFrame,
 
 if __name__ == "__main__":
     df = pd.read_csv("./dataset/KSTAR_Disruption_ts_data.csv")
-    df_disrupt = pd.read_csv("./dataset/KSTAR_Disruption_Shot_List_extend.csv", encoding = "euc-kr")
-    
+    # df_disrupt = pd.read_csv("./dataset/KSTAR_Disruption_Shot_List_extend.csv", encoding = "euc-kr")
+    df_disrupt = pd.read_csv("./dataset/KSTAR_Disruption_Shot_List.csv", encoding = "euc-kr")
+
     cols = df.columns[df.notna().any()].drop(['Unnamed: 0','shot','time']).tolist()
     fps = 210
     dt = 1.0 / fps * 4

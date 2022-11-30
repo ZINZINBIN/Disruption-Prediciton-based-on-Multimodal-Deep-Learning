@@ -345,8 +345,6 @@ def generate_real_time_experiment(
             end_time = time.time()
             print("# convert to gif | {:.3f} percent complete | time : {:.3f}".format(frame_idx/(frame_end + fps)* 100, end_time - start_time))
 
-    from matplotlib import animation
-    
     ani = animation.FuncAnimation(fig, replay, frames = indices)
     writergif = animation.PillowWriter(fps = plot_freq)
     ani.save(save_dir, writergif)
@@ -463,17 +461,17 @@ def generate_real_time_experiment_0D(
     
     for idx in range(0, min(len(prob_list), frame_end - frame_srt + fps)):
         
-        if idx > frame_end - int(1.4 * fps/10) and idx_distance > 0 and idx < frame_end: 
-            idx_distance = 0
-            
-        elif idx > frame_end and idx_distance == 0:
-            idx_distance = clip_len
-        
         if idx_interval > idx_distance:
             indices.append(idx)
             idx_interval = 1
         else:
             idx_interval += 1
+        
+        if idx > frame_end - int(1.4 * fps/10) and idx_distance > 0 and idx < frame_end: 
+            idx_distance = 0
+            
+        elif idx > frame_end and idx_distance == 0:
+            idx_distance = clip_len
     
     frame_indices = range(frame_srt, frame_end + fps)
     prob_indices = range(0, frame_end + fps - frame_srt)
@@ -485,7 +483,7 @@ def generate_real_time_experiment_0D(
     print("current quench: ", tipminf)
     
     # generate gif file using animation
-    fig, axes = plt.subplots(nrows = 1, ncols=3, figsize = (18,6))
+    fig, axes = plt.subplots(nrows = 1, ncols=2, figsize = (18,6))
     prob_points = axes[1].plot([],[], label = 'disrupt prob')[0]
     time_text = axes[1].text(0.1, 0.9, s = "", fontsize = 12, transform = axes[1].transAxes)
     
@@ -523,8 +521,6 @@ def generate_real_time_experiment_0D(
             end_time = time.time()
             print("# convert to gif | {:.3f} percent complete | time : {:.3f}".format(frame_idx/(max(frame_indices))* 100, end_time - start_time))
 
-    from matplotlib import animation
-    
     ani = animation.FuncAnimation(fig, replay, frames = indices)
     writergif = animation.PillowWriter(fps = plot_freq)
     ani.save(save_dir, writergif)

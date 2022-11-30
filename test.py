@@ -3,7 +3,7 @@ import torch
 import os
 import numpy as np
 from src.models.ViViT import ViViT
-from src.models.ConvLSTM import ConvLSTM
+from src.models.ts_transformer import TStransformer
 from src.visualization.visualize_application import generate_real_time_experiment, video2img, VideoDataset, generate_real_time_experiment_0D
 
 ts_cols = [
@@ -15,7 +15,8 @@ ts_cols = [
 args = {
     "seq_len" : 21,
     "vis_save_best_dir" : "./weights/ViViT_clip_21_dist_3_best.pt",
-    "0D_save_best_dir" : "./weights/ts_conv_lstm_clip_21_dist_3_best.pt",
+    # "0D_save_best_dir" : "./weights/ts_conv_lstm_clip_21_dist_3_best.pt",
+    "0D_save_best_dir" : "./weights/ts_transformer_clip_21_dist_3_best.pt",
     "image_size" : 128,
     "patch_size" : 16,
     "dist" : 3,
@@ -58,36 +59,43 @@ if __name__ == "__main__":
     model.to(device)
     model.load_state_dict(torch.load(args['vis_save_best_dir']))
     
-    shot_num = 21274
+    shot_num = 21310
     file_path = os.path.join("./dataset/raw_videos/raw_videos/", "%06dtv01.avi"%shot_num)
     img_file_path = os.path.join("./dataset/test-shot")
-    video2img(file_path, 256, 256, True, img_file_path)
+    # video2img(file_path, 256, 256, True, img_file_path)
     
-    dataset = VideoDataset(img_file_path, resize_height = 256, resize_width=256, crop_size = 128, seq_len = 21, dist = 3, frame_srt=21, frame_end = -1)
+    # dataset = VideoDataset(img_file_path, resize_height = 256, resize_width=256, crop_size = 128, seq_len = 21, dist = 3, frame_srt=21, frame_end = -1)
     
-    generate_real_time_experiment(
-        img_file_path,
-        model, 
-        device, 
-        save_dir = "./results/real_time_disruption_prediction_{}.gif".format(shot_num),
-        shot_list_dir = "./dataset/KSTAR_Disruption_Shot_List_extend.csv",
-        ts_data_dir = "./dataset/KSTAR_Disruption_ts_data_extend.csv",
-        shot_num = shot_num,
-        clip_len = args['seq_len'],
-        dist_frame = args['dist'],
-        plot_freq = 7,
-    )
+    # generate_real_time_experiment(
+    #     img_file_path,
+    #     model, 
+    #     device, 
+    #     save_dir = "./results/real_time_disruption_prediction_{}.gif".format(shot_num),
+    #     shot_list_dir = "./dataset/KSTAR_Disruption_Shot_List_extend.csv",
+    #     ts_data_dir = "./dataset/KSTAR_Disruption_ts_data_extend.csv",
+    #     shot_num = shot_num,
+    #     clip_len = args['seq_len'],
+    #     dist_frame = args['dist'],
+    #     plot_freq = 7,
+    # )
     
     model.cpu()
     
     del model
     
     # 0D data
-    model = ConvLSTM(
-        seq_len = args['seq_len'],
-        col_dim = len(ts_cols),
+    model = TStransformer(
+        n_features=len(ts_cols),
+        feature_dims = 128,
+        max_len = args['seq_len'],
+        n_layers = 8,
+        n_heads = 8,
+        dim_feedforward=1024,
+        dropout = 0.25,
+        cls_dims = 128,
+        n_classes = 2
     )
-
+    
     model.to(device)
     model.load_state_dict(torch.load(args['0D_save_best_dir']))
     

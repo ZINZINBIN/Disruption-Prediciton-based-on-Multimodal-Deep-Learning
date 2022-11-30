@@ -2,7 +2,7 @@ import torch
 import argparse
 import numpy as np
 from torch.utils.data import DataLoader
-from src.CustomDataset import CustomDataset
+from src.CustomDataset import DatasetForVideo
 from src.models.resnet import Bottleneck3D
 from src.models.slowfast import SlowFast
 from src.utils.sampler import ImbalancedDatasetSampler
@@ -81,10 +81,14 @@ if __name__ == "__main__":
     root_dir = args["root_dir"]
     image_size = args['image_size']
 
-    train_data = CustomDataset(root_dir = root_dir, task = 'train', ts_data = None, augmentation = False, crop_size = image_size, seq_len = seq_len, mode = 'video')
-    valid_data = CustomDataset(root_dir = root_dir, task = 'valid', ts_data = None, augmentation = False, crop_size = image_size, seq_len = seq_len, mode = 'video')
-    test_data = CustomDataset(root_dir = root_dir, task = 'test', ts_data = None, augmentation = False, crop_size = image_size, seq_len = seq_len, mode = 'video')
+    train_data = DatasetForVideo(root_dir = root_dir, task = 'train', augmentation = True, crop_size = image_size, seq_len = seq_len)
+    valid_data = DatasetForVideo(root_dir = root_dir, task = 'valid', augmentation = True, crop_size = image_size, seq_len = seq_len)
+    test_data = DatasetForVideo(root_dir = root_dir, task = 'test', augmentation = True, crop_size = image_size, seq_len = seq_len)
 
+    print("train data : ", train_data.__len__())
+    print("valid data : ", valid_data.__len__())
+    print("test data : ", test_data.__len__())
+    
     if args["use_sampler"]:
         train_sampler = ImbalancedDatasetSampler(train_data)
         valid_sampler = None

@@ -5,94 +5,47 @@ import pandas as pd
 from src.CustomDataset import DatasetFor0D
 from src.models.ts_transformer import TStransformer
 from src.utils.sampler import ImbalancedDatasetSampler
-from src.utils.utility import plot_learning_curve, generate_prob_curve_from_0D
+from src.utils.utility import plot_learning_curve, generate_prob_curve_from_0D, preparing_0D_dataset
 from src.visualization.visualize_latent_space import visualize_2D_latent_space, visualize_3D_latent_space
 from torch.utils.data import DataLoader
 from src.train import train
 from src.evaluate import evaluate
 from src.loss import LDAMLoss, FocalLoss
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import RobustScaler
-
-df = pd.read_csv("./dataset/KSTAR_Disruption_ts_data_extend.csv").reset_index()
-
-# nan interpolation
-df.interpolate(method = 'linear', limit_direction = 'forward')
-
-# columns for use
-ts_cols = [
-    '\\q95', '\\ipmhd', '\\kappa', 
-    '\\tritop', '\\tribot','\\betap','\\betan',
-    '\\li', '\\WTOT_DLM03'
-]
-
-# float type
-for col in ts_cols:
-    df[col] = df[col].astype(np.float32)
-
-# train / valid / test data split
-from sklearn.model_selection import train_test_split
-shot_list = np.unique(df.shot.values)
-
-shot_train, shot_test = train_test_split(shot_list, test_size = 0.2, random_state = 42)
-shot_train, shot_valid = train_test_split(shot_train, test_size = 0.2, random_state = 42)
-
-df_train = pd.DataFrame()
-df_valid = pd.DataFrame()
-df_test = pd.DataFrame()
-
-for shot in shot_train:
-    df_train = pd.concat([df_train, df[df.shot == shot]], axis = 0)
-
-for shot in shot_valid:
-    df_valid = pd.concat([df_valid, df[df.shot == shot]], axis = 0)
-
-for shot in shot_test:
-    df_test = pd.concat([df_test, df[df.shot == shot]], axis = 0)
-
-scaler = RobustScaler()
-df_train[ts_cols] = scaler.fit_transform(df_train[ts_cols].values)
-df_valid[ts_cols] = scaler.transform(df_valid[ts_cols].values)
-df_test[ts_cols] = scaler.transform(df_test[ts_cols].values)
-
-# disruption info
-kstar_shot_list = pd.read_csv('./dataset/KSTAR_Disruption_Shot_List_extend.csv', encoding = "euc-kr")
-
-# shot list
-shot_list = np.unique(df.shot.values).tolist()
-
-ts_train = df_train
-ts_valid = df_valid
-ts_test = df_test
-seq_len = 21
-dist = 3
-dt = 1 / 210 * 4
-cols = ts_cols
-col_len = len(cols)
-save_best_dir = "./weights/ts_transformer_clip_21_dist_3_best.pt"
-save_last_dir = "./weights/ts_transformer_clip_21_dist_3_best.pt"
-save_txt = "./results/test_ts_transformer_clip_21_dist_3.txt"
-save_conf = "./results/test_ts_transformer_clip_21_dist_3_confusion_matrix.png"
-save_latent_2d = "./results/ts_transformer_clip_21_dist_3_latent_2d.png"
-save_latent_3d = "./results/ts_transformer_clip_21_dist_3_latent_3d.png"
-
-train_data = DatasetFor0D(ts_train, kstar_shot_list, seq_len = seq_len, cols = ts_cols, dist = dist, dt = 1.0 / 210 * 4)
-valid_data = DatasetFor0D(ts_valid, kstar_shot_list, seq_len = seq_len, cols = ts_cols, dist = dist, dt = 1.0 / 210 * 4)
-test_data = DatasetFor0D(ts_test, kstar_shot_list, seq_len = seq_len, cols = ts_cols, dist = dist, dt = 1.0 / 210 * 4)
-
 from torch.utils.data import DataLoader
 from src.utils.sampler import ImbalancedDatasetSampler
 
-batch_size = 128
-lr = 1e-3
-gamma = 0.95
-num_epoch = 64
-verbose = 8
+# columns for use
+ts_cols = ['\\q95', '\\ipmhd', '\\kappa', '\\tritop', '\\tribot','\\betap','\\betan','\\li', '\\WTOT_DLM03']
 
-sampler = ImbalancedDatasetSampler(train_data)
-train_loader = DataLoader(train_data, batch_size = batch_size, num_workers =8, sampler = sampler)
-valid_loader = DataLoader(valid_data, batch_size = batch_size, num_workers = 8, shuffle = True)
-test_loader = DataLoader(test_data, batch_size = batch_size, num_workers = 8, shuffle = True)
+# parsing
+parser = argparse.ArgumentParser(description="training Transformer model for disruption classifier")
+parser.add_argument("--batch_size", type = int, default = 128)
+parser.add_argument("--lr", type = float, default = 1e-3)
+parser.add_argument("--gamma", type = float, default = 0.95)
+parser.add_argument("--gpu_num", type = int, default = 2)
+
+parser.add_argument("--num_workers", type = int, default = 8)
+parser.add_argument("--pin_memory", type = bool, default = False)
+
+parser.add_argument("--dist", type = int, default = 3)
+parser.add_argument("--dt", type = float, default = 4 * 1 / 210)
+parser.add_argument("--seq_len", type = int, default = 21)
+parser.add_argument("--use_sampler", type = bool, default = True)
+parser.add_argument("--num_epoch", type = int, default = 64)
+parser.add_argument("--verbose", type = int, default = 4)
+
+parser.add_argument("--save_best_dir", type = str, default = "./weights/ts_transformer_clip_21_dist_3_best.pt")
+parser.add_argument("--save_last_dir", type = str, default = "./weights/ts_transformer_clip_21_dist_3_last.pt")
+parser.add_argument("--save_txt", type = str, default = "./results/test_ts_transformer_clip_21_dist_3.txt")
+parser.add_argument("--save_conf", type = str, default = "./results/test_ts_transformer_clip_21_dist_3_confusion_matrix.png")
+parser.add_argument("--save_latent_2d", type = str, default = "./results/ts_transformer_clip_21_dist_3_latent_2d.png")
+parser.add_argument("--save_latent_3d", type = str, default = "./results/ts_transformer_clip_21_dist_3_latent_3d.png")
+
+parser.add_argument("--use_focal_loss", type = bool, default = True)
+parser.add_argument("--use_LDAM_loss", type = bool, default = False)
+parser.add_argument("--use_weight", type = bool, default = True)
+
+args = vars(parser.parse_args())
 
 # torch device state
 print("torch device avaliable : ", torch.cuda.is_available())
@@ -105,40 +58,113 @@ torch.cuda.empty_cache()
 
 # device allocation
 if(torch.cuda.device_count() >= 1):
-    device = "cuda:1"
+    device = "cuda:" + str(args["gpu_num"])
 else:
     device = 'cpu'
     
 if __name__ == "__main__":
+    
+    # parsing
+    batch_size = args['batch_size']
+    lr = args['lr']
+    num_workers = args['num_workers']
+    gamma = args['gamma']
+    num_epoch = args['num_epoch']
+    verbose = args['verbose']
+    seq_len = args['seq_len']
+    dist = args['dist']
+    dt = args['dt']
+    col_len = len(ts_cols)
+    save_best_dir = args['save_best_dir']
+    save_last_dir = args['save_last_dir']
+    save_txt = args['save_txt']
+    save_conf = args['save_conf']
+    save_latent_2d = args['save_latent_2d']
+    save_latent_3d = args['save_latent_3d']
+    
+    # dataset
+    ts_train, ts_valid, ts_test, ts_scaler = preparing_0D_dataset("./dataset/KSTAR_Disruption_ts_data_extend.csv", ts_cols = ts_cols, scaler = 'Robust')
+    
+    print("train data : ", len(ts_train))
+    print("valid data : ", len(ts_valid))
+    print("test data : ", len(ts_test))
+    
+    # disruption info
+    # kstar_shot_list = pd.read_csv('./dataset/KSTAR_Disruption_Shot_List_extend.csv', encoding = "euc-kr")
+    kstar_shot_list = pd.read_csv('./dataset/KSTAR_Disruption_Shot_List.csv', encoding = "euc-kr")
 
+    train_data = DatasetFor0D(ts_train, kstar_shot_list, seq_len = seq_len, cols = ts_cols, dist = dist, dt = dt)
+    valid_data = DatasetFor0D(ts_valid, kstar_shot_list, seq_len = seq_len, cols = ts_cols, dist = dist, dt = dt)
+    test_data = DatasetFor0D(ts_test, kstar_shot_list, seq_len = seq_len, cols = ts_cols, dist = dist, dt = dt)
+    
+    print("train data : ", train_data.__len__())
+    print("valid data : ", valid_data.__len__())
+    print("test data : ", test_data.__len__())
+    
+    if args["use_sampler"]:
+        train_sampler = ImbalancedDatasetSampler(train_data)
+        valid_sampler = None
+        test_sampler = None
+
+    else:
+        train_sampler = None
+        valid_sampler = None
+        test_sampler = None
+        
+    train_loader = DataLoader(train_data, batch_size = batch_size, num_workers =num_workers, sampler = train_sampler)
+    
+    if valid_sampler:
+        valid_loader = DataLoader(valid_data, batch_size = batch_size, num_workers = num_workers, sampler = valid_sampler)
+    else:
+        valid_loader = DataLoader(valid_data, batch_size = batch_size, num_workers = num_workers, shuffle = True)
+    
+    if test_sampler:
+        test_loader = DataLoader(test_data, batch_size = batch_size, num_workers = num_workers, sampler = test_sampler)
+    else:
+        test_loader = DataLoader(test_data, batch_size = batch_size, num_workers = num_workers, shuffle = True)    
+    
+    # model
     model = TStransformer(
         n_features=col_len,
-        feature_dims = 16,
-        max_len = seq_len, 
-        n_layers = 4,
-        n_heads = 4, 
-        dim_feedforward = 1024,
-        dropout = 0.5, 
-        cls_dims = 128, 
-        n_classes  = 2
+        feature_dims = 128,
+        max_len = seq_len,
+        n_layers = 8,
+        n_heads = 8,
+        dim_feedforward=1024,
+        dropout = 0.25,
+        cls_dims = 128,
+        n_classes = 2
     )
+    
+    model.summary()
 
     model.to(device)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr = lr, weight_decay=gamma)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size = 4, gamma=gamma)
-
+    
     train_data.get_num_per_cls()
     cls_num_list = train_data.get_cls_num_list()
     
-    per_cls_weights = 1.0 / np.array(cls_num_list)
-    per_cls_weights = per_cls_weights / np.sum(per_cls_weights)
-    per_cls_weights = torch.FloatTensor(per_cls_weights).to(device)
-
-    focal_gamma = 2.0
-    loss_fn = FocalLoss(weight = per_cls_weights, gamma = focal_gamma)
-
+    if args['use_weight']:
+        per_cls_weights = 1.0 / np.array(cls_num_list)
+        per_cls_weights = per_cls_weights / np.sum(per_cls_weights)
+        per_cls_weights = torch.FloatTensor(per_cls_weights).to(device)
+    else:
+        per_cls_weights = np.array([1,1])
+        per_cls_weights = torch.FloatTensor(per_cls_weights).to(device)
     
+    if args['use_focal_loss']:
+        focal_gamma = 2.0
+        loss_fn = FocalLoss(weight = per_cls_weights, gamma = focal_gamma)
+
+    elif args['use_LDAM_loss']:
+        max_m = 0.5
+        s = 1.0
+        loss_fn = LDAMLoss(cls_num_list, max_m = max_m, weight = per_cls_weights, s = s)
+    else: 
+        loss_fn = torch.nn.CrossEntropyLoss(reduction = "mean", weight = per_cls_weights)
+        
     train_loss,  train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train(
         train_loader,
         valid_loader,
@@ -171,7 +197,7 @@ if __name__ == "__main__":
     # plot probability curve
     generate_prob_curve_from_0D(
         model, 
-        batch_size = 4, 
+        batch_size = 1, 
         device = device, 
         save_dir = "./results/disruption_probs_curve.png",
         ts_data = "./dataset/KSTAR_Disruption_ts_data_extend.csv",
