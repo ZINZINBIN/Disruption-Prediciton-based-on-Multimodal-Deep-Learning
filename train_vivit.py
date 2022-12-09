@@ -13,7 +13,7 @@ from src.evaluate import evaluate
 from src.loss import LDAMLoss, FocalLoss
 
 parser = argparse.ArgumentParser(description="training ViViT for disruption classifier")
-parser.add_argument("--batch_size", type = int, default = 50)
+parser.add_argument("--batch_size", type = int, default = 32)
 parser.add_argument("--lr", type = float, default = 1e-3)
 parser.add_argument("--gamma", type = float, default = 0.95)
 parser.add_argument("--gpu_num", type = int, default = 0)
@@ -25,8 +25,9 @@ parser.add_argument("--num_workers", type = int, default = 8)
 parser.add_argument("--pin_memory", type = bool, default = False)
 
 parser.add_argument("--seq_len", type = int, default = 21)
+parser.add_argument("--dist", type = int, default = 3)
 parser.add_argument("--use_sampler", type = bool, default = True)
-parser.add_argument("--num_epoch", type = int, default = 128)
+parser.add_argument("--num_epoch", type = int, default = 256)
 parser.add_argument("--verbose", type = int, default = 4)
 parser.add_argument("--root_dir", type = str, default = "./dataset/dur21_dis3")
 parser.add_argument("--save_best_dir", type = str, default = "./weights/ViViT_clip_21_dist_3_best.pt")
@@ -66,6 +67,7 @@ if __name__ == "__main__":
 
     batch_size = args['batch_size']
     lr = args['lr']
+    dist = args['dist']
     seq_len = args['seq_len']
     num_epoch = args['num_epoch']
     verbose = args['verbose']
@@ -86,7 +88,6 @@ if __name__ == "__main__":
     '''
     
     # use modified dataset
-    dist = 3
     root_dir = "./dataset/temp"
     shot_train, shot_valid, shot_test = preparing_video_dataset(root_dir)
     df_disrupt = pd.read_csv("./dataset/KSTAR_Disruption_Shot_List_extend.csv")
@@ -112,11 +113,6 @@ if __name__ == "__main__":
     train_loader = DataLoader(train_data, batch_size = args['batch_size'], sampler=train_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"])
     valid_loader = DataLoader(valid_data, batch_size = args['batch_size'], sampler=valid_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"])
     test_loader = DataLoader(test_data, batch_size = args['batch_size'], sampler=test_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"])
-
-    sample_data, sample_target = next(iter(train_loader))
-    
-    print('sample data : ', sample_data)
-    print('sample target : ', sample_target)
 
     model = ViViT(
         image_size = args['image_size'],
@@ -162,6 +158,7 @@ if __name__ == "__main__":
     else: 
         loss_fn = torch.nn.CrossEntropyLoss(reduction = "mean", weight = per_cls_weights)
 
+    
     train_loss,  train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train(
         train_loader,
         valid_loader,

@@ -65,11 +65,6 @@ def make_folder(
         - height : resize height
     '''
     
-    # check the directory for saving video data
-    check_directory(save_path, shot_num)
-
-    save_path = os.path.join(save_path, str(shot_num))
-    
     # path for video data
     video_shot = "%06dtv01.avi"%shot_num
     video_path = raw_videos_path + video_shot
@@ -79,8 +74,17 @@ def make_folder(
         video_shot = "%06dtv02.avi"%shot_num
         video_path = raw_videos_path + video_shot
         is_flip = True
-
-    if os.path.isfile(video_path) :
+        
+    # check the directory for saving video data
+    if os.path.isfile(video_path):
+        check_directory(save_path, shot_num)
+    else:
+        return
+    
+    save_path = os.path.join(save_path, str(shot_num))
+    
+    # convert video file to image in the directory
+    if os.path.isfile(video_path):
         capture = cv2.VideoCapture(video_path)
         frame_rate = int(round(capture.get(cv2.CAP_PROP_FPS)))
 
@@ -98,10 +102,10 @@ def make_folder(
             retaining, frame = capture.read()
 
             if frame is None:
-                continue
+                frame = np.zeros((width, height))
 
             if frame_height != height or frame_width != width:
-                frame = cv2.resize(frame, (width, height))
+                frame = cv2.resize(frame, (width, height), cv2.INTER_CUBIC)
   
             cv2.imwrite(filename = os.path.join(save_path, '%06d.jpg'%count), img = frame)
             count += 1

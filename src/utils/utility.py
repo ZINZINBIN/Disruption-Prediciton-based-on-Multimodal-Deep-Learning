@@ -416,109 +416,7 @@ class DatasetFor0D(Dataset):
         data = torch.from_numpy(data)
         return data
 
-
-
-# generate distribution probability curve(t vs prob)
-def generate_prob_curve(
-    dataset : torch.Tensor, 
-    model : torch.nn.Module, 
-    batch_size : int = 32, 
-    device : str = "cpu", 
-    save_dir : Optional[str] = "./results/disruption_probs_curve.png",
-    shot_list_dir : Optional[str] = "./dataset/KSTAR_Disruption_Shot_List.csv",
-    shot_number : Optional[int] = None,
-    clip_len : Optional[int] = None,
-    dist_frame : Optional[int] = None,
-    use_continuous_frame : bool = True
-    ):
-    prob_list = []
-    is_disruption = []
-    video_len = dataset.size(0)
-
-    model.to(device)
-    model.eval()
-
-    if video_len >= batch_size:
-        for idx in range(int(video_len / batch_size)):
-            with torch.no_grad():
-                idx_start = batch_size * idx
-                idx_end = batch_size * (idx + 1)
-
-                frames = dataset[idx_start : idx_end, :, :, :, :]
-                frames = frames.to(device)
-                output = model(frames)
-                probs = torch.nn.functional.softmax(output, dim = 1)[:,0]
-                probs = probs.cpu().detach().numpy().tolist()
-
-                prob_list.extend(
-                    probs
-                )
-                is_disruption.extend(
-                    torch.nn.functional.softmax(output, dim = 1).max(1, keepdim = True)[1].cpu().detach().numpy().tolist()
-                )
-
-    else:
-        with torch.no_grad():
-            frames = dataset[:, :, :, :, :]
-            frames = frames.to(device)
-            probs = model(frames)
-            probs = torch.nn.functional.softmax(probs, dim = 1)[:,0]
-            probs = probs.cpu().detach().numpy().tolist()
-            prob_list.extend(
-                probs
-            )
-            is_disruption.extend(
-                    torch.nn.functional.softmax(output, dim = 1).max(1, keepdim = True)[1].cpu().detach().numpy().tolist()
-            )
-
-    if shot_list_dir and shot_number:
-        shot_list = pd.read_csv(shot_list_dir)
-        shot_info = shot_list[shot_list["shot"] == shot_number]
-    else:
-        shot_list = None
-        shot_info = None
-
-    if shot_info is not None:
-        t_disrupt = shot_info["tTQend"].values[0] + 0.1 # video frame이 -100ms 부터 시작됨, 보정값
-        t_current = shot_info["tipminf"].values[0] + 0.1 
-    else:
-        t_disrupt = None
-        t_current = None
-
-    if use_continuous_frame:
-        interval = 1
-        # clip_len + distance만큼 외삽 진행
-        prob_list = [0] * (clip_len + dist_frame) + prob_list
-    else:
-        interval = clip_len
-        prob_list = [0] * (1 + int(dist_frame / clip_len)) + prob_list
-
-    fps = 210
-    time_x = np.arange(1, len(prob_list) + 1) * (1/fps) * interval - 0.1
-    
-    if save_dir:
-        threshold_line = [0.5] * len(time_x)
-
-        plt.figure(figsize = (8,5), facecolor = 'white')
-        plt.plot(time_x, threshold_line, 'k', label = "threshold(p = 0.5)")
-        plt.plot(time_x, prob_list, 'b-', label = "disruption probs")
-        # plt.plot(time_x, is_disruption, "r", label = "disruption line(predict)")
-
-        if t_disrupt is not None:
-            plt.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed", label = "thermal quench")
-        
-        if t_current is not None:
-            plt.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed", label = "current quench")
-
-        plt.ylabel("probability")
-        plt.xlabel("time(unit : s)")
-        plt.ylim([0,1])
-        plt.xlim([0,max(time_x)])
-        plt.legend()
-        plt.savefig(save_dir)
-
-    return time_x, prob_list
-
+# function for ploting the probability curve for video network
 def generate_prob_curve(
     file_path : str,
     model : torch.nn.Module, 
@@ -685,109 +583,182 @@ def generate_prob_curve(
     
     fig.tight_layout()
 
-    plt.savefig(save_dir)
+    plt.savefig(save_dir, facecolor = fig.get_facecolor(), edgecolor = 'none', transparent = False)
     return time_x, prob_list
 
 def generate_prob_curve_from_0D(
     model : torch.nn.Module, 
-    batch_size : int = 32, 
     device : str = "cpu", 
     save_dir : Optional[str] = "./results/disruption_probs_curve.png",
-    ts_data : Optional[str] = "./dataset/KSTAR_Disruption_ts_data_extend.csv",
+    ts_data_dir : Optional[str] = "./dataset/KSTAR_Disruption_ts_data_extend.csv",
     ts_cols : Optional[List] = None,
     shot_list_dir : Optional[str] = './dataset/KSTAR_Disruption_Shot_List_extend.csv',
-    shot : Optional[int] = None,
+    shot_num : Optional[int] = None,
     seq_len : Optional[int] = None,
     dist : Optional[int] = None,
     dt : Optional[int] = None,
     ):
     
-    prob_list = []
-    is_disruption = []
-    
-    model.to(device)
-    model.eval()
-
     # obtain tTQend, tipmin and tftsrt
     shot_list_dir = pd.read_csv(shot_list_dir, encoding = "euc-kr")
-    tTQend = shot_list_dir[shot_list_dir.shot == shot].tTQend.values[0]
-    tftsrt = shot_list_dir[shot_list_dir.shot == shot].tftsrt.values[0]
-    tipminf = shot_list_dir[shot_list_dir.shot == shot].tipminf.values[0]
+    tTQend = shot_list_dir[shot_list_dir.shot == shot_num].tTQend.values[0]
+    tftsrt = shot_list_dir[shot_list_dir.shot == shot_num].tftsrt.values[0]
+    tipminf = shot_list_dir[shot_list_dir.shot == shot_num].tipminf.values[0]
+    
+    frame_srt = shot_list_dir[shot_list_dir.shot == shot_num].frame_startup.values[0]
+    frame_end = shot_list_dir[shot_list_dir.shot == shot_num].frame_cutoff.values[0]
 
     # input data generation
-    ts_data = pd.read_csv(ts_data).reset_index()
+    ts_data = pd.read_csv(ts_data_dir).reset_index()
 
     for col in ts_cols:
         ts_data[col] = ts_data[col].astype(np.float32)
 
     ts_data.interpolate(method = 'linear', limit_direction = 'forward')
-
-    from sklearn.preprocessing import RobustScaler
-    scaler = RobustScaler()
-    ts_data[ts_cols] = scaler.fit_transform(ts_data[ts_cols].values)
-    df_shot = ts_data[ts_data.shot == shot]
     
-    dataset = torch.from_numpy(df_shot[ts_cols].values).view(-1, len(ts_cols))
+    ts_data_0D = ts_data[ts_data['shot'] == shot_num]
+    
+    t = ts_data_0D.time
+    ip = ts_data_0D['\\ipmhd'] * (-1)
+    kappa = ts_data_0D['\\kappa']
+    betap = ts_data_0D['\\betap']
+    betan = ts_data_0D['\\betan']
+    li = ts_data_0D['\\li']
+    Bc = ts_data_0D['\\bcentr']
+    q95 = ts_data_0D['\\q95']
+    tritop = ts_data_0D['\\tritop']
+    tribot = ts_data_0D['\\tribot']
+    W_tot = ts_data_0D['\\WTOT_DLM03']
+    ne = ts_data_0D['\\ne_inter01']
+    te = ts_data_0D['\\TS_CORE10:CORE10_TE']
+    
+    # video data
+    dataset = DatasetFor0D(ts_data_0D, ts_cols, seq_len, dist, dt)
 
-    if dataset.size()[0] % seq_len !=0:
-        pad = np.zeros((seq_len - dataset.size()[0] % seq_len, len(ts_cols)), dtype = np.float32)
-        pad = torch.from_numpy(pad).float()
-        dataset = torch.concat([dataset, pad], axis = 0)
+    prob_list = []
+    is_disruption = []
 
-    num_data = dataset.size()[0] // seq_len
-
-    for idx in range(0, num_data // batch_size):
+    model.to(device)
+    model.eval()
+    
+    from tqdm.auto import tqdm
+    
+    for idx in tqdm(range(dataset.__len__())):
         with torch.no_grad():
-            idx_start = batch_size * idx * seq_len
-            idx_end = batch_size * (idx + 1) * seq_len
-            data = dataset[idx_start : idx_end, :].view(batch_size, seq_len, len(ts_cols))
-            output = model(data.to(device))
+            data = dataset.__getitem__(idx)
+            data = data.to(device).unsqueeze(0)
+            output = model(data)
             probs = torch.nn.functional.softmax(output, dim = 1)[:,0]
             probs = probs.cpu().detach().numpy().tolist()
+
             prob_list.extend(
                 probs
             )
+            
             is_disruption.extend(
                 torch.nn.functional.softmax(output, dim = 1).max(1, keepdim = True)[1].cpu().detach().numpy().tolist()
             )
-
-    if num_data % batch_size != 0:
-        with torch.no_grad():
-            idx_start = batch_size * idx * seq_len
-            data = dataset[idx_start : , :].view(-1, seq_len, len(ts_cols))
-            output = model(data.to(device))
-            probs = torch.nn.functional.softmax(output, dim = 1)[:,0]
-            probs = probs.cpu().detach().numpy().tolist()
-            prob_list.extend(
-                probs
-            )
-            is_disruption.extend(
-                torch.nn.functional.softmax(output, dim = 1).max(1, keepdim = True)[1].cpu().detach().numpy().tolist()
-            )
-
+            
+    interval = 4
+    fps = 210
+    
+    prob_list = [0] * seq_len + prob_list
+    
+    # correction for startup peaking effect : we will soon solve this problem
+    for idx, prob in enumerate(prob_list):
+        
+        if idx < fps * 1 and prob >= 0.5:
+            prob_list[idx] = 0
+            
+    from scipy.interpolate import interp1d
+    prob_x = np.linspace(0, len(prob_list) * interval, num = len(prob_list), endpoint = True)
+    prob_y = np.array(prob_list)
+    f_prob = interp1d(prob_x, prob_y, kind = 'cubic')
+    prob_list = f_prob(np.linspace(0, len(prob_list) * interval, num = len(prob_list) * interval, endpoint = False))
+    
+    time_x = np.arange(0, len(prob_list)) * (1/fps)
+    
+    print("time : ", len(time_x))
+    print("prob : ", len(prob_list))
+    print("thermal quench : ", tTQend)
+    print("current quench: ", tipminf)
+    
     t_disrupt = tTQend
     t_current = tipminf
     
-    prob_list = [0] + prob_list
-    interval = seq_len * dt
-    time_x = np.arange(1, len(prob_list) + 1) * interval - dist * dt
+    # plot the disruption probability with plasma status
+    fig = plt.figure(figsize = (14, 6))
+    fig.suptitle("Disruption prediction with shot : {}".format(shot_num))
+    gs = GridSpec(nrows = 4, ncols = 3)
     
-    if save_dir:
-        threshold_line = [0.5] * len(time_x)
+    quantile = [0, 0.25, 0.5, 0.75, 1.0, 1.25]
+    t_quantile = [q * t_current for q in quantile]
+        
+    # kappa
+    ax_kappa = fig.add_subplot(gs[0,0])
+    ax_kappa.plot(t, kappa, label = 'kappa')
+    ax_kappa.text(0.85, 0.8, "kappa", transform = ax_kappa.transAxes)
 
-        plt.figure(figsize = (8,5), facecolor = 'white')
-        plt.plot(time_x, threshold_line, 'k', label = "threshold(p = 0.5)")
-        plt.plot(time_x, prob_list, 'b-', label = "disruption probs")
-        plt.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed", label = "thermal quench")
-        plt.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed", label = "current quench")
-        plt.axvline(x = tftsrt, ymin = 0, ymax = 1, color = "purple", linestyle = "dashed", label = "burn-up")
+    # tri top
+    ax_tri_top = fig.add_subplot(gs[1,0])
+    ax_tri_top.plot(t, tritop, label = 'tri_top')
+    ax_tri_top.text(0.85, 0.8, "tri_top", transform = ax_tri_top.transAxes)
+    
+    # tri bot
+    ax_tri_bot = fig.add_subplot(gs[2,0])
+    ax_tri_bot.plot(t, tribot, label = 'tri_bot')
+    ax_tri_bot.text(0.85, 0.8, "tri_bot", transform = ax_tri_bot.transAxes)
+    
+    # plasma current
+    ax_Ip = fig.add_subplot(gs[3,0])
+    ax_Ip.plot(t, ip, label = 'Ip')
+    ax_Ip.text(0.85, 0.8, "Ip", transform = ax_Ip.transAxes)
+    
+    ax_Ip.set_xlabel("time(s)")
+    ax_Ip.set_xticks(t_quantile)
+    ax_Ip.set_xticklabels(["{:.1f}".format(t) for t in t_quantile])
+    
+    # line density
+    ax_li = fig.add_subplot(gs[0,1])
+    ax_li.plot(t, li, label = 'line density')
+    ax_li.text(0.85, 0.8, "li", transform = ax_li.transAxes)
+    
+    # q95
+    ax_q95 = fig.add_subplot(gs[1,1])
+    ax_q95.plot(t, q95, label = 'q95')
+    ax_q95.text(0.85, 0.8, "q95", transform = ax_q95.transAxes)
+    ax_q95.set_ylim([0,10])
+    
+    # betap
+    ax_bp = fig.add_subplot(gs[2,1])
+    ax_bp.plot(t, betap, label = 'beta p')
+    ax_bp.text(0.85, 0.8, "betap", transform = ax_bp.transAxes)
 
-        plt.ylabel("probability")
-        plt.xlabel("time(unit : s)")
-        plt.ylim([0,1])
-        plt.xlim([0,max(time_x)])
-        plt.legend()
-        plt.savefig(save_dir)
+    # electron density
+    ax_ne = fig.add_subplot(gs[3,1])
+    ax_ne.plot(t, ne, label = 'ne')
+    ax_ne.text(0.85, 0.8, "ne", transform = ax_ne.transAxes)
+    
+    ax_ne.set_xlabel("time(s)")
+    ax_ne.set_xticks(t_quantile)
+    ax_ne.set_xticklabels(["{:.1f}".format(t) for t in t_quantile])
+    
+    # probability
+    threshold_line = [0.5] * len(time_x)
+    ax2 = fig.add_subplot(gs[:,2])
+    ax2.plot(time_x, prob_list, 'b', label = 'disrupt prob')
+    ax2.plot(time_x, threshold_line, 'k', label = "threshold(p = 0.5)")
+    ax2.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed", label = "TQ")
+    ax2.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed", label = "CQ")
+    ax2.set_ylabel("probability")
+    ax2.set_xlabel("time(unit : s)")
+    ax2.set_ylim([0,1])
+    ax2.set_xlim([0, max(time_x)])
+    ax2.legend(loc = 'upper right')
+    
+    fig.tight_layout()
+
+    plt.savefig(save_dir, facecolor = fig.get_facecolor(), edgecolor = 'none', transparent = False)
 
     return time_x, prob_list
 

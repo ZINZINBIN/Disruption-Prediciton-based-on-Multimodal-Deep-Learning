@@ -2,8 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 import torch
-import random
-import cv2
+import random, glob2, cv2
 from torch.utils.data import Dataset, DataLoader
 from tqdm import tqdm
 from typing import Optional, Dict, List, Union, Literal
@@ -316,7 +315,6 @@ class DatasetForVideo2(Dataset):
         else:
             self.augmentation_args = augmentation_args
 
-
         self.video_file_path = []
         self.indices = []
         self.labels = []
@@ -328,22 +326,24 @@ class DatasetForVideo2(Dataset):
             dis_frame = tipmin_frame - dist
             
             indices = [i for i in reversed(range(dis_frame - seq_len, tftsrt_frame, -seq_len))]
+            video_path = sorted(glob2.glob(os.path.join(shot_dir, "*")))
             
             for idx in indices:
-                self.video_file_path.append(shot_dir[idx : idx + seq_len])
-                
+                self.video_file_path.append(video_path[idx + 1 : idx + seq_len + 1])
                 if idx == indices[-1]:
                     self.labels.append(0)
                 else:
                     self.labels.append(1)
-
+        
+        self.labels = np.array(self.labels, dtype=int)
         self.n_classes = 2
+    
+        print("disrupt : {}, non-disrupt : {}".format(np.sum(self.labels==0), np.sum(self.labels == 1)))
 
     def load_frames(self, filepaths : List):
-  
         buffer = np.empty((self.seq_len, self.resize_height, self.resize_width, 3), np.dtype('float32'))
         for i, filepath in enumerate(filepaths):
-            frame = np.array(cv2.imread(filepath)).astype(np.float32)
+            frame = np.array(cv2.imread(filepath)).astype(np.float32) 
             buffer[i] = frame
             
         return buffer
@@ -373,7 +373,9 @@ class DatasetForVideo2(Dataset):
 
         buffer = self.normalize(buffer)
         buffer = self.to_tensor(buffer)
-        return torch.from_numpy(buffer)
+        buffer = torch.from_numpy(buffer)
+ 
+        return buffer
 
     def refill_temporal_slide(self, buffer:np.ndarray):
         for _ in range(self.seq_len - buffer.shape[0]):

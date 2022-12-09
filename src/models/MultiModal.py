@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
-import math
 from src.models.ConvLSTM import ConvLSTM, ConvLSTMEncoder
 from src.models.ViViT import ViViTEncoder, ViViT
 from typing import Dict, Literal
