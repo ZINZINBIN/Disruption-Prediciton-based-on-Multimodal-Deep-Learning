@@ -20,7 +20,7 @@ ts_cols = ['\\q95', '\\ipmhd', '\\kappa', '\\tritop', '\\tribot','\\betap','\\be
 # parsing
 parser = argparse.ArgumentParser(description="training Transformer model for disruption classifier")
 parser.add_argument("--batch_size", type = int, default = 128)
-parser.add_argument("--lr", type = float, default = 1e-3)
+parser.add_argument("--lr", type = float, default = 2e-4)
 parser.add_argument("--gamma", type = float, default = 0.95)
 parser.add_argument("--gpu_num", type = int, default = 2)
 
@@ -31,7 +31,7 @@ parser.add_argument("--dist", type = int, default = 3)
 parser.add_argument("--dt", type = float, default = 4 * 1 / 210)
 parser.add_argument("--seq_len", type = int, default = 21)
 parser.add_argument("--use_sampler", type = bool, default = True)
-parser.add_argument("--num_epoch", type = int, default = 64)
+parser.add_argument("--num_epoch", type = int, default = 128)
 parser.add_argument("--verbose", type = int, default = 4)
 
 parser.add_argument("--save_best_dir", type = str, default = "./weights/ts_transformer_clip_21_dist_3_best.pt")
@@ -85,21 +85,16 @@ if __name__ == "__main__":
     # dataset
     ts_train, ts_valid, ts_test, ts_scaler = preparing_0D_dataset("./dataset/KSTAR_Disruption_ts_data_extend.csv", ts_cols = ts_cols, scaler = 'Robust')
     
-    print("train data : ", len(ts_train))
-    print("valid data : ", len(ts_valid))
-    print("test data : ", len(ts_test))
-    
     # disruption info
-    # kstar_shot_list = pd.read_csv('./dataset/KSTAR_Disruption_Shot_List_extend.csv', encoding = "euc-kr")
     kstar_shot_list = pd.read_csv('./dataset/KSTAR_Disruption_Shot_List.csv', encoding = "euc-kr")
 
     train_data = DatasetFor0D(ts_train, kstar_shot_list, seq_len = seq_len, cols = ts_cols, dist = dist, dt = dt)
     valid_data = DatasetFor0D(ts_valid, kstar_shot_list, seq_len = seq_len, cols = ts_cols, dist = dist, dt = dt)
     test_data = DatasetFor0D(ts_test, kstar_shot_list, seq_len = seq_len, cols = ts_cols, dist = dist, dt = dt)
     
-    print("train data : ", train_data.__len__())
-    print("valid data : ", valid_data.__len__())
-    print("test data : ", test_data.__len__())
+    print("train data : {}, disrupt : {}, non-disrupt : {}".format(train_data.__len__(), train_data.n_disrupt, train_data.n_normal))
+    print("valid data : {}, disrupt : {}, non-disrupt : {}".format(valid_data.__len__(), valid_data.n_disrupt, valid_data.n_normal))
+    print("test data : {}, disrupt : {}, non-disrupt : {}".format(test_data.__len__(), test_data.n_disrupt, test_data.n_normal))
     
     if args["use_sampler"]:
         train_sampler = ImbalancedDatasetSampler(train_data)
@@ -197,13 +192,12 @@ if __name__ == "__main__":
     # plot probability curve
     generate_prob_curve_from_0D(
         model, 
-        batch_size = 1, 
         device = device, 
         save_dir = "./results/disruption_probs_curve.png",
-        ts_data = "./dataset/KSTAR_Disruption_ts_data_extend.csv",
+        ts_data_dir = "./dataset/KSTAR_Disruption_ts_data_extend.csv",
         ts_cols = ts_cols,
         shot_list_dir = './dataset/KSTAR_Disruption_Shot_List_extend.csv',
-        shot = 21310,
+        shot_num = 21310,
         seq_len = seq_len,
         dist = dist,
         dt = dt

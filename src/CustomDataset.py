@@ -291,6 +291,10 @@ class DatasetForVideo2(Dataset):
 
         self.shot_dir_list = shot_dir_list
         self.shot_list = [int(shot_dir.split("/")[-1]) for shot_dir in shot_dir_list]
+        
+        # to analyze which shot the network can not predict
+        self.shot_num = []
+        self.get_shot_num = False
 
         self.augmentation = augmentation # video sequence augmentation
         self.augmentation_args = augmentation_args # argument for augmentation
@@ -334,12 +338,15 @@ class DatasetForVideo2(Dataset):
                     self.labels.append(0)
                 else:
                     self.labels.append(1)
+                    
+            self.shot_num.extend([shot_num for _ in range(len(indices))])
         
         self.labels = np.array(self.labels, dtype=int)
         self.n_classes = 2
-    
-        print("disrupt : {}, non-disrupt : {}".format(np.sum(self.labels==0), np.sum(self.labels == 1)))
-
+        
+        self.n_disrupt = np.sum(self.labels==0)
+        self.n_normal = np.sum(self.labels == 1)
+        
     def load_frames(self, filepaths : List):
         buffer = np.empty((self.seq_len, self.resize_height, self.resize_width, 3), np.dtype('float32'))
         for i, filepath in enumerate(filepaths):
@@ -353,7 +360,12 @@ class DatasetForVideo2(Dataset):
 
     def __getitem__(self, idx : int):
         label = torch.from_numpy(np.array(self.labels[idx]))
-        return self.get_video_data(idx), label
+        
+        if self.get_shot_num:
+            shot_num = self.shot_num[idx]
+            return self.get_video_data(idx), label, shot_num
+        else:
+            return self.get_video_data(idx), label
 
     def get_video_data(self, index : int):
         buffer = self.load_frames(self.video_file_path[index])
@@ -519,12 +531,17 @@ class DatasetFor0D(Dataset):
 
         self.indices = []
         self.labels = []
+        self.shot_num = []
+        self.get_shot_num = False
+        
         self.n_classes = 2
         self._generate_index()
 
     def _generate_index(self):
         shot_list = np.unique(self.ts_data.shot.values).tolist()
         df_disruption = self.disrupt_data
+        
+        shot_list = [shot_num for shot_num in shot_list if shot_num in df_disruption.shot.values]
         
         # ignore shot which have too many nan values
         shot_ignore = []
@@ -543,16 +560,16 @@ class DatasetFor0D(Dataset):
             tTQend = df_disruption[df_disruption.shot == shot].tTQend.values[0]
             tftsrt = df_disruption[df_disruption.shot == shot].tftsrt.values[0]
             tipminf = df_disruption[df_disruption.shot == shot].tipminf.values[0]
-
             t_disrupt = tipminf
-
+            
             df_shot = self.ts_data[self.ts_data.shot == shot]
+            
             indices = []
             labels = []
 
             idx = int(tftsrt * self.dt)
             idx_last = len(df_shot.index) - self.seq_len - self.dist
-
+            
             while(idx < idx_last):
                 row = df_shot.iloc[idx]
                 t = row['time']
@@ -577,18 +594,28 @@ class DatasetFor0D(Dataset):
                 
                 elif t > t_disrupt:
                     break
-
+                
+            self.shot_num.extend([shot for _ in range(len(indices))])
             self.indices.extend(indices)
             self.labels.extend(labels)
-
+            
+        self.n_disrupt = np.sum(np.array(self.labels)==0)
+        self.n_normal = np.sum(np.array(self.labels)==1)
+        
     def __getitem__(self, idx:int):
         indx = self.indices[idx]
         label = self.labels[idx]
         label = np.array(label)
         label = torch.from_numpy(label)
-        data = self.ts_data[self.cols].loc[indx:indx+self.seq_len - 1].values
+        data = self.ts_data[self.cols].loc[indx+1:indx+self.seq_len].values
         data = torch.from_numpy(data).float()
-        return data, label
+        
+        if self.get_shot_num:
+            shot_num = self.shot_num[idx]
+            return data, label, shot_num
+        
+        else:
+            return data, label
 
     def __len__(self):
         return len(self.indices)
@@ -747,6 +774,146 @@ class MultiModalDataset(Dataset):
         for i in range(self.n_classes):
             cls_num_list.append(self.num_per_cls_dict[i])
         return cls_num_list
+
+class MultiModalDataset2(Dataset):
+    def __init__(
+        self, 
+        task : Literal["train", "valid", "test"] = "train", 
+        ts_data : Optional[pd.DataFrame] = None,
+        ts_cols : Optional[List] = None,
+        mult_info : Optional[pd.DataFrame] = None,
+        dt : Optional[float] = 1.0 / 210 * 4,
+        distance : Optional[int] = 0,
+        n_fps : Optional[int] = 4,
+        resize_height : Optional[int] = 256,
+        resize_width : Optional[int] = 256,
+        crop_size : Optional[int] = 128,
+        seq_len : int = 21,
+        n_classes : int = 2,
+        ):
+        self.task = task # task : train / valid / test 
+        
+        # resize each frame from video
+        self.resize_height = resize_height
+        self.resize_width = resize_width
+        
+        # crop
+        self.crop_size = crop_size
+        
+        # video sequence length
+        # warning : 0D data and video data should have equal sequence length
+        self.seq_len = seq_len
+        
+        # use for 0D data prediction
+        self.distance = distance # prediction time
+        self.dt = dt # time difference of 0D data
+        self.n_fps = n_fps
+
+        # video_file_path : video file path : {database}/{shot_num}_{frame_start}_{frame_end}.avi
+        # indices : index for tabular data, shot == shot_num, index <- df[df.frame_idx == frame_start].index
+        self.n_classes = n_classes
+
+        self.ts_data = ts_data
+        self.mult_info = mult_info
+        self.ts_cols = ts_cols
+        
+        # select columns for 0D data prediction
+        if ts_cols is None:
+            self.ts_cols = DEFAULT_TS_COLS
+            
+        self.video_file_path = mult_info[mult_info.task == task]["path"].values.tolist()
+        self.labels = [0 if label is True else 1 for label in mult_info[mult_info.task == task].is_disrupt]
+        self.indices = mult_info[mult_info.task == task]["t_start_index"].astype(int).values.tolist()
+
+    def load_frames(self, file_dir : str):
+        frames = sorted([os.path.join(file_dir, img) for img in os.listdir(file_dir)])
+        frame_count = self.seq_len
+        buffer = np.empty((frame_count, self.resize_height, self.resize_width, 3), np.dtype('float32'))
+        
+        for i, frame_name in enumerate(frames[::-1][::self.n_fps][::-1]):
+            frame = np.array(cv2.imread(frame_name)).astype(np.float32)
+            buffer[i] = frame
+    
+        return buffer
+    
+    def __len__(self):
+        return len(self.labels)
+
+    def __getitem__(self, idx : int):
+        data_video = self.get_video_data(idx)
+        data_0D = self.get_tabular_data(idx)
+        data_dict = {
+            "video" : data_video,
+            "0D" : data_0D
+        }
+        label = torch.from_numpy(np.array(self.labels[idx]))
+        return data_dict, label
+
+    def get_video_data(self, index : int):
+        buffer = self.load_frames(self.video_file_path[index])
+        if buffer.shape[0] < self.seq_len:
+            buffer = self.refill_temporal_slide(buffer)
+        buffer = self.crop(buffer, self.seq_len, self.crop_size)
+        buffer = self.normalize(buffer)
+        buffer = self.to_tensor(buffer)
+        return torch.from_numpy(buffer)
+    
+    def get_tabular_data(self, index : int):
+        ts_idx = self.indices[index]
+        data = self.ts_data[self.ts_cols].loc[ts_idx:ts_idx+self.seq_len-1].values
+        return torch.from_numpy(data).float()
+
+    def refill_temporal_slide(self, buffer:np.ndarray):
+        for _ in range(self.seq_len - buffer.shape[0]):
+            frame_new = buffer[-1].reshape(1, self.resize_height, self.resize_width, 3)
+            buffer = np.concatenate((buffer, frame_new))
+        return buffer
+
+    def normalize(self, buffer):
+        for i, frame in enumerate(buffer):
+            frame -= np.array([[[90.0, 98.0, 102.0]]])
+            buffer[i] = frame
+        return buffer
+
+    def to_tensor(self, buffer:Union[np.ndarray, torch.Tensor]):
+        return buffer.transpose((3, 0, 1, 2))
+
+    def crop(self, buffer : Union[np.ndarray, torch.Tensor], clip_len : int, crop_size : int, is_random : bool = False):
+        if buffer.shape[0] < clip_len :
+            time_index = np.random.randint(abs(buffer.shape[0] - clip_len))
+        elif buffer.shape[0] == clip_len :
+            time_index = 0
+        else :
+            time_index = np.random.randint(buffer.shape[0] - clip_len)
+
+        if not is_random:
+            original_height = self.resize_height
+            original_width = self.resize_width
+            mid_x, mid_y = original_height // 2, original_width // 2
+            offset_x, offset_y = crop_size // 2, crop_size // 2
+            buffer = buffer[time_index : time_index + clip_len, mid_x - offset_x:mid_x+offset_x, mid_y - offset_y: mid_y+ offset_y, :]
+        else:
+            height_index = np.random.randint(buffer.shape[1] - crop_size)
+            width_index = np.random.randint(buffer.shape[2] - crop_size)
+
+            buffer = buffer[time_index:time_index + clip_len,
+                    height_index:height_index + crop_size,
+                    width_index:width_index + crop_size, :]
+        return buffer
+
+    def get_num_per_cls(self):
+        classes = np.unique(self.labels)
+        self.num_per_cls_dict = dict()
+
+        for cls in classes:
+            num = np.sum(np.where(self.labels == cls, 1, 0))
+            self.num_per_cls_dict[cls] = num
+         
+    def get_cls_num_list(self):
+        cls_num_list = []
+        for i in range(self.n_classes):
+            cls_num_list.append(self.num_per_cls_dict[i])
+        return cls_num_list 
     
 
 if __name__ == "__main__":

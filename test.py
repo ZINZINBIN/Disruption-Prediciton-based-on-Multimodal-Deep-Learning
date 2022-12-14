@@ -15,7 +15,6 @@ ts_cols = [
 args = {
     "seq_len" : 21,
     "vis_save_best_dir" : "./weights/ViViT_clip_21_dist_3_best.pt",
-    # "0D_save_best_dir" : "./weights/ts_conv_lstm_clip_21_dist_3_best.pt",
     "0D_save_best_dir" : "./weights/ts_transformer_clip_21_dist_3_best.pt",
     "image_size" : 128,
     "patch_size" : 16,

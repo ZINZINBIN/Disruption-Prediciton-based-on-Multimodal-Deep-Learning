@@ -46,10 +46,10 @@ def parsing():
     
 
     # optimizer : SGD, RMSProps, Adam, AdamW
-    parser.add_argument("--optimizer", type = str, default = "AdamW")
+    parser.add_argument("--optimizer", type = str, default = "Adam")
     
     # learning rate, step size and decay constant
-    parser.add_argument("--lr", type = float, default = 1e-3)
+    parser.add_argument("--lr", type = float, default = 2e-4)
     parser.add_argument("--use_scheduler", type = bool, default = True)
     parser.add_argument("--step_size", type = int, default = 4)
     parser.add_argument("--gamma", type = float, default = 0.95)
@@ -66,7 +66,7 @@ def parsing():
     parser.add_argument("--beta", type = float, default = 0.25)
 
     # loss type : CE, Focal, LDAM
-    parser.add_argument("--loss_type", type = str, default = "CE")
+    parser.add_argument("--loss_type", type = str, default = "Focal")
     
     # LDAM Loss parameter
     parser.add_argument("--max_m", type = float, default = 0.5)
@@ -76,11 +76,11 @@ def parsing():
     parser.add_argument("--focal_gamma", type = float, default = 2.0)
     
     # monitoring the training process
-    parser.add_argument("--verbose", type = int, default = -1)
+    parser.add_argument("--verbose", type = int, default = 4)
     
     # model setup
     parser.add_argument("--alpha", type = float, default = 0.01)
-    parser.add_argument("--dropout", type = float, default = 0.25)
+    parser.add_argument("--dropout", type = float, default = 0.1)
     parser.add_argument("--feature_dims", type = int, default = 128)
     parser.add_argument("--n_layers", type = int, default = 8)
     parser.add_argument("--n_heads", type = int, default = 8)
@@ -130,9 +130,9 @@ if __name__ == "__main__":
     valid_data = DatasetFor0D(ts_valid, kstar_shot_list, seq_len = args['seq_len'], cols = ts_cols, dist = args['dist'], dt = args['dist'] * 1 / 210)
     test_data = DatasetFor0D(ts_test, kstar_shot_list, seq_len = args['seq_len'], cols = ts_cols, dist = args['dist'], dt = args['dist'] * 1 / 210)
     
-    print("train data : ", train_data.__len__())
-    print("valid data : ", valid_data.__len__())
-    print("test data : ", test_data.__len__())
+    print("train data : {}, disrupt : {}, non-disrupt : {}".format(train_data.__len__(), train_data.n_disrupt, train_data.n_normal))
+    print("valid data : {}, disrupt : {}, non-disrupt : {}".format(valid_data.__len__(), valid_data.n_disrupt, valid_data.n_normal))
+    print("test data : {}, disrupt : {}, non-disrupt : {}".format(test_data.__len__(), test_data.n_disrupt, test_data.n_normal))
     
     # label distribution for LDAM / Focal Loss
     train_data.get_num_per_cls()

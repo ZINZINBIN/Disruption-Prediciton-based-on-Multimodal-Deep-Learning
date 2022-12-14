@@ -63,7 +63,9 @@ def evaluate(
                 loss = loss_fn(output, target)
     
             test_loss += loss.item()
-            pred = torch.nn.functional.softmax(output, dim = 1).max(1, keepdim = True)[1]
+            # pred = torch.nn.functional.softmax(output, dim = 1).max(1, keepdim = True)[1]
+            
+            pred = torch.nn.functional.softmax(output, dim = 1)[:,0]
             pred = (pred > torch.FloatTensor([threshold]).to(device))
             test_acc += pred.eq(target.view_as(pred)).sum().item()
 
@@ -109,6 +111,112 @@ def evaluate(
 
     return test_loss, test_acc, test_f1
 
+def evaluate_detail(
+    train_loader : DataLoader,
+    valid_loader : DataLoader,
+    test_loader : DataLoader, 
+    model : torch.nn.Module,
+    device : Optional[str] = "cpu",
+    save_csv : Optional[str] = None,
+    tag : Optional[str] = None,
+    model_type : Literal["single","multi","multi-GB"] = "single"
+    ):
+    
+    # convert get_shot_num variable true
+    train_loader.dataset.get_shot_num = True
+    valid_loader.dataset.get_shot_num = True
+    test_loader.dataset.get_shot_num = True
+
+    total_shot = np.array([])
+    total_pred = np.array([])
+    total_label = np.array([])
+    total_task = []
+
+    if device is None:
+        device = torch.device("cuda:0")
+
+    model.to(device)
+    model.eval()
+    
+    # evaluation for train dataset
+    for idx, (data, target, shot_num) in enumerate(train_loader):
+        with torch.no_grad():
+            if model_type == "single":
+                data = data.to(device)
+                output = model(data)
+            elif model_type == "multi":
+                data_video = data['video'].to(device)
+                data_0D = data['0D'].to(device)
+                output = model(data_video, data_0D)
+            elif model_type == "multi-GB":
+                data_video = data['video'].to(device)
+                data_0D = data['0D'].to(device)
+                output, output_vis, output_ts = model(data_video, data_0D)
+            
+            pred = torch.nn.functional.softmax(output, dim = 1)[:,0]
+            
+            total_shot = np.concatenate((total_shot, shot_num.cpu().numpy().reshape(-1,)))
+            total_pred = np.concatenate((total_pred, pred.cpu().numpy().reshape(-1,)))
+            total_label = np.concatenate((total_label, target.cpu().numpy().reshape(-1,)))
+            
+    total_task.extend(["train" for _ in range(train_loader.dataset.__len__())])
+            
+    # evaluation for valid dataset
+    for idx, (data, target, shot_num) in enumerate(valid_loader):
+        with torch.no_grad():
+            if model_type == "single":
+                data = data.to(device)
+                output = model(data)
+            elif model_type == "multi":
+                data_video = data['video'].to(device)
+                data_0D = data['0D'].to(device)
+                output = model(data_video, data_0D)
+            elif model_type == "multi-GB":
+                data_video = data['video'].to(device)
+                data_0D = data['0D'].to(device)
+                output, output_vis, output_ts = model(data_video, data_0D)
+            
+            pred = torch.nn.functional.softmax(output, dim = 1)[:,0]
+            
+            total_shot = np.concatenate((total_shot, shot_num.cpu().numpy().reshape(-1,)))
+            total_pred = np.concatenate((total_pred, pred.cpu().numpy().reshape(-1,)))
+            total_label = np.concatenate((total_label, target.cpu().numpy().reshape(-1,)))
+            
+    total_task.extend(["valid" for _ in range(valid_loader.dataset.__len__())])
+            
+    # evaluation for test dataset
+    for idx, (data, target, shot_num) in enumerate(test_loader):
+        with torch.no_grad():
+            if model_type == "single":
+                data = data.to(device)
+                output = model(data)
+            elif model_type == "multi":
+                data_video = data['video'].to(device)
+                data_0D = data['0D'].to(device)
+                output = model(data_video, data_0D)
+            elif model_type == "multi-GB":
+                data_video = data['video'].to(device)
+                data_0D = data['0D'].to(device)
+                output, output_vis, output_ts = model(data_video, data_0D)
+            
+            pred = torch.nn.functional.softmax(output, dim = 1)[:,0]
+            
+            total_shot = np.concatenate((total_shot, shot_num.cpu().numpy().reshape(-1,)))
+            total_pred = np.concatenate((total_pred, pred.cpu().numpy().reshape(-1,)))
+            total_label = np.concatenate((total_label, target.cpu().numpy().reshape(-1,)))
+
+    total_task.extend(["test" for _ in range(test_loader.dataset.__len__())])
+
+    import pandas as pd
+    df = pd.DataFrame({})
+    
+    df['task'] = total_task
+    df['label'] = total_label
+    df['shot'] = total_shot.astype(int)
+    df['pred'] = total_pred
+    df['tag'] = [tag for _ in range(len(total_pred))]
+    df.to_csv(save_csv, index = False)
+    
 def plot_roc_curve(y_true : np.ndarray, y_pred : np.ndarray, save_dir : str, title : Optional[str] = None):
     auc = roc_auc_score(y_true, y_pred, average='macro')
     fpr, tpr, threshold = roc_curve(y_true, y_pred)
