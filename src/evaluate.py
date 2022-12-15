@@ -66,7 +66,7 @@ def evaluate(
             # pred = torch.nn.functional.softmax(output, dim = 1).max(1, keepdim = True)[1]
             
             pred = torch.nn.functional.softmax(output, dim = 1)[:,0]
-            pred = (pred > torch.FloatTensor([threshold]).to(device))
+            pred = torch.logical_not((pred > torch.FloatTensor([threshold]).to(device)))
             test_acc += pred.eq(target.view_as(pred)).sum().item()
 
             total_size += pred.size(0)

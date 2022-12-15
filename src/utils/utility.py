@@ -412,7 +412,7 @@ class DatasetFor0D(Dataset):
         idx_srt = self.indices[idx]
         idx_end = idx_srt + self.seq_len
         
-        data = self.ts_data[self.cols].iloc[idx_srt : idx_end].values
+        data = self.ts_data[self.cols].iloc[idx_srt + 1: idx_end + 1].values
         data = torch.from_numpy(data)
         return data
 

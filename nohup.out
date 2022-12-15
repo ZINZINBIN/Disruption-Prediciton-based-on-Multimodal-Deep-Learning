@@ -1,0 +1,122 @@
+############### device setup ###################
+torch device avaliable :  True
+torch current device :  0
+torch device num :  4
+extract the null data:   0%|          | 0/620 [00:00<?, ?it/s]extract the null data:   7%|▋         | 42/620 [00:00<00:01, 412.00it/s]extract the null data:  14%|█▍        | 89/620 [00:00<00:01, 441.54it/s]extract the null data:  22%|██▏       | 135/620 [00:00<00:01, 446.37it/s]extract the null data:  30%|██▉       | 184/620 [00:00<00:00, 461.52it/s]extract the null data:  38%|███▊      | 233/620 [00:00<00:00, 469.71it/s]extract the null data:  45%|████▌     | 280/620 [00:00<00:00, 454.21it/s]extract the null data:  53%|█████▎    | 326/620 [00:00<00:00, 451.55it/s]extract the null data:  60%|██████    | 374/620 [00:00<00:00, 459.34it/s]extract the null data:  68%|██████▊   | 420/620 [00:00<00:00, 451.05it/s]extract the null data:  75%|███████▌  | 467/620 [00:01<00:00, 455.52it/s]extract the null data:  83%|████████▎ | 514/620 [00:01<00:00, 459.48it/s]extract the null data:  90%|█████████ | 560/620 [00:01<00:00, 456.42it/s]extract the null data:  98%|█████████▊| 606/620 [00:01<00:00, 456.94it/s]extract the null data: 100%|██████████| 620/620 [00:01<00:00, 454.02it/s]
+  0%|          | 0/605 [00:00<?, ?it/s]  2%|▏         | 14/605 [00:00<00:04, 134.99it/s]  5%|▍         | 28/605 [00:00<00:04, 122.20it/s]  7%|▋         | 42/605 [00:00<00:04, 129.56it/s]  9%|▉         | 56/605 [00:00<00:04, 129.06it/s] 11%|█▏        | 69/605 [00:00<00:04, 119.46it/s] 14%|█▎        | 82/605 [00:00<00:05, 98.88it/s]  15%|█▌        | 93/605 [00:00<00:05, 99.27it/s] 17%|█▋        | 104/605 [00:00<00:05, 98.49it/s] 20%|█▉        | 119/605 [00:01<00:04, 112.23it/s] 22%|██▏       | 131/605 [00:01<00:04, 114.20it/s] 24%|██▍       | 144/605 [00:01<00:03, 117.88it/s] 26%|██▋       | 159/605 [00:01<00:03, 123.05it/s] 29%|██▉       | 174/605 [00:01<00:03, 129.32it/s] 31%|███       | 189/605 [00:01<00:03, 133.11it/s] 34%|███▎      | 204/605 [00:01<00:02, 136.87it/s] 36%|███▌      | 218/605 [00:01<00:02, 135.17it/s] 39%|███▊      | 233/605 [00:01<00:02, 137.51it/s] 41%|████      | 247/605 [00:02<00:02, 129.51it/s] 43%|████▎     | 261/605 [00:02<00:02, 123.32it/s] 45%|████▌     | 274/605 [00:02<00:02, 121.73it/s] 47%|████▋     | 287/605 [00:02<00:02, 110.34it/s] 49%|████▉     | 299/605 [00:02<00:03, 89.49it/s]  51%|█████     | 309/605 [00:02<00:03, 89.57it/s] 53%|█████▎    | 319/605 [00:02<00:03, 74.38it/s] 55%|█████▍    | 332/605 [00:03<00:03, 84.48it/s] 57%|█████▋    | 344/605 [00:03<00:02, 91.51it/s] 59%|█████▉    | 359/605 [00:03<00:02, 104.00it/s] 61%|██████▏   | 372/605 [00:03<00:02, 108.47it/s] 64%|██████▍   | 386/605 [00:03<00:01, 116.30it/s] 66%|██████▌   | 399/605 [00:03<00:01, 112.50it/s] 68%|██████▊   | 411/605 [00:03<00:01, 100.60it/s] 70%|██████▉   | 423/605 [00:03<00:01, 104.51it/s] 72%|███████▏  | 435/605 [00:03<00:01, 107.58it/s] 74%|███████▍  | 447/605 [00:04<00:01, 97.25it/s]  76%|███████▌  | 459/605 [00:04<00:01, 102.40it/s] 78%|███████▊  | 470/605 [00:04<00:01, 95.54it/s]  79%|███████▉  | 480/605 [00:04<00:01, 94.41it/s] 81%|████████▏ | 493/605 [00:04<00:01, 103.35it/s] 84%|████████▍ | 508/605 [00:04<00:00, 114.80it/s] 86%|████████▌ | 521/605 [00:04<00:00, 118.31it/s] 88%|████████▊ | 534/605 [00:04<00:00, 117.74it/s] 90%|█████████ | 546/605 [00:04<00:00, 108.68it/s] 92%|█████████▏| 558/605 [00:05<00:00, 105.96it/s] 94%|█████████▍| 570/605 [00:05<00:00, 109.53it/s] 96%|█████████▌| 582/605 [00:05<00:00, 84.75it/s]  98%|█████████▊| 595/605 [00:05<00:00, 89.78it/s]100%|██████████| 605/605 [00:05<00:00, 69.39it/s]100%|██████████| 605/605 [00:05<00:00, 104.52it/s]
+extract the null data:   0%|          | 0/155 [00:00<?, ?it/s]extract the null data:  37%|███▋      | 58/155 [00:00<00:00, 576.47it/s]extract the null data:  81%|████████  | 125/155 [00:00<00:00, 626.35it/s]extract the null data: 100%|██████████| 155/155 [00:00<00:00, 626.54it/s]
+  0%|          | 0/148 [00:00<?, ?it/s]  9%|▉         | 14/148 [00:00<00:01, 120.46it/s] 18%|█▊        | 27/148 [00:00<00:01, 115.17it/s] 27%|██▋       | 40/148 [00:00<00:00, 121.30it/s] 39%|███▊      | 57/148 [00:00<00:00, 133.49it/s] 49%|████▊     | 72/148 [00:00<00:00, 138.19it/s] 59%|█████▉    | 87/148 [00:00<00:00, 140.92it/s] 69%|██████▉   | 102/148 [00:00<00:00, 133.84it/s] 78%|███████▊  | 116/148 [00:00<00:00, 120.95it/s] 87%|████████▋ | 129/148 [00:01<00:00, 119.97it/s] 96%|█████████▌| 142/148 [00:01<00:00, 117.70it/s]100%|██████████| 148/148 [00:01<00:00, 125.56it/s]
+extract the null data:   0%|          | 0/194 [00:00<?, ?it/s]extract the null data:  26%|██▋       | 51/194 [00:00<00:00, 503.11it/s]extract the null data:  58%|█████▊    | 113/194 [00:00<00:00, 568.56it/s]extract the null data:  90%|█████████ | 175/194 [00:00<00:00, 590.02it/s]extract the null data: 100%|██████████| 194/194 [00:00<00:00, 578.05it/s]
+  0%|          | 0/184 [00:00<?, ?it/s]  5%|▌         | 10/184 [00:00<00:01, 98.32it/s] 11%|█▏        | 21/184 [00:00<00:01, 100.22it/s] 17%|█▋        | 32/184 [00:00<00:01, 100.79it/s] 26%|██▌       | 48/184 [00:00<00:01, 120.85it/s] 34%|███▍      | 63/184 [00:00<00:00, 130.74it/s] 42%|████▏     | 77/184 [00:00<00:00, 133.65it/s] 49%|████▉     | 91/184 [00:00<00:00, 122.34it/s] 57%|█████▋    | 104/184 [00:00<00:00, 123.88it/s] 64%|██████▎   | 117/184 [00:01<00:00, 89.26it/s]  70%|██████▉   | 128/184 [00:01<00:00, 92.84it/s] 78%|███████▊  | 144/184 [00:01<00:00, 107.06it/s] 86%|████████▌ | 158/184 [00:01<00:00, 113.63it/s] 93%|█████████▎| 171/184 [00:01<00:00, 115.39it/s]100%|██████████| 184/184 [00:01<00:00, 94.59it/s] 100%|██████████| 184/184 [00:01<00:00, 106.63it/s]
+train data : 29236, disrupt : 1833, non-disrupt : 27403
+valid data : 6145, disrupt : 465, non-disrupt : 5680
+test data : 9282, disrupt : 564, non-disrupt : 8718
+
+################# model summary #################
+
+-----------------------------------------------------------------------------------
+           Layer (type)                Input Shape         Param #     Tr. Param #
+===================================================================================
+           NoiseLayer-1                 [2, 21, 9]               0               0
+               Linear-2                 [2, 21, 9]           1,280           1,280
+   PositionalEncoding-3               [21, 2, 128]               0               0
+   TransformerEncoder-4     [21, 2, 128], [21, 21]       1,586,176       1,586,176
+               Linear-5                   [2, 128]          16,512          16,512
+          BatchNorm1d-6                   [2, 128]             256             256
+                 GELU-7                   [2, 128]               0               0
+               Linear-8                   [2, 128]             258             258
+===================================================================================
+Total params: 1,604,482
+Trainable params: 1,604,482
+Non-trainable params: 0
+Batch size: 2
+-----------------------------------------------------------------------------------
+
+################# training process #################
+
+training process:   0%|          | 0/256 [00:00<?, ?it/s]############### device setup ###################
+torch device avaliable :  True
+torch current device :  0
+torch device num :  4
+extract the null data:   0%|          | 0/620 [00:00<?, ?it/s]extract the null data:   7%|▋         | 45/620 [00:00<00:01, 443.96it/s]extract the null data:  16%|█▌        | 97/620 [00:00<00:01, 485.19it/s]extract the null data:  25%|██▌       | 155/620 [00:00<00:00, 525.92it/s]extract the null data:  35%|███▌      | 217/620 [00:00<00:00, 560.09it/s]extract the null data:  44%|████▍     | 274/620 [00:00<00:00, 547.37it/s]extract the null data:  53%|█████▎    | 329/620 [00:00<00:00, 522.90it/s]extract the null data:  62%|██████▏   | 382/620 [00:00<00:00, 516.30it/s]extract the null data:  70%|███████   | 435/620 [00:00<00:00, 517.80it/s]extract the null data:  79%|███████▊  | 487/620 [00:00<00:00, 512.48it/s]extract the null data:  87%|████████▋ | 540/620 [00:01<00:00, 516.70it/s]extract the null data:  95%|█████████▌| 592/620 [00:01<00:00, 511.29it/s]extract the null data: 100%|██████████| 620/620 [00:01<00:00, 516.49it/s]
+  0%|          | 0/605 [00:00<?, ?it/s]  2%|▏         | 14/605 [00:00<00:04, 134.41it/s]  5%|▍         | 28/605 [00:00<00:04, 124.51it/s]  7%|▋         | 42/605 [00:00<00:04, 127.85it/s]  9%|▉         | 55/605 [00:00<00:04, 123.86it/s] 11%|█         | 68/605 [00:00<00:04, 107.95it/s] 13%|█▎        | 80/605 [00:00<00:05, 90.88it/s]  15%|█▍        | 90/605 [00:00<00:05, 88.77it/s] 17%|█▋        | 102/605 [00:00<00:05, 96.29it/s] 19%|█▊        | 113/605 [00:01<00:05, 94.46it/s] 21%|██        | 126/605 [00:01<00:04, 103.78it/s] 23%|██▎       | 139/605 [00:01<00:04, 109.18it/s] 25%|██▍       | 151/605 [00:01<00:04, 107.53it/s] 27%|██▋       | 163/605 [00:01<00:04, 106.12it/s] 29%|██▉       | 178/605 [00:01<00:03, 116.10it/s] 32%|███▏      | 193/605 [00:01<00:03, 123.28it/s] 34%|███▍      | 206/605 [00:01<00:03, 121.29it/s] 36%|███▌      | 219/605 [00:01<00:03, 120.22it/s] 39%|███▊      | 233/605 [00:02<00:03, 123.97it/s] 41%|████      | 246/605 [00:02<00:03, 118.85it/s] 43%|████▎     | 258/605 [00:02<00:03, 112.83it/s] 45%|████▍     | 271/605 [00:02<00:02, 117.34it/s] 47%|████▋     | 284/605 [00:02<00:02, 120.19it/s] 49%|████▉     | 297/605 [00:02<00:03, 92.41it/s]  51%|█████     | 309/605 [00:02<00:03, 97.62it/s] 53%|█████▎    | 320/605 [00:03<00:03, 84.09it/s] 55%|█████▌    | 333/605 [00:03<00:02, 92.78it/s] 57%|█████▋    | 346/605 [00:03<00:02, 100.69it/s] 60%|█████▉    | 360/605 [00:03<00:02, 109.01it/s] 62%|██████▏   | 373/605 [00:03<00:02, 111.92it/s] 64%|██████▍   | 387/605 [00:03<00:01, 113.25it/s] 66%|██████▌   | 399/605 [00:03<00:01, 113.27it/s] 68%|██████▊   | 412/605 [00:03<00:01, 117.39it/s] 70%|███████   | 424/605 [00:03<00:01, 116.25it/s] 72%|███████▏  | 436/605 [00:03<00:01, 115.34it/s] 74%|███████▍  | 448/605 [00:04<00:01, 109.34it/s] 76%|███████▋  | 462/605 [00:04<00:01, 116.40it/s] 78%|███████▊  | 474/605 [00:04<00:01, 109.69it/s] 80%|████████  | 486/605 [00:04<00:01, 109.89it/s] 83%|████████▎ | 502/605 [00:04<00:00, 123.53it/s] 85%|████████▌ | 515/605 [00:04<00:00, 123.90it/s] 87%|████████▋ | 528/605 [00:04<00:00, 123.93it/s] 89%|████████▉ | 541/605 [00:04<00:00, 119.25it/s] 92%|█████████▏| 554/605 [00:05<00:00, 111.23it/s] 94%|█████████▎| 566/605 [00:05<00:00, 111.93it/s] 96%|█████████▌| 578/605 [00:05<00:00, 104.08it/s] 97%|█████████▋| 589/605 [00:05<00:00, 93.74it/s]  99%|█████████▉| 599/605 [00:05<00:00, 91.83it/s]100%|██████████| 605/605 [00:05<00:00, 105.50it/s]
+extract the null data:   0%|          | 0/155 [00:00<?, ?it/s]extract the null data:  41%|████▏     | 64/155 [00:00<00:00, 638.22it/s]extract the null data:  85%|████████▌ | 132/155 [00:00<00:00, 660.82it/s]extract the null data: 100%|██████████| 155/155 [00:00<00:00, 656.83it/s]
+  0%|          | 0/148 [00:00<?, ?it/s]  9%|▉         | 13/148 [00:00<00:01, 129.23it/s] 18%|█▊        | 26/148 [00:00<00:01, 105.46it/s] 26%|██▌       | 38/148 [00:00<00:00, 110.17it/s] 36%|███▌      | 53/148 [00:00<00:00, 124.20it/s] 45%|████▍     | 66/148 [00:00<00:00, 121.84it/s] 53%|█████▎    | 79/148 [00:00<00:00, 121.41it/s] 62%|██████▏   | 92/148 [00:00<00:00, 123.30it/s] 71%|███████   | 105/148 [00:00<00:00, 112.44it/s] 79%|███████▉  | 117/148 [00:01<00:00, 102.02it/s] 88%|████████▊ | 130/148 [00:01<00:00, 107.73it/s] 96%|█████████▌| 142/148 [00:01<00:00, 99.95it/s] 100%|██████████| 148/148 [00:01<00:00, 110.48it/s]
+extract the null data:   0%|          | 0/194 [00:00<?, ?it/s]extract the null data:  26%|██▌       | 50/194 [00:00<00:00, 494.59it/s]extract the null data:  54%|█████▎    | 104/194 [00:00<00:00, 516.87it/s]extract the null data:  81%|████████  | 157/194 [00:00<00:00, 520.68it/s]extract the null data: 100%|██████████| 194/194 [00:00<00:00, 512.77it/s]
+  0%|          | 0/184 [00:00<?, ?it/s]  5%|▍         | 9/184 [00:00<00:01, 89.56it/s] 11%|█         | 20/184 [00:00<00:01, 101.11it/s] 17%|█▋        | 31/184 [00:00<00:01, 93.66it/s]  24%|██▍       | 45/184 [00:00<00:01, 108.54it/s] 32%|███▏      | 59/184 [00:00<00:01, 118.82it/s] 39%|███▉      | 72/184 [00:00<00:00, 120.96it/s] 46%|████▌     | 85/184 [00:00<00:00, 114.64it/s] 53%|█████▎    | 97/184 [00:00<00:00, 111.75it/s] 59%|█████▉    | 109/184 [00:01<00:00, 90.96it/s] 65%|██████▍   | 119/184 [00:01<00:00, 82.18it/s] 70%|███████   | 129/184 [00:01<00:00, 85.55it/s] 78%|███████▊  | 143/184 [00:01<00:00, 97.68it/s] 84%|████████▎ | 154/184 [00:01<00:00, 99.00it/s] 90%|█████████ | 166/184 [00:01<00:00, 104.51it/s] 96%|█████████▌| 177/184 [00:01<00:00, 101.79it/s]100%|██████████| 184/184 [00:01<00:00, 96.56it/s] 
+train data : 29257, disrupt : 1768, non-disrupt : 27489
+valid data : 6149, disrupt : 448, non-disrupt : 5701
+test data : 9288, disrupt : 549, non-disrupt : 8739
+
+################# model summary #################
+
+-----------------------------------------------------------------------------------
+           Layer (type)                Input Shape         Param #     Tr. Param #
+===================================================================================
+           NoiseLayer-1                 [2, 21, 9]               0               0
+               Linear-2                 [2, 21, 9]           1,280           1,280
+   PositionalEncoding-3               [21, 2, 128]               0               0
+   TransformerEncoder-4     [21, 2, 128], [21, 21]       1,586,176       1,586,176
+               Linear-5                   [2, 128]          16,512          16,512
+          BatchNorm1d-6                   [2, 128]             256             256
+                 GELU-7                   [2, 128]               0               0
+               Linear-8                   [2, 128]             258             258
+===================================================================================
+Total params: 1,604,482
+Trainable params: 1,604,482
+Non-trainable params: 0
+Batch size: 2
+-----------------------------------------------------------------------------------
+
+################# training process #################
+
+training process:   0%|          | 0/256 [00:00<?, ?it/s]training process:   0%|          | 1/256 [01:49<7:45:05, 109.43s/it]epoch : 1, train loss : 0.042, valid loss : 0.019, train acc : 0.698, valid acc : 0.283, train f1 : 0.686, valid f1 : 0.270
+training process:   0%|          | 1/256 [01:44<7:25:23, 104.80s/it]epoch : 1, train loss : 0.033, valid loss : 0.009, train acc : 0.719, valid acc : 0.873, train f1 : 0.705, valid f1 : 0.724
+training process:   1%|          | 2/256 [04:08<8:56:19, 126.69s/it]training process:   1%|          | 2/256 [03:53<8:22:45, 118.76s/it]training process:   1%|          | 3/256 [05:49<8:05:05, 115.04s/it]training process:   1%|          | 3/256 [05:34<7:46:28, 110.63s/it]training process:   1%|          | 3/256 [06:55<9:44:33, 138.63s/it]
+Traceback (most recent call last):
+  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torch/utils/data/dataloader.py", line 990, in _try_get_data
+    data = self._data_queue.get(timeout=timeout)
+  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/multiprocessing/queues.py", line 113, in get
+    if not self._poll(timeout):
+  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/multiprocessing/connection.py", line 262, in poll
+    return self._poll(timeout)
+  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/multiprocessing/connection.py", line 429, in _poll
+    r = wait([self], timeout)
+  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/multiprocessing/connection.py", line 936, in wait
+    ready = selector.select(timeout)
+  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/selectors.py", line 416, in select
+    fd_event_list = self._selector.poll(timeout)
+  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torch/utils/data/_utils/signal_handling.py", line 66, in handler
+    _error_if_any_worker_fails()
+RuntimeError: DataLoader worker (pid 1693772) is killed by signal: Killed. 
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/jinsukim/codes_for_study/research-predict-disruption/train_0D_network.py", line 242, in <module>
+    train_loss,  train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train(
+  File "/home/jinsukim/codes_for_study/research-predict-disruption/src/train.py", line 177, in train
+    train_loss, train_acc, train_f1 = train_per_epoch(
+  File "/home/jinsukim/codes_for_study/research-predict-disruption/src/train.py", line 32, in train_per_epoch
+    for batch_idx, (data, target) in enumerate(train_loader):
+  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torch/utils/data/dataloader.py", line 521, in __next__
+    data = self._next_data()
+  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torch/utils/data/dataloader.py", line 1186, in _next_data
+    idx, data = self._get_data()
+  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torch/utils/data/dataloader.py", line 1152, in _get_data
+    success, data = self._try_get_data()
+  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torch/utils/data/dataloader.py", line 1003, in _try_get_data
+    raise RuntimeError('DataLoader worker (pid(s) {}) exited unexpectedly'.format(pids_str)) from e
+RuntimeError: DataLoader worker (pid(s) 1693772) exited unexpectedly
+training process:   2%|▏         | 4/256 [07:57<8:24:43, 120.17s/it]training process:   2%|▏         | 5/256 [09:11<7:12:27, 103.38s/it]epoch : 5, train loss : 0.006, valid loss : 0.005, train acc : 0.914, valid acc : 0.937, train f1 : 0.913, valid f1 : 0.833
+training process:   2%|▏         | 6/256 [10:14<6:14:01, 89.77s/it] training process:   3%|▎         | 7/256 [11:19<5:38:44, 81.62s/it]training process:   3%|▎         | 8/256 [12:25<5:17:49, 76.89s/it]training process:   4%|▎         | 9/256 [13:31<5:02:00, 73.36s/it]epoch : 9, train loss : 0.004, valid loss : 0.005, train acc : 0.946, valid acc : 0.964, train f1 : 0.946, valid f1 : 0.891
+training process:   4%|▍         | 10/256 [14:37<4:50:47, 70.93s/it]training process:   4%|▍         | 11/256 [15:42<4:43:00, 69.31s/it]training process:   5%|▍         | 12/256 [16:50<4:40:22, 68.94s/it]training process:   5%|▌         | 13/256 [18:00<4:40:09, 69.17s/it]epoch : 13, train loss : 0.003, valid loss : 0.006, train acc : 0.959, valid acc : 0.972, train f1 : 0.959, valid f1 : 0.912
+training process:   5%|▌         | 14/256 [19:06<4:35:22, 68.27s/it]training process:   6%|▌         | 15/256 [20:20<4:41:22, 70.05s/it]training process:   6%|▋         | 16/256 [21:23<4:31:26, 67.86s/it]training process:   7%|▋         | 17/256 [22:29<4:28:24, 67.38s/it]epoch : 17, train loss : 0.003, valid loss : 0.006, train acc : 0.966, valid acc : 0.960, train f1 : 0.966, valid f1 : 0.881
+training process:   7%|▋         | 18/256 [23:40<4:31:40, 68.49s/it]training process:   7%|▋         | 19/256 [24:45<4:25:54, 67.32s/it]training process:   8%|▊         | 20/256 [25:55<4:27:30, 68.01s/it]training process:   8%|▊         | 21/256 [26:58<4:20:47, 66.58s/it]epoch : 21, train loss : 0.002, valid loss : 0.007, train acc : 0.972, valid acc : 0.978, train f1 : 0.972, valid f1 : 0.926
+training process:   9%|▊         | 22/256 [27:58<4:12:19, 64.70s/it]training process:   9%|▉         | 23/256 [29:00<4:07:31, 63.74s/it]training process:   9%|▉         | 24/256 [30:02<4:04:19, 63.19s/it]training process:  10%|▉         | 25/256 [31:04<4:02:06, 62.89s/it]epoch : 25, train loss : 0.002, valid loss : 0.006, train acc : 0.976, valid acc : 0.970, train f1 : 0.976, valid f1 : 0.907
+training process:  10%|█         | 26/256 [32:04<3:58:16, 62.16s/it]training process:  11%|█         | 27/256 [33:01<3:51:13, 60.58s/it]training process:  11%|█         | 28/256 [34:01<3:48:46, 60.20s/it]training process:  11%|█▏        | 29/256 [35:01<3:47:55, 60.24s/it]epoch : 29, train loss : 0.002, valid loss : 0.007, train acc : 0.980, valid acc : 0.978, train f1 : 0.980, valid f1 : 0.929
+training process:  12%|█▏        | 30/256 [36:02<3:47:48, 60.48s/it]training process:  12%|█▏        | 31/256 [37:00<3:44:11, 59.79s/it]training process:  12%|█▎        | 32/256 [37:57<3:40:22, 59.03s/it]training process:  13%|█▎        | 33/256 [38:58<3:40:58, 59.46s/it]epoch : 33, train loss : 0.001, valid loss : 0.008, train acc : 0.984, valid acc : 0.970, train f1 : 0.984, valid f1 : 0.907
+training process:  13%|█▎        | 34/256 [39:56<3:38:29, 59.05s/it]training process:  14%|█▎        | 35/256 [40:56<3:39:02, 59.47s/it]training process:  14%|█▍        | 36/256 [41:58<3:40:37, 60.17s/it]training process:  14%|█▍        | 37/256 [43:00<3:40:59, 60.55s/it]epoch : 37, train loss : 0.001, valid loss : 0.009, train acc : 0.985, valid acc : 0.969, train f1 : 0.985, valid f1 : 0.902
+training process:  15%|█▍        | 38/256 [44:00<3:40:06, 60.58s/it]training process:  15%|█▌        | 39/256 [45:02<3:39:58, 60.82s/it]training process:  16%|█▌        | 40/256 [46:01<3:37:28, 60.41s/it]training process:  16%|█▌        | 41/256 [47:00<3:35:07, 60.04s/it]epoch : 41, train loss : 0.001, valid loss : 0.009, train acc : 0.988, valid acc : 0.980, train f1 : 0.988, valid f1 : 0.934
+training process:  16%|█▋        | 42/256 [48:02<3:35:58, 60.55s/it]training process:  17%|█▋        | 43/256 [49:03<3:35:12, 60.62s/it]training process:  17%|█▋        | 44/256 [50:03<3:33:26, 60.41s/it]training process:  18%|█▊        | 45/256 [51:02<3:30:46, 59.94s/it]epoch : 45, train loss : 0.001, valid loss : 0.010, train acc : 0.988, valid acc : 0.981, train f1 : 0.988, valid f1 : 0.938
+training process:  18%|█▊        | 46/256 [52:00<3:28:00, 59.43s/it]

@@ -25,7 +25,7 @@ def parsing():
 
     # common argument
     # batch size / sequence length / epochs / distance / num workers / pin memory use
-    parser.add_argument("--batch_size", type = int, default = 128)
+    parser.add_argument("--batch_size", type = int, default = 1024)
     parser.add_argument("--seq_len", type = int, default = 21)
     parser.add_argument("--dist", type = int, default = 3)
     parser.add_argument("--num_workers", type = int, default = 8)
@@ -33,11 +33,11 @@ def parsing():
 
     # model setup
     parser.add_argument("--alpha", type = float, default = 0.01)
-    parser.add_argument("--dropout", type = float, default = 0.1)
+    parser.add_argument("--dropout", type = float, default = 0.25)
     parser.add_argument("--feature_dims", type = int, default = 128)
     parser.add_argument("--n_layers", type = int, default = 8)
     parser.add_argument("--n_heads", type = int, default = 8)
-    parser.add_argument("--dim_feedforward", type = int, default = 1024)
+    parser.add_argument("--dim_feedforward", type = int, default = 512)
     parser.add_argument("--cls_dims", type = int, default = 128)
     
     args = vars(parser.parse_args())

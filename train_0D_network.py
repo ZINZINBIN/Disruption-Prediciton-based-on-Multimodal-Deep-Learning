@@ -32,11 +32,11 @@ def parsing():
     parser.add_argument("--gpu_num", type = int, default = 0)
 
     # batch size / sequence length / epochs / distance / num workers / pin memory use
-    parser.add_argument("--batch_size", type = int, default = 128)
+    parser.add_argument("--batch_size", type = int, default = 1024)
     parser.add_argument("--num_epoch", type = int, default = 256)
     parser.add_argument("--seq_len", type = int, default = 21)
     parser.add_argument("--dist", type = int, default = 3)
-    parser.add_argument("--num_workers", type = int, default = 8)
+    parser.add_argument("--num_workers", type = int, default = 4)
     parser.add_argument("--pin_memory", type = bool, default = False)
 
     # model weight / save process
@@ -46,7 +46,7 @@ def parsing():
     
 
     # optimizer : SGD, RMSProps, Adam, AdamW
-    parser.add_argument("--optimizer", type = str, default = "Adam")
+    parser.add_argument("--optimizer", type = str, default = "AdamW")
     
     # learning rate, step size and decay constant
     parser.add_argument("--lr", type = float, default = 2e-4)
@@ -80,11 +80,11 @@ def parsing():
     
     # model setup
     parser.add_argument("--alpha", type = float, default = 0.01)
-    parser.add_argument("--dropout", type = float, default = 0.1)
+    parser.add_argument("--dropout", type = float, default = 0.25)
     parser.add_argument("--feature_dims", type = int, default = 128)
     parser.add_argument("--n_layers", type = int, default = 8)
     parser.add_argument("--n_heads", type = int, default = 8)
-    parser.add_argument("--dim_feedforward", type = int, default = 1024)
+    parser.add_argument("--dim_feedforward", type = int, default = 512)
     parser.add_argument("--cls_dims", type = int, default = 128)
     
     args = vars(parser.parse_args())
@@ -126,9 +126,9 @@ if __name__ == "__main__":
     ts_train, ts_valid, ts_test, ts_scaler = preparing_0D_dataset("./dataset/KSTAR_Disruption_ts_data_extend.csv", ts_cols = ts_cols, scaler = 'Robust')
     kstar_shot_list = pd.read_csv('./dataset/KSTAR_Disruption_Shot_List.csv', encoding = "euc-kr")
 
-    train_data = DatasetFor0D(ts_train, kstar_shot_list, seq_len = args['seq_len'], cols = ts_cols, dist = args['dist'], dt = args['dist'] * 1 / 210)
-    valid_data = DatasetFor0D(ts_valid, kstar_shot_list, seq_len = args['seq_len'], cols = ts_cols, dist = args['dist'], dt = args['dist'] * 1 / 210)
-    test_data = DatasetFor0D(ts_test, kstar_shot_list, seq_len = args['seq_len'], cols = ts_cols, dist = args['dist'], dt = args['dist'] * 1 / 210)
+    train_data = DatasetFor0D(ts_train, kstar_shot_list, seq_len = args['seq_len'], cols = ts_cols, dist = args['dist'], dt = 4 * 1 / 210)
+    valid_data = DatasetFor0D(ts_valid, kstar_shot_list, seq_len = args['seq_len'], cols = ts_cols, dist = args['dist'], dt = 4 * 1 / 210)
+    test_data = DatasetFor0D(ts_test, kstar_shot_list, seq_len = args['seq_len'], cols = ts_cols, dist = args['dist'], dt = 4 * 1 / 210)
     
     print("train data : {}, disrupt : {}, non-disrupt : {}".format(train_data.__len__(), train_data.n_disrupt, train_data.n_normal))
     print("valid data : {}, disrupt : {}, non-disrupt : {}".format(valid_data.__len__(), valid_data.n_disrupt, valid_data.n_normal))
@@ -217,6 +217,7 @@ if __name__ == "__main__":
     else:
         loss_fn = torch.nn.CrossEntropyLoss(reduction = "mean", weight = per_cls_weights)
 
+    
     # training process
     print("\n################# training process #################\n")
     if args['use_DRW']:
@@ -257,11 +258,9 @@ if __name__ == "__main__":
             model_type = "single"
         )
     
-    
     # plot the learning curve
     save_learning_curve = os.path.join(save_dir, "{}_lr_curve.png".format(tag))
     plot_learning_curve(train_loss, valid_loss, train_f1, valid_f1, figsize = (12,6), save_dir = save_learning_curve)
-    
     
     # evaluation process
     print("\n################# evaluation process #################\n")
@@ -304,7 +303,7 @@ if __name__ == "__main__":
         )
     except:
         print("{} : visualize 3D latent space doesn't work due to stability error".format(tag))
-        
+    
     # plot probability curve
     test_shot_num = args['test_shot_num']
     
