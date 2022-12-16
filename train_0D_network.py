@@ -13,6 +13,7 @@ from src.train import train, train_DRW
 from src.evaluate import evaluate
 from src.loss import FocalLoss, LDAMLoss
 from src.models.ts_transformer import TStransformer
+from src.feature_importance import compute_permute_feature_importance
 
 # columns for use
 ts_cols = ['\\q95', '\\ipmhd', '\\kappa', '\\tritop', '\\tribot','\\betap','\\betan','\\li', '\\WTOT_DLM03']
@@ -277,6 +278,19 @@ if __name__ == "__main__":
         device,
         save_conf = save_conf,
         save_txt = save_txt
+    )
+    
+    # compute the feature importance of the variables
+    print("\n################# Feature Importance #################\n")
+    compute_permute_feature_importance(
+        model,
+        test_loader,
+        ts_cols,
+        loss_fn,
+        device,
+        'single',
+        'loss',
+        os.path.join(save_dir, "{}_feature_importance.png".format(tag))
     )
     
     # Additional analyzation

@@ -518,7 +518,6 @@ class DatasetForVideo2(Dataset):
             cls_num_list.append(self.num_per_cls_dict[i])
         return cls_num_list
 
-
 # Dataset for 0D data : different method used for label matching
 class DatasetFor0D(Dataset):
     def __init__(self, ts_data : pd.DataFrame, disrupt_data : pd.DataFrame, seq_len : int = 21, cols : List = DEFAULT_TS_COLS, dist:int = 3, dt : float = 1.0 / 210 * 4):

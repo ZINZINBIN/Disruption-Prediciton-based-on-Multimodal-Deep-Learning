@@ -8,6 +8,8 @@ from torch.utils.data import DataLoader
 from src.utils.utility import preparing_0D_dataset
 from src.evaluate import evaluate_detail
 from src.models.ts_transformer import TStransformer
+from src.feature_importance import compute_permute_feature_importance
+from src.loss import FocalLoss
 
 # columns for use
 ts_cols = ['\\q95', '\\ipmhd', '\\kappa', '\\tritop', '\\tribot','\\betap','\\betan','\\li', '\\WTOT_DLM03']
@@ -107,6 +109,27 @@ if __name__ == "__main__":
     test_loader = DataLoader(test_data, batch_size = args['batch_size'], sampler=None, num_workers = args["num_workers"], pin_memory=args["pin_memory"])
 
     model.load_state_dict(torch.load(save_best_dir))
+    
+    # loss definition
+    train_data.get_num_per_cls()
+    cls_num_list = train_data.get_cls_num_list()
+    
+    per_cls_weights = 1.0 / np.array(cls_num_list)
+    per_cls_weights = per_cls_weights / np.sum(per_cls_weights)
+    per_cls_weights = torch.FloatTensor(per_cls_weights).to(device)
+    focal_gamma = 2.0
+    loss_fn = FocalLoss(weight = per_cls_weights, gamma = focal_gamma)
+    
+    compute_permute_feature_importance(
+        model,
+        test_loader,
+        ts_cols,
+        loss_fn,
+        device,
+        'single',
+        'loss',
+        os.path.join(save_dir, "{}_feature_importance.png".format(tag))
+    )
     
     save_csv = os.path.join(save_dir, "{}_total_score.csv".format(tag))
     
