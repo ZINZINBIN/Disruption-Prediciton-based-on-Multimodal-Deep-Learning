@@ -132,8 +132,10 @@ def evaluate_detail(
     total_label = np.array([])
     total_task = []
 
-    if device is None:
+    if device is None and torch.cuda.is_available():
         device = torch.device("cuda:0")
+    elif device is None and not torch.cuda.is_available():
+        device = 'cpu'
 
     model.to(device)
     model.eval()
@@ -161,6 +163,7 @@ def evaluate_detail(
             
     total_task.extend(["train" for _ in range(train_loader.dataset.__len__())])
             
+    model.eval()
     # evaluation for valid dataset
     for idx, (data, target, shot_num) in enumerate(valid_loader):
         with torch.no_grad():
@@ -184,6 +187,7 @@ def evaluate_detail(
             
     total_task.extend(["valid" for _ in range(valid_loader.dataset.__len__())])
             
+    model.eval()
     # evaluation for test dataset
     for idx, (data, target, shot_num) in enumerate(test_loader):
         with torch.no_grad():
@@ -198,7 +202,7 @@ def evaluate_detail(
                 data_video = data['video'].to(device)
                 data_0D = data['0D'].to(device)
                 output, output_vis, output_ts = model(data_video, data_0D)
-            
+                
             pred = torch.nn.functional.softmax(output, dim = 1)[:,0]
             
             total_shot = np.concatenate((total_shot, shot_num.cpu().numpy().reshape(-1,)))

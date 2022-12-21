@@ -3,6 +3,7 @@ import torch.nn as nn
 from torch.autograd import Variable
 from src.models.ConvLSTM import ConvLSTM, ConvLSTMEncoder
 from src.models.ViViT import ViViTEncoder, ViViT
+from src.models.ts_transformer import TStransformer
 from typing import Dict, Literal
 from pytorch_model_summary import summary
 
@@ -14,8 +15,12 @@ class MultiModalModel(nn.Module):
         self.args_video = args_video
         self.args_0D = args_0D
         self.encoder_video = ViViTEncoder(**args_video)
-        self.encoder_0D = ConvLSTMEncoder(**args_0D)
-        linear_input_dims = self.encoder_0D.lstm_dim * 2 + self.encoder_video.dim
+        
+        # self.encoder_0D = ConvLSTMEncoder(**args_0D)
+        # linear_input_dims = self.encoder_0D.lstm_dim * 2 + self.encoder_video.dim
+        
+        self.encoder_0D = TStransformer(**args_0D)
+        linear_input_dims = self.encoder_0D.feature_dims + self.encoder_video.dim
         
         self.classifier = nn.Sequential(
             nn.Linear(linear_input_dims, linear_input_dims // 2),

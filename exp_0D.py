@@ -27,7 +27,7 @@ def parsing():
 
     # common argument
     # batch size / sequence length / epochs / distance / num workers / pin memory use
-    parser.add_argument("--batch_size", type = int, default = 1024)
+    parser.add_argument("--batch_size", type = int, default = 128)
     parser.add_argument("--seq_len", type = int, default = 21)
     parser.add_argument("--dist", type = int, default = 3)
     parser.add_argument("--num_workers", type = int, default = 8)
@@ -119,20 +119,10 @@ if __name__ == "__main__":
     per_cls_weights = torch.FloatTensor(per_cls_weights).to(device)
     focal_gamma = 2.0
     loss_fn = FocalLoss(weight = per_cls_weights, gamma = focal_gamma)
-    
-    compute_permute_feature_importance(
-        model,
-        test_loader,
-        ts_cols,
-        loss_fn,
-        device,
-        'single',
-        'loss',
-        os.path.join(save_dir, "{}_feature_importance.png".format(tag))
-    )
-    
+
     save_csv = os.path.join(save_dir, "{}_total_score.csv".format(tag))
     
+    # evaluate with shot comparison
     evaluate_detail(
         train_loader,
         valid_loader,
@@ -142,4 +132,16 @@ if __name__ == "__main__":
         save_csv,
         tag,
         model_type = 'single'
+    )
+    
+    # feature importance
+    compute_permute_feature_importance(
+        model,
+        test_loader,
+        ts_cols,
+        loss_fn,
+        device,
+        'single',
+        'loss',
+        os.path.join(save_dir, "{}_feature_importance.png".format(tag))
     )

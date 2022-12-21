@@ -84,6 +84,9 @@ def compute_permute_feature_importance(
     criteria : Literal['loss','score'],
     save_dir : str
     ):
+    
+    # convert get_shot_num variable true
+    dataloader.dataset.get_shot_num = False
 
     n_features = len(features)
     data_orig = dataloader.dataset.ts_data.copy()

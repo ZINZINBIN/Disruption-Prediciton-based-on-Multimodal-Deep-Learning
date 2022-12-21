@@ -534,7 +534,13 @@ class DatasetFor0D(Dataset):
         self.get_shot_num = False
         
         self.n_classes = 2
+        
+        self.preprocessing()
         self._generate_index()
+        
+    def preprocessing(self):
+        # nan -> forward fill
+        self.ts_data[self.cols] = self.ts_data[self.cols].fillna(method='ffill')
 
     def _generate_index(self):
         shot_list = np.unique(self.ts_data.shot.values).tolist()

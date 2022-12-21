@@ -16,6 +16,36 @@ from src.models.ts_transformer import TStransformer
 from src.feature_importance import compute_permute_feature_importance
 
 # columns for use
+# ip error : target - measure value
+# ne_inter03 : nan value 
+# ne_tci01 : since 2018, minus(shot : 21272)
+# 2018년도 샷은 ne가 이상해서 쓰지 않는 것 추천 / 확인해볼 것
+# shot 31356 -> abrupt disruption, 다른 진단이 필요하다, LM
+# shot 31243 -> abrupt disruption, 
+# shot 31676 -> 
+# warning region : ~ 400ms? 정도로 확대해서 disruption prediction 해보자
+# flag2 : no train, no valid (20%, 240)
+
+# Heaing factor, EC, NBI
+# shot list 확장 + prediction region(warning time ~ 400ms)
+# abrupt disruption shot 
+
+# input_shape : [Batch, sequence lenth, ]
+
+
+'''
+Te = [x1,x2,x3,x4,x5, .... , x50]
+   = [0,0,0,0,...,100,120,...,100,0,0,0,]
+
+Idea : core value or specific position (r = 1.8대비 r = 1.5 등), shot마다 다른지 확인
+* edge : error가 높아서 좋지 않음(accuracy bad)
+* lock mode : ikstar 참조, work/disruption/machinelearning/database/data, LM
+* lock mode에 대한 numbering도 포함
+* DB : 32, lock mode error
+
+'''
+
+
 ts_cols = ['\\q95', '\\ipmhd', '\\kappa', '\\tritop', '\\tribot','\\betap','\\betan','\\li', '\\WTOT_DLM03']
 
 # argument parser
