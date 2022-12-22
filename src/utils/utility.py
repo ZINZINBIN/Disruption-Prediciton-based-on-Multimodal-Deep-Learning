@@ -67,6 +67,57 @@ def preparing_0D_dataset(filepath : str = "./dataset/KSTAR_Disruption_ts_data_ex
 
     return df_train, df_valid, df_test, scaler
     
+def preparing_multi_data(root_dir : str, ts_filepath : str = "./dataset/KSTAR_Disruption_ts_data_5ms.csv", ts_cols : Optional[List] = None, scaler : Literal['Robust', 'Standard', 'MinMax'] = 'Robust'):
+    shot_list = glob2.glob(os.path.join(root_dir, "*"))
+    shot_train, shot_test = train_test_split(shot_list, test_size = 0.2, random_state = 42)
+    shot_train, shot_valid = train_test_split(shot_train, test_size = 0.2, random_state = 42) 
+    
+    # preparing 0D data for use
+    df = pd.read_csv(ts_filepath).reset_index()
+
+    # nan interpolation
+    df.interpolate(method = 'linear', limit_direction = 'forward')
+
+    # float type
+    if ts_cols is None:
+        for col in df.columns:
+            df[col] = df[col].astype(np.float32)
+    else:
+        for col in ts_cols:
+            df[col] = df[col].astype(np.float32)
+
+    # train / valid / test data split
+    ts_shot_train_list = [int(shot_dir.split("/")[-1]) for shot_dir in shot_train]
+    ts_shot_valid_list = [int(shot_dir.split("/")[-1]) for shot_dir in shot_valid]
+    ts_shot_test_list = [int(shot_dir.split("/")[-1]) for shot_dir in shot_test]
+
+    df_train = pd.DataFrame()
+    df_valid = pd.DataFrame()
+    df_test = pd.DataFrame()
+
+    for shot in ts_shot_train_list:
+        df_train = pd.concat([df_train, df[df.shot == shot]], axis = 0)
+
+    for shot in ts_shot_valid_list:
+        df_valid = pd.concat([df_valid, df[df.shot == shot]], axis = 0)
+
+    for shot in ts_shot_test_list:
+        df_test = pd.concat([df_test, df[df.shot == shot]], axis = 0)
+        
+    if scaler == 'Robust':
+        scaler = RobustScaler()
+    elif scaler == 'Standard':
+        scaler = StandardScaler()
+    else:
+        scaler = MinMaxScaler()
+    
+    df_train[ts_cols] = scaler.fit_transform(df_train[ts_cols].values)
+    df_valid[ts_cols] = scaler.transform(df_valid[ts_cols].values)
+    df_test[ts_cols] = scaler.transform(df_test[ts_cols].values)
+
+    return (shot_train, df_train), (shot_valid, df_valid), (shot_test, df_test), scaler
+    
+    
 def preprocessing_video(file_path : str, width : int = 256, height: int = 256, overwrite : bool = True, save_path : Optional[str] = None):
     '''
     preprocessing_video : load video data by cv2 to save as resized image file(.jpg)

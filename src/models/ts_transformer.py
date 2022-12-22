@@ -100,7 +100,7 @@ class TStransformer(nn.Module):
         
         
 class TStransformerEncoder(nn.Module):
-    def __init__(self, n_features : int = 11, feature_dims : int = 256, max_len : int = 128, n_layers : int = 1, n_heads : int = 8, dim_feedforward : int = 1024, dropout : float = 0.1, cls_dims : int = 128, n_classes : int = 2):
+    def __init__(self, n_features : int = 11, feature_dims : int = 256, max_len : int = 128, n_layers : int = 1, n_heads : int = 8, dim_feedforward : int = 1024, dropout : float = 0.1):
         super(TStransformerEncoder, self).__init__()
         self.src_mask = None
         self.n_features = n_features
