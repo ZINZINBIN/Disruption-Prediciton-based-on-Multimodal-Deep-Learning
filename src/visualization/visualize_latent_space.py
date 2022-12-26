@@ -102,7 +102,7 @@ def visualize_3D_latent_space_multi(model : nn.Module, dataloader : DataLoader, 
             total_latent_0D.append(latent_0D.detach().cpu().numpy().reshape(batch,-1))
             
             total_label = np.concatenate((total_label, target.detach().cpu().numpy().reshape(-1,)), axis = 0)
-    
+            
     total_latent_fusion = np.concatenate(total_latent_fusion, axis = 0)
     total_latent_vis = np.concatenate(total_latent_vis, axis = 0)
     total_latent_0D = np.concatenate(total_latent_0D, axis = 0)

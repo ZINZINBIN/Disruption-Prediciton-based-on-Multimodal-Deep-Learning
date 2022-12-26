@@ -35,12 +35,17 @@ class MultiModalModel(nn.Module):
         # x_video = x_video.mean(dim = 1) if self.encoder_video.pool == 'mean' else x_video[:, 0]
         x_0D = self.encoder_0D(x_0D)
         
-        # print("x_video : ", x_video.size())
-        # print("x_0D : ", x_0D.size())
-        
         x = torch.cat([x_video, x_0D], axis = 1)
         output = self.classifier(x)
         return output
+    
+    def encode(self, x_vis : torch.Tensor, x_0D : torch.Tensor):
+        with torch.no_grad():
+            h_vis = self.encoder_video(x_vis)
+            h_0D = self.encoder_0D(x_0D)
+            h_concat = torch.cat([h_vis, h_0D], axis = 1)
+            
+        return (h_concat, h_vis, h_0D)
     
     def summary(self, device : str = 'cpu', show_input : bool = True, show_hierarchical : bool = False, print_summary : bool = True, show_parent_layers : bool = False):
         sample_video = torch.zeros((8,  self.args_video["in_channels"], self.args_video["n_frames"], self.args_video["image_size"], self.args_video["image_size"]), device = device)

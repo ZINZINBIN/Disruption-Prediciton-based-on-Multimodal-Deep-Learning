@@ -467,6 +467,14 @@ class DatasetFor0D(Dataset):
         data = torch.from_numpy(data)
         return data
 
+class MultiModalDataset(Dataset):
+    def __init__(self):
+        pass
+    def __getitem__(self, idx : int):
+        pass
+    def __len__(self):
+        pass
+
 # function for ploting the probability curve for video network
 def generate_prob_curve(
     file_path : str,

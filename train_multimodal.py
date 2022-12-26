@@ -322,6 +322,7 @@ if __name__ == "__main__":
             model_type = "multi"
         )
     
+    
     # plot the learning curve
     save_learning_curve = os.path.join(save_dir, "{}_lr_curve.png".format(tag))
     plot_learning_curve(train_loss, valid_loss, train_f1, valid_f1, figsize = (12,6), save_dir = save_learning_curve)
@@ -340,7 +341,8 @@ if __name__ == "__main__":
         loss_fn,
         device,
         save_conf = save_conf,
-        save_txt = save_txt
+        save_txt = save_txt,
+        model_type = 'multi'
     )
     
     # Additional analyzation
@@ -348,11 +350,12 @@ if __name__ == "__main__":
     
     try:
         visualize_3D_latent_space_multi(
-        model, 
-        train_loader,
-        device,
-        args["save_latent_dir"], 
+            model, 
+            train_loader,
+            device,
+            save_3D_latent_dir
         )
+        
     except:
         print("{} : visualize 3D latent space doesn't work due to stability error".format(tag))
         
