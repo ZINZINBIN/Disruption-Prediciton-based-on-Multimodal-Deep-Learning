@@ -6,6 +6,7 @@ import numpy as np
 from tqdm.auto import tqdm
 from torch.utils.data import DataLoader
 from sklearn.metrics import f1_score
+from src.evaluate import evaluate_tensorboard
 from torch.utils.tensorboard import SummaryWriter
 
 def train_per_epoch(
@@ -146,10 +147,11 @@ def train(
     verbose : Optional[int] = 8,
     save_best_dir : str = "./weights/best.pt",
     save_last_dir : str = "./weights/last.pt",
-    exp_dir : str = './results',
+    exp_dir : Optional[str] = None,
     max_norm_grad : Optional[float] = None,
     criteria : Literal["f1_score", "acc", "loss"] = "f1_score",
-    model_type : Literal["single","multi"] = "single"
+    model_type : Literal["single","multi"] = "single",
+    test_for_check_per_epoch : Optional[DataLoader] = None,
     ):
 
     train_loss_list = []
@@ -170,7 +172,10 @@ def train(
         os.mkdir(exp_dir)
     
     # tensorboard
-    writer = SummaryWriter(exp_dir)
+    if exp_dir:
+        writer = SummaryWriter(exp_dir)
+    else:
+        writer = None
 
     for epoch in tqdm(range(num_epoch), desc = "training process"):
 
@@ -209,7 +214,13 @@ def train(
         
         writer.add_scalar('F1_score/train', train_f1, epoch)
         writer.add_scalar('F1_score/valid', valid_f1, epoch)
-
+        
+        if test_for_check_per_epoch and writer is not None:
+            model.eval()
+            fig = evaluate_tensorboard(test_for_check_per_epoch, model, optimizer, loss_fn, device, 0.5, model_type)
+            writer.add_figure('Model-performance', fig, epoch)
+            model.train()
+        
         if verbose:
             if epoch % verbose == 0:
                 print("epoch : {}, train loss : {:.3f}, valid loss : {:.3f}, train acc : {:.3f}, valid acc : {:.3f}, train f1 : {:.3f}, valid f1 : {:.3f}".format(
@@ -245,6 +256,9 @@ def train(
     print("training process finished, best loss : {:.3f} and best acc : {:.3f}, best f1 : {:.3f}, best epoch : {}".format(
         best_loss, best_acc, best_f1, best_epoch
     ))
+    
+    if writer:
+        writer.close()
 
     return  train_loss_list, train_acc_list, train_f1_list,  valid_loss_list,  valid_acc_list, valid_f1_list
 
@@ -265,7 +279,8 @@ def train_DRW(
     criteria : Literal["f1_score", "acc", "loss"] = "f1_score",
     cls_num_list : Optional[List] = None,
     betas : List = [0, 0.25, 0.75, 0.9],
-    model_type : Literal['single','multi'] = 'single'
+    model_type : Literal['single','multi'] = 'single',
+    test_for_check_per_epoch : Optional[DataLoader] = None,
     ):
 
     train_loss_list = []
@@ -296,7 +311,10 @@ def train_DRW(
         return per_cls_weights    
     
     # tensorboard
-    writer = SummaryWriter(exp_dir)  
+    if exp_dir:
+        writer = SummaryWriter(exp_dir)
+    else:
+        writer = None
     
     for epoch in tqdm(range(num_epoch), desc = "training process - Deferred Re-weighting"):
 
@@ -340,6 +358,12 @@ def train_DRW(
         
         writer.add_scalar('F1_score/train', train_f1, epoch)
         writer.add_scalar('F1_score/valid', valid_f1, epoch)
+        
+        if test_for_check_per_epoch and writer is not None:
+            model.eval()
+            fig = evaluate_tensorboard(test_for_check_per_epoch, model, optimizer, loss_fn, device, 0.5, model_type)
+            writer.add_figure('Model-performance', fig, epoch)
+            model.train()
 
         if verbose:
             if epoch % verbose == 0:
@@ -370,9 +394,11 @@ def train_DRW(
         # save the last parameters
         torch.save(model.state_dict(), save_last_dir)
 
-    # print("\n============ Report ==============\n")
     print("training process finished, best loss : {:.3f}, best acc : {:.3f}, best f1 : {:.3f}, best epoch : {}".format(
         best_loss, best_acc, best_f1, best_epoch
     ))
+    
+    if writer:
+        writer.close()
 
     return  train_loss_list, train_acc_list, train_f1_list,  valid_loss_list, valid_acc_list, valid_f1_list

@@ -1,11 +1,12 @@
 import numpy as np
+import pandas as pd
 import torch
 from torch.utils.data import DataLoader
 from typing import Optional, Literal
 import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, classification_report, f1_score
-from sklearn.metrics import roc_auc_score, roc_curve
+from sklearn.metrics import roc_auc_score, roc_curve, precision_recall_curve
 
 def MAE(pred, true):
     return np.mean(np.abs(pred - true))
@@ -110,6 +111,110 @@ def evaluate(
             f.write(summary)
 
     return test_loss, test_acc, test_f1
+
+
+def evaluate_tensorboard(
+    test_loader : DataLoader, 
+    model : torch.nn.Module,
+    optimizer : Optional[torch.optim.Optimizer],
+    loss_fn : Optional[torch.nn.Module]= None,
+    device : Optional[str] = "cpu",
+    threshold : float = 0.5,
+    model_type : Literal["single","multi","multi-GB"] = "single"
+    ):
+
+    test_loss = 0
+    total_pred = np.array([])
+    total_label = np.array([])
+
+    if device is None:
+        device = torch.device("cuda:0")
+
+    model.to(device)
+    model.eval()
+
+    total_size = 0
+
+    for idx, (data, target) in enumerate(test_loader):
+        with torch.no_grad():
+            optimizer.zero_grad()
+            
+            if model_type == "single":
+                data = data.to(device)
+                output = model(data)
+            elif model_type == "multi":
+                data_video = data['video'].to(device)
+                data_0D = data['0D'].to(device)
+                output = model(data_video, data_0D)
+            elif model_type == "multi-GB":
+                data_video = data['video'].to(device)
+                data_0D = data['0D'].to(device)
+                output, output_vis, output_ts = model(data_video, data_0D)
+                
+            target = target.to(device)
+            
+            if model_type == 'multi-GB':
+                loss = loss_fn(output, output_vis, output_ts, target)
+            else:
+                loss = loss_fn(output, target)
+    
+            test_loss += loss.item()
+            
+            pred = torch.nn.functional.softmax(output, dim = 1)[:,0].detach()
+            total_size += pred.size(0)
+            
+            total_pred = np.concatenate((total_pred, pred.cpu().numpy().reshape(-1,)))
+            total_label = np.concatenate((total_label, target.cpu().numpy().reshape(-1,)))
+
+    test_loss /= (idx + 1)
+    
+    lr_probs = total_pred
+    total_pred = np.where(total_pred > threshold, 0, 1)
+    
+    # f1 score
+    test_f1 = f1_score(total_label, total_pred, average = "macro")
+    
+    # roc score
+    ns_probs = [0 for _ in range(len(total_label))]
+    ns_auc = roc_auc_score(total_label, ns_probs, average="macro")
+    lr_auc = roc_auc_score(total_label, lr_probs, average = "macro")
+    
+    fig, axes = plt.subplots(2,2, sharex = False, figsize = (15, 10))
+    
+    # confusion matrix
+    conf_mat = confusion_matrix(total_label, total_pred)
+    s = sns.heatmap(
+        conf_mat, # conf_mat / np.sum(conf_mat),
+        annot = True,
+        fmt ='04d' ,# fmt = '.2f',
+        cmap = 'Blues',
+        xticklabels=["disruption","normal"],
+        yticklabels=["disruption","normal"],
+        ax = axes[0,0]
+    )
+
+    s.set_xlabel("Prediction")
+    s.set_ylabel("Actual")
+
+    # roc curve
+    ns_fpr, ns_tpr, _ = roc_curve(total_label, ns_probs)
+    lr_fpr, lr_tpr, _ = roc_curve(total_label, lr_probs)
+    
+    axes[0,1].plot(ns_fpr, ns_tpr, linestyle = '--', label = 'Random')
+    axes[0,1].plot(lr_fpr, lr_tpr, marker = '.', label = 'Model')
+    axes[0,1].set_xlabel('False Positive Rate')
+    axes[0,1].set_ylabel('True Positive Rate')
+    
+    lr_precision, lr_recall, _ = precision_recall_curve(total_label, lr_probs)
+    axes[1,0].plot(lr_recall, lr_precision, marker = '.', label = 'Model')
+    axes[1,0].set_xlabel("Recall")
+    axes[1,0].set_ylabel("Precision")
+    
+    clf_report = classification_report(total_label, total_pred, labels = [0,1], target_names = ["Disrupt", "Normal"], output_dict = True)
+    s2 = sns.heatmap(pd.DataFrame(clf_report).iloc[:-1, :].T, annot = True, ax = axes[1,1])
+    fig.tight_layout()
+    
+    return fig
 
 def evaluate_detail(
     train_loader : DataLoader,

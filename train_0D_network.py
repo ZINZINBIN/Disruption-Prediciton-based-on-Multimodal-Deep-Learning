@@ -145,7 +145,7 @@ if __name__ == "__main__":
     tag = "{}_clip_{}_dist_{}".format(args["tag"], args["seq_len"], args["dist"])
     save_best_dir = "./weights/{}_best.pt".format(tag)
     save_last_dir = "./weights/{}_last.pt".format(tag)
-    exp_dir = os.path.join(save_dir, "tensorboard_{}".format(tag))
+    exp_dir = os.path.join("./runs/", "tensorboard_{}".format(tag))
  
     # device allocation
     if(torch.cuda.device_count() >= 1):
