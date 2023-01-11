@@ -61,9 +61,11 @@ def preparing_0D_dataset(filepath : str = "./dataset/KSTAR_Disruption_ts_data_ex
     else:
         scaler = MinMaxScaler()
     
-    df_train[ts_cols] = scaler.fit_transform(df_train[ts_cols].values)
-    df_valid[ts_cols] = scaler.transform(df_valid[ts_cols].values)
-    df_test[ts_cols] = scaler.transform(df_test[ts_cols].values)
+    # df_train[ts_cols] = scaler.fit_transform(df_train[ts_cols].values)
+    # df_valid[ts_cols] = scaler.transform(df_valid[ts_cols].values)
+    # df_test[ts_cols] = scaler.transform(df_test[ts_cols].values)
+    
+    scaler.fit(df_train[ts_cols].values)
 
     return df_train, df_valid, df_test, scaler
     
@@ -111,9 +113,11 @@ def preparing_multi_data(root_dir : str, ts_filepath : str = "./dataset/KSTAR_Di
     else:
         scaler = MinMaxScaler()
     
-    df_train[ts_cols] = scaler.fit_transform(df_train[ts_cols].values)
-    df_valid[ts_cols] = scaler.transform(df_valid[ts_cols].values)
-    df_test[ts_cols] = scaler.transform(df_test[ts_cols].values)
+    # df_train[ts_cols] = scaler.fit_transform(df_train[ts_cols].values)
+    # df_valid[ts_cols] = scaler.transform(df_valid[ts_cols].values)
+    # df_test[ts_cols] = scaler.transform(df_test[ts_cols].values)
+    
+    scaler.fit(df_train[ts_cols].values)
 
     return (shot_train, df_train), (shot_valid, df_valid), (shot_test, df_test), scaler
     

@@ -46,7 +46,11 @@ Idea : core value or specific position (r = 1.8대비 r = 1.5 등), shot마다 �
 '''
 
 
-ts_cols = ['\\q95', '\\ipmhd', '\\kappa', '\\tritop', '\\tribot','\\betap','\\betan','\\li', '\\WTOT_DLM03']
+ts_cols = [
+    '\\q95', '\\ipmhd', '\\kappa', '\\tritop', '\\tribot',
+    '\\betap','\\betan','\\li', '\\WTOT_DLM03','\\ne_inter01', 
+    '\\TS_NE_CORE_AVG', '\\TS_TE_CORE_AVG'
+]
 
 # argument parser
 def parsing():
@@ -63,8 +67,8 @@ def parsing():
     parser.add_argument("--gpu_num", type = int, default = 0)
 
     # batch size / sequence length / epochs / distance / num workers / pin memory use
-    parser.add_argument("--batch_size", type = int, default = 1024)
-    parser.add_argument("--num_epoch", type = int, default = 256)
+    parser.add_argument("--batch_size", type = int, default = 256)
+    parser.add_argument("--num_epoch", type = int, default = 128)
     parser.add_argument("--seq_len", type = int, default = 21)
     parser.add_argument("--dist", type = int, default = 3)
     parser.add_argument("--num_workers", type = int, default = 4)
@@ -75,7 +79,6 @@ def parsing():
     parser.add_argument("--use_wandb", type = bool, default = False)
     parser.add_argument("--wandb_save_name", type = str, default = "SBERT-exp001")
     
-
     # optimizer : SGD, RMSProps, Adam, AdamW
     parser.add_argument("--optimizer", type = str, default = "AdamW")
     
@@ -113,7 +116,7 @@ def parsing():
     parser.add_argument("--alpha", type = float, default = 0.01)
     parser.add_argument("--dropout", type = float, default = 0.25)
     parser.add_argument("--feature_dims", type = int, default = 128)
-    parser.add_argument("--n_layers", type = int, default = 8)
+    parser.add_argument("--n_layers", type = int, default = 4)
     parser.add_argument("--n_heads", type = int, default = 8)
     parser.add_argument("--dim_feedforward", type = int, default = 512)
     parser.add_argument("--cls_dims", type = int, default = 128)
@@ -157,9 +160,9 @@ if __name__ == "__main__":
     ts_train, ts_valid, ts_test, ts_scaler = preparing_0D_dataset("./dataset/KSTAR_Disruption_ts_data_extend.csv", ts_cols = ts_cols, scaler = 'Robust')
     kstar_shot_list = pd.read_csv('./dataset/KSTAR_Disruption_Shot_List.csv', encoding = "euc-kr")
 
-    train_data = DatasetFor0D(ts_train, kstar_shot_list, seq_len = args['seq_len'], cols = ts_cols, dist = args['dist'], dt = 4 * 1 / 210)
-    valid_data = DatasetFor0D(ts_valid, kstar_shot_list, seq_len = args['seq_len'], cols = ts_cols, dist = args['dist'], dt = 4 * 1 / 210)
-    test_data = DatasetFor0D(ts_test, kstar_shot_list, seq_len = args['seq_len'], cols = ts_cols, dist = args['dist'], dt = 4 * 1 / 210)
+    train_data = DatasetFor0D(ts_train, kstar_shot_list, seq_len = args['seq_len'], cols = ts_cols, dist = args['dist'], dt = 4 * 1 / 210, scaler = ts_scaler)
+    valid_data = DatasetFor0D(ts_valid, kstar_shot_list, seq_len = args['seq_len'], cols = ts_cols, dist = args['dist'], dt = 4 * 1 / 210, scaler = ts_scaler)
+    test_data = DatasetFor0D(ts_test, kstar_shot_list, seq_len = args['seq_len'], cols = ts_cols, dist = args['dist'], dt = 4 * 1 / 210, scaler = ts_scaler)
     
     print("train data : {}, disrupt : {}, non-disrupt : {}".format(train_data.__len__(), train_data.n_disrupt, train_data.n_normal))
     print("valid data : {}, disrupt : {}, non-disrupt : {}".format(valid_data.__len__(), valid_data.n_disrupt, valid_data.n_normal))
@@ -248,7 +251,6 @@ if __name__ == "__main__":
     else:
         loss_fn = torch.nn.CrossEntropyLoss(reduction = "mean", weight = per_cls_weights)
 
-    
     # training process
     print("\n################# training process #################\n")
     if args['use_DRW']:
@@ -267,7 +269,8 @@ if __name__ == "__main__":
             max_norm_grad = 1.0,
             criteria = "f1_score",
             betas = betas,
-            model_type = "single"
+            model_type = "single",
+            test_for_check_per_epoch=test_loader
         )
         
     else:
@@ -286,7 +289,8 @@ if __name__ == "__main__":
             exp_dir = exp_dir,
             max_norm_grad = 1.0,
             criteria = "f1_score",
-            model_type = "single"
+            model_type = "single",
+            test_for_check_per_epoch=test_loader
         )
     
     # plot the learning curve

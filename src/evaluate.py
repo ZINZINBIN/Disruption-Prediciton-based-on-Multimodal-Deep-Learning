@@ -160,7 +160,7 @@ def evaluate_tensorboard(
     
             test_loss += loss.item()
             
-            pred = torch.nn.functional.softmax(output, dim = 1)[:,0].detach()
+            pred = torch.nn.functional.softmax(output, dim = 1)[:,1].detach()
             total_size += pred.size(0)
             
             total_pred = np.concatenate((total_pred, pred.cpu().numpy().reshape(-1,)))
@@ -169,7 +169,7 @@ def evaluate_tensorboard(
     test_loss /= (idx + 1)
     
     lr_probs = total_pred
-    total_pred = np.where(total_pred > threshold, 0, 1)
+    total_pred = np.where(total_pred > 1 - threshold, 1, 0)
     
     # f1 score
     test_f1 = f1_score(total_label, total_pred, average = "macro")

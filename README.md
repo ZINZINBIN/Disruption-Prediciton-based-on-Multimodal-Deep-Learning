@@ -95,7 +95,7 @@ python3 experiment.py --gpu_num {gpu_num} --loss_type {'CE', 'FOCAL', 'LDAM'}
 ```
 
 ## Detail
-### model to use
+### Model to use
 - Video encoder
     - R2Plus1D
     - Slowfast
@@ -108,8 +108,11 @@ python3 experiment.py --gpu_num {gpu_num} --loss_type {'CE', 'FOCAL', 'LDAM'}
 - Multimodal Model
     - Multimodal fusion model: video encoder + 0D data encoder
     - Tensor Fusion Network
+    - Other methods (Future work)
+        - Multimodal deep representation learning for video classification : https://link.springer.com/content/pdf/10.1007/s11280-018-0548-3.pdf?pdf=button
+        - Truly Multi-modal YouTube-8M Video Classification with Video, Audio, and Text : https://static.googleusercontent.com/media/research.google.com/ko//youtube8m/workshop2017/c06.pdf
 
-### technique or algorithm to use
+### Technique or algorithm to use
 - Solving imbalanced classificatio issue
     - Re-Sampling : ImbalancedWeightedSampler, Over-Sampling for minor classes
     - Re-Weighting : Define inverse class frequencies as weights to apply with loss function (CE, Focal Loss, LDAM Loss)
@@ -148,7 +151,10 @@ python3 experiment.py --gpu_num {gpu_num} --loss_type {'CE', 'FOCAL', 'LDAM'}
 ## Reference
 - R2Plus1D : A Spatial-temporal Attention Module for 3D Convolution Network in Action Recognition
 - Slowfast : SlowFast Networks for Video Recognition
+- Video Vision Transformer : ViViT: A Video Vision Transformer, Anurag Arnab et al, 2021
 - Multigrid : A Multigrid Method for Efficiently Training Video Models, Chao-Yuan Wu et al, 2020
 - Video Data Augmentation : VideoMix: Rethinking Data Augmentation for Video Classification
-- UTAE : Panoptic Segmentation of Satellite Image Time Series with Convolutional Temporal Attention Networks
 - LDAM : Label-distribution-aware Margin Loss
+- Focal Loss : Focal Loss for Dense object detection, TY Lin et al, 2017
+- Gradient Blending : What Makes Training Multi-Modal Classification Networks Hard?, Weiyao Wang et al, 2022
+- Tensor Fusion Network : Tensor Fusion Network for Multimodal Sentiment Analysis, Amir Zadeh et al, 2017

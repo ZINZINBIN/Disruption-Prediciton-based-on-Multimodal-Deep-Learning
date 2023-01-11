@@ -108,7 +108,7 @@ def parsing():
     # 0D model
     parser.add_argument("--dropout_0D", type = float, default = 0.25)
     parser.add_argument("--feature_dims_0D", type = int, default = 128)
-    parser.add_argument("--n_layers_0D", type = int, default = 8)
+    parser.add_argument("--n_layers_0D", type = int, default = 4)
     parser.add_argument("--n_heads_0D", type = int, default = 8)
     parser.add_argument("--dim_feedforward_0D", type = int, default = 512)
     
@@ -168,7 +168,7 @@ if __name__ == "__main__":
     tag = "{}_clip_{}_dist_{}".format(args["tag"], args["seq_len"], args["dist"])
     save_best_dir = "./weights/{}_best.pt".format(tag)
     save_last_dir = "./weights/{}_last.pt".format(tag)
-    exp_dir = os.path.join(save_dir, "tensorboard_{}".format(tag))
+    exp_dir = os.path.join("./runs/", "tensorboard_{}".format(tag))
  
     # device allocation
     if(torch.cuda.device_count() >= 1):
@@ -198,9 +198,9 @@ if __name__ == "__main__":
     (shot_train, ts_train), (shot_valid, ts_valid), (shot_test, ts_test), scaler = preparing_multi_data(root_dir, ts_filepath, ts_cols, scaler = 'Robust')
     kstar_shot_list = pd.read_csv('./dataset/KSTAR_Disruption_Shot_List_extend.csv', encoding = "euc-kr")
 
-    train_data = MultiModalDataset2(shot_train, kstar_shot_list, ts_train, ts_cols, augmentation=True, augmentation_args=augment_args, crop_size=args['image_size'], seq_len = args['seq_len'], dist = args['dist'], dt = 1 / 210)
-    valid_data = MultiModalDataset2(shot_valid, kstar_shot_list, ts_valid, ts_cols, augmentation=False, augmentation_args=None, crop_size=args['image_size'], seq_len = args['seq_len'], dist = args['dist'], dt = 1 / 210)
-    test_data = MultiModalDataset2(shot_test, kstar_shot_list, ts_test, ts_cols, augmentation=False, augmentation_args=None, crop_size=args['image_size'], seq_len = args['seq_len'], dist = args['dist'], dt = 1 / 210)
+    train_data = MultiModalDataset2(shot_train, kstar_shot_list, ts_train, ts_cols, augmentation=True, augmentation_args=augment_args, crop_size=args['image_size'], seq_len = args['seq_len'], dist = args['dist'], dt = 1 / 210, scaler = scaler)
+    valid_data = MultiModalDataset2(shot_valid, kstar_shot_list, ts_valid, ts_cols, augmentation=False, augmentation_args=None, crop_size=args['image_size'], seq_len = args['seq_len'], dist = args['dist'], dt = 1 / 210, scaler = scaler)
+    test_data = MultiModalDataset2(shot_test, kstar_shot_list, ts_test, ts_cols, augmentation=False, augmentation_args=None, crop_size=args['image_size'], seq_len = args['seq_len'], dist = args['dist'], dt = 1 / 210, scaler = scaler)
 
     print("train data : {}, disrupt : {}, non-disrupt : {}".format(train_data.__len__(), train_data.n_disrupt, train_data.n_normal))
     print("valid data : {}, disrupt : {}, non-disrupt : {}".format(valid_data.__len__(), valid_data.n_disrupt, valid_data.n_normal))
@@ -301,7 +301,8 @@ if __name__ == "__main__":
             max_norm_grad = 1.0,
             criteria = "f1_score",
             betas = betas,
-            model_type = "multi"
+            model_type = "multi",
+            test_for_check_per_epoch=test_loader
         )
     else:
         train_loss,  train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train(
@@ -319,7 +320,8 @@ if __name__ == "__main__":
             exp_dir = exp_dir,
             max_norm_grad = 1.0,
             criteria = "f1_score",
-            model_type = "multi"
+            model_type = "multi",
+            test_for_check_per_epoch=test_loader
         )
     
     

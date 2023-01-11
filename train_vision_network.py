@@ -28,12 +28,12 @@ def parsing():
     parser.add_argument("--gpu_num", type = int, default = 0)
 
     # data input shape 
-    parser.add_argument("--image_size", type = int, default = 256)
+    parser.add_argument("--image_size", type = int, default = 128)
     parser.add_argument("--patch_size", type = int, default = 16)
 
     # common argument
     # batch size / sequence length / epochs / distance / num workers / pin memory use
-    parser.add_argument("--batch_size", type = int, default = 8)
+    parser.add_argument("--batch_size", type = int, default = 32)
     parser.add_argument("--num_epoch", type = int, default = 128)
     parser.add_argument("--seq_len", type = int, default = 21)
     parser.add_argument("--dist", type = int, default = 3)

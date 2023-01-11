@@ -520,7 +520,7 @@ class DatasetForVideo2(Dataset):
 
 # Dataset for 0D data : different method used for label matching
 class DatasetFor0D(Dataset):
-    def __init__(self, ts_data : pd.DataFrame, disrupt_data : pd.DataFrame, seq_len : int = 21, cols : List = DEFAULT_TS_COLS, dist:int = 3, dt : float = 1.0 / 210 * 4):
+    def __init__(self, ts_data : pd.DataFrame, disrupt_data : pd.DataFrame, seq_len : int = 21, cols : List = DEFAULT_TS_COLS, dist:int = 3, dt : float = 1.0 / 210 * 4, scaler = None):
         self.ts_data = ts_data
         self.disrupt_data = disrupt_data
         self.seq_len = seq_len
@@ -530,27 +530,23 @@ class DatasetFor0D(Dataset):
 
         self.indices = []
         self.labels = []
-        self.shot_num = []
+        self.shot_num = [] # shot list with respond to indices
         self.get_shot_num = False
         
+        self.scaler = scaler
+        
         self.n_classes = 2
+        
+        shot_list = np.unique(self.ts_data.shot.values).tolist()
+        self.shot_list = [shot_num for shot_num in shot_list if shot_num in disrupt_data.shot.values]
         
         self.preprocessing()
         self._generate_index()
         
     def preprocessing(self):
-        # nan -> forward fill
-        self.ts_data[self.cols] = self.ts_data[self.cols].fillna(method='ffill')
-
-    def _generate_index(self):
-        shot_list = np.unique(self.ts_data.shot.values).tolist()
-        df_disruption = self.disrupt_data
-        
-        shot_list = [shot_num for shot_num in shot_list if shot_num in df_disruption.shot.values]
-        
         # ignore shot which have too many nan values
         shot_ignore = []
-        for shot in tqdm(shot_list, desc = 'extract the null data'):
+        for shot in tqdm(self.shot_list, desc = 'extract the null data'):
             df_shot = self.ts_data[self.ts_data.shot == shot]
             null_check = df_shot[self.cols].isna().sum()
             
@@ -558,10 +554,23 @@ class DatasetFor0D(Dataset):
                 if c > 0.5 * len(df_shot):
                     shot_ignore.append(shot)
                     break
-          
-        shot_list = [shot_num for shot_num in shot_list if shot_num not in shot_ignore]
+        
+        # update shot list with ignoring the null data
+        shot_list_new = [shot_num for shot_num in self.shot_list if shot_num not in shot_ignore]
+        self.shot_list = shot_list_new
+        
+        # 0D parameter : NAN -> forward fill
+        for shot in tqdm(self.shot_list, desc = 'replace nan value'):
+            df_shot = self.ts_data[self.ts_data.shot == shot].copy()
+            self.ts_data.loc[self.ts_data.shot == shot, self.cols] = df_shot[self.cols].fillna(method='ffill')
+            
+        if self.scaler:
+            self.ts_data[self.cols] = self.scaler.transform(self.ts_data[self.cols])
 
-        for shot in tqdm(shot_list):
+    def _generate_index(self):
+        df_disruption = self.disrupt_data
+        
+        for shot in tqdm(self.shot_list):
             tTQend = df_disruption[df_disruption.shot == shot].tTQend.values[0]
             tftsrt = df_disruption[df_disruption.shot == shot].tftsrt.values[0]
             tipminf = df_disruption[df_disruption.shot == shot].tipminf.values[0]
@@ -572,7 +581,7 @@ class DatasetFor0D(Dataset):
             indices = []
             labels = []
 
-            idx = int(tftsrt * self.dt)
+            idx = int(tftsrt / self.dt)
             idx_last = len(df_shot.index) - self.seq_len - self.dist
             
             while(idx < idx_last):
@@ -794,6 +803,7 @@ class MultiModalDataset2(Dataset):
         seq_len : int = 21,
         dist : int = 3,
         dt : float = 1.0 / 210 * 4,
+        scaler = None
         ):
         
         self.n_classes = 2
@@ -824,6 +834,9 @@ class MultiModalDataset2(Dataset):
         self.ts_cols = ts_cols
         self.dt = dt # time difference of 0D data
         
+        # scaler
+        self.scaler = scaler
+        
         # disruption info
         self.df_disrupt = df_disrupt
         
@@ -832,8 +845,16 @@ class MultiModalDataset2(Dataset):
             self.ts_cols = DEFAULT_TS_COLS
             
         # preprocessing for ts data
+        # step 1. middle value nan -> interpolation
+        self.ts_data[self.ts_cols] = self.ts_data[self.ts_cols].interpolate(method = "linear", limit_direction = 'forward')
+        
+        # step 2. nan for all value -> 0
         self.ts_data[self.ts_cols] = self.ts_data[self.ts_cols].fillna(method = 'ffill')
-            
+        
+        # data scaling for ts data
+        if self.scaler:
+            self.ts_data[self.ts_cols] = scaler.transform(self.ts_data[self.ts_cols])
+        
         # data augmentation setup
         if augmentation_args is None:
             if self.augmentation is True:  
