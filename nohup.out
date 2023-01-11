@@ -979,4 +979,37 @@ Non-trainable params: 0
 
 ################# training process #################
 
+training process:   0%|          | 0/128 [00:00<?, ?it/s]############### device setup ###################
+torch device avaliable :  True
+torch current device :  0
+torch device num :  4
+extract the null data:   0%|          | 0/122 [00:00<?, ?it/s]extract the null data:  26%|██▌       | 32/122 [00:00<00:00, 311.19it/s]extract the null data:  59%|█████▉    | 72/122 [00:00<00:00, 360.55it/s]extract the null data:  93%|█████████▎| 113/122 [00:00<00:00, 379.58it/s]extract the null data: 100%|██████████| 122/122 [00:00<00:00, 367.11it/s]
+# check | video data : 35846, 0D data : 35846
+extract the null data:   0%|          | 0/31 [00:00<?, ?it/s]extract the null data: 100%|██████████| 31/31 [00:00<00:00, 453.22it/s]
+# check | video data : 7635, 0D data : 7635
+extract the null data:   0%|          | 0/39 [00:00<?, ?it/s]extract the null data: 100%|██████████| 39/39 [00:00<00:00, 454.80it/s]
+# check | video data : 10015, 0D data : 10015
+train data : 35846, disrupt : 485, non-disrupt : 35361
+valid data : 7635, disrupt : 124, non-disrupt : 7511
+test data : 10015, disrupt : 156, non-disrupt : 9859
+
+################# model summary #################
+
+-----------------------------------------------------------------------------------
+             Layer (type)              Input Shape         Param #     Tr. Param #
+===================================================================================
+           ViViTEncoder-1     [8, 3, 21, 128, 128]       3,429,888       3,429,888
+   TStransformerEncoder-2               [8, 21, 9]         992,640         992,640
+                 Linear-3                 [8, 256]          32,896          32,896
+            BatchNorm1d-4                 [8, 128]             256             256
+                   ReLU-5                 [8, 128]               0               0
+                 Linear-6                 [8, 128]             258             258
+===================================================================================
+Total params: 4,455,938
+Trainable params: 4,455,938
+Non-trainable params: 0
+-----------------------------------------------------------------------------------
+
+################# training process #################
+
 training process:   0%|          | 0/128 [00:00<?, ?it/s]

@@ -10,3 +10,6 @@ dataset/*
 *.pt
 *.zip
 *.csv
+
+# tensorboard data log
+runs/*
