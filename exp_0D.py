@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 import argparse
-from src.CustomDataset import DatasetFor0D
+from src.dataset import DatasetFor0D
 from torch.utils.data import DataLoader
 from src.utils.utility import preparing_0D_dataset
 from src.evaluate import evaluate_detail

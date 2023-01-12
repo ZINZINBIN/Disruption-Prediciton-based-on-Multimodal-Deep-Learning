@@ -6,6 +6,8 @@ import numpy as np
 from pytorch_model_summary import summary
 from typing import Optional
 
+torch.backends.cudnn.benchmark = True
+
 class SubBatchNorm3d(nn.Module):
     def __init__(self, num_splits, **args):
         super(SubBatchNorm3d, self).__init__()

@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
-from src.models.ConvLSTM import ConvLSTM, ConvLSTMEncoder
+from src.models.CnnLSTM import ConvLSTM, ConvLSTMEncoder
 from src.models.ViViT import ViViTEncoder, ViViT
-from src.models.ts_transformer import TStransformerEncoder
+from src.models.ts_transformer import TStransformerEncoder, TStransformer
 from typing import Dict, Literal
 from pytorch_model_summary import summary
 
@@ -60,9 +60,12 @@ class MultiModalModel_GB(nn.Module):
         self.args_video = args_video
         self.args_0D = args_0D
         self.vis_model = ViViT(**args_video)
-        self.ts_model = ConvLSTM(**args_0D)        
         
-        linear_input_dims = self.ts_model.lstm_dim * 2 + self.vis_model.dim
+        # self.ts_model = ConvLSTM(**args_0D)     
+        # linear_input_dims = self.ts_model.lstm_dim * 2 + self.vis_model.dim
+        
+        self.ts_model = TStransformer(**args_0D)   
+        linear_input_dims = self.ts_model.feature_dims + self.vis_model.dim
         
         self.classifier = nn.Sequential(
             nn.Linear(linear_input_dims, linear_input_dims // 2),
@@ -143,10 +146,23 @@ class MultiModalModel_GB(nn.Module):
             out_multi = self.classifier(x)
     
             return out_multi if self.use_stream == 'multi' else (out_multi, out_vis, out_ts)
+        
+    def encode(self, x_vis : torch.Tensor, x_0D : torch.Tensor):
+        with torch.no_grad():
+            _ = self.vis_model(x_vis)
+            _ = self.ts_model(x_0D)
+            
+            vis_latent = self.vis_latent[0]
+            ts_latent = self.ts_latent[0]
+            x = torch.cat([vis_latent, ts_latent], axis = 1)
+            
+        return (x, vis_latent, ts_latent)
             
     def summary(self, device : str = 'cpu', show_input : bool = True, show_hierarchical : bool = False, print_summary : bool = True, show_parent_layers : bool = False):
         sample_video = torch.zeros((8,  self.args_video["in_channels"], self.args_video["n_frames"], self.args_video["image_size"], self.args_video["image_size"]), device = device)
-        sample_0D = torch.zeros((8, self.args_0D["seq_len"], self.args_0D["col_dim"]), device = device)
+        # sample_0D = torch.zeros((8, self.args_0D["seq_len"], self.args_0D["col_dim"]), device = device)
+        
+        sample_0D = torch.zeros((8, self.args_0D["max_len"], self.args_0D["n_features"]), device = device)
         return summary(self, sample_video, sample_0D, show_input = show_input, show_hierarchical=show_hierarchical, print_summary = print_summary, show_parent_layers=show_parent_layers)
 
 # Tensor Fusion Network

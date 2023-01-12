@@ -31,7 +31,12 @@ def train_per_epoch(
     total_size = 0
 
     for batch_idx, (data, target) in enumerate(train_loader):
-        optimizer.zero_grad()
+        
+        # optimizer.zero_grad()
+        
+        # Efficient zero-out gradients
+        for param in model.parameters():
+            param.grad = None
         
         if model_type == "single":
             data = data.to(device)
@@ -99,7 +104,7 @@ def valid_per_epoch(
 
     for batch_idx, (data, target) in enumerate(valid_loader):
         with torch.no_grad():
-            optimizer.zero_grad()
+            # optimizer.zero_grad()
             
             if model_type == "single":
                 data = data.to(device)

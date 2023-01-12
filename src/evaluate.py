@@ -168,6 +168,9 @@ def evaluate_tensorboard(
 
     test_loss /= (idx + 1)
     
+    # data clipping / postprocessing for ignoring nan, inf, too large data
+    total_pred = np.nan_to_num(total_pred, copy = True, nan = 0, posinf = 1.0, neginf = 0)
+    
     lr_probs = total_pred
     total_pred = np.where(total_pred > 1 - threshold, 1, 0)
     

@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 import argparse
-from src.CustomDataset import DatasetForVideo2
+from src.dataset import DatasetForVideo2
 from torch.utils.data import DataLoader
 from src.utils.utility import preparing_video_dataset
 from src.visualization.visualize_latent_space import visualize_2D_latent_space, visualize_3D_latent_space

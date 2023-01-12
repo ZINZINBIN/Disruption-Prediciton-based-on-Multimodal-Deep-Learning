@@ -4,7 +4,7 @@ import numpy as np
 import argparse
 import copy, os
 from torch.utils.data import DataLoader
-from src.CustomDataset import DEFAULT_TS_COLS, MultiModalDataset2
+from src.dataset import DEFAULT_TS_COLS, MultiModalDataset2
 from src.utils.sampler import ImbalancedDatasetSampler
 from src.utils.utility import preparing_multi_data, plot_learning_curve
 from src.train import train, train_DRW
@@ -13,7 +13,7 @@ from src.loss import LDAMLoss, FocalLoss
 from src.visualization.visualize_latent_space import visualize_3D_latent_space_multi
 from src.GradientBlending import GradientBlending, train_GB_dynamic, train_GB
 from src.CCA import DeepCCA, train_cca, CCALoss, evaluate_cca_loss
-from src.models.MultiModal import MultiModalModel
+from src.models.MultiModal import MultiModalModel, MultiModalModel_GB
 
 # argument parser
 def parsing():
@@ -81,9 +81,15 @@ def parsing():
     # Deffered Re-weighting
     parser.add_argument("--use_DRW", type = bool, default = False)
     parser.add_argument("--beta", type = float, default = 0.25)
-
+    
+    # Gradient Blending for Multi-modal learning
+    parser.add_argument("--use_GB", type = bool, default = False)
+    parser.add_argument("--w_fusion", type = float, default = 0.5)
+    parser.add_argument("--w_vis", type = float, default = 0.2)
+    parser.add_argument("--w_0D", type = float, default = 0.3)
+    
     # loss type : CE, Focal, LDAM
-    parser.add_argument("--loss_type", type = str, default = "Focal")
+    parser.add_argument("--loss_type", type = str, default = "Focal", choices = ['CE','Focal', 'LDAM'])
     
     # LDAM Loss parameter
     parser.add_argument("--max_m", type = float, default = 0.5)
@@ -131,7 +137,7 @@ if __name__ == "__main__":
     args = parsing()
     
     # 0D data columns
-    ts_cols = ['\\q95', '\\ipmhd', '\\kappa', '\\tritop', '\\tribot','\\betap','\\betan','\\li', '\\WTOT_DLM03']
+    ts_cols = ['\\q95', '\\ipmhd', '\\kappa', '\\tritop', '\\tribot','\\betap','\\betan','\\li', '\\WTOT_DLM03', '\\TS_NE_CORE_AVG', '\\TS_TE_CORE_AVG',]
     
     # default argument
     args_video = {
@@ -165,7 +171,39 @@ if __name__ == "__main__":
     if not os.path.isdir(save_dir):
         os.mkdir(save_dir)
     
-    tag = "{}_clip_{}_dist_{}".format(args["tag"], args["seq_len"], args["dist"])
+    # tag : {model_name}_clip_{seq_len}_dist_{pred_len}_{Loss-type}_{Boosting-type}_{GB}
+    loss_type = args['loss_type']
+    
+    if args['use_GB']:
+        print("Multimodal learning with Gradient Blending, DRW option is off")
+        args['use_DRW'] = False
+    
+    if not args['use_GB'] and args['use_DRW']:
+        print("Deferred Re-Weighting is selected, Re-Weighting option is off")
+        args['use_RW'] = False
+    
+    if args['use_sampling'] and not args['use_weighting'] and not args['use_DRW']:
+        boost_type = "RS"
+    elif args['use_sampling'] and args['use_weighting'] and not args['use_DRW']:
+        boost_type = "RS_RW"
+    elif args['use_sampling'] and not args['use_weighting'] and args['use_DRW']:
+        boost_type = "RS_DRW"
+    elif args['use_sampling'] and args['use_weighting'] and args['use_DRW']:
+        boost_type = "RS_DRW"
+    elif not args['use_sampling'] and args['use_weighting'] and not args['use_DRW']:
+        boost_type = "RW"
+    elif not args['use_sampling'] and not args['use_weighting'] and args['use_DRW']:
+        boost_type = "DRW"
+    elif not args['use_sampling'] and args['use_weighting'] and args['use_DRW']:
+        boost_type = "DRW"
+    elif not args['use_sampling'] and not args['use_weighting'] and not args['use_DRW']:
+        boost_type = "Normal"
+    
+    if args['use_GB']:
+        tag = "{}_clip_{}_dist_{}_{}_{}_GB".format(args["tag"], args["seq_len"], args["dist"], loss_type, boost_type)
+    else:
+        tag = "{}_clip_{}_dist_{}_{}_{}".format(args["tag"], args["seq_len"], args["dist"], loss_type, boost_type)
+    
     save_best_dir = "./weights/{}_best.pt".format(tag)
     save_last_dir = "./weights/{}_last.pt".format(tag)
     exp_dir = os.path.join("./runs/", "tensorboard_{}".format(tag))
@@ -210,12 +248,20 @@ if __name__ == "__main__":
     train_data.get_num_per_cls()
     cls_num_list = train_data.get_cls_num_list()
 
-    model = MultiModalModel(
-        2,
-        args['seq_len'],
-        args_video,
-        args_0D
-    )
+    if args['use_GB']:
+        model = MultiModalModel_GB(
+             2,
+            args_video,
+            args_0D
+        )
+        
+    else:
+        model = MultiModalModel(
+            2,
+            args['seq_len'],
+            args_video,
+            args_0D
+        )
     
     print("\n################# model summary #################\n")
     model.summary()
@@ -282,10 +328,42 @@ if __name__ == "__main__":
         
     else:
         loss_fn = torch.nn.CrossEntropyLoss(reduction = "mean", weight = per_cls_weights)
+        
+        
+    # Gradient Blending
+    if args['use_GB']:
+        w_fusion = 0.5
+        w_vis = 0.1
+        w_0D = 0.4
+        loss_fn = GradientBlending(
+            copy.deepcopy(loss_fn),
+            copy.deepcopy(loss_fn),
+            copy.deepcopy(loss_fn),
+            w_vis,
+            w_0D,
+            w_fusion   
+        )
 
     # training process
     print("\n################# training process #################\n")
-    if args['use_DRW']:
+    if args['use_GB']:
+        train_loss, train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train_GB(
+            train_loader,
+            valid_loader,
+            model,
+            optimizer,
+            scheduler,
+            loss_fn,
+            device,
+            args['num_epoch'],
+            args['verbose'],
+            save_best_dir,
+            save_last_dir,
+            1.0,
+            "f1_score"
+        )
+        
+    elif args['use_DRW']:
         train_loss,  train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train_DRW(
             train_loader,
             valid_loader,
@@ -336,6 +414,11 @@ if __name__ == "__main__":
     save_conf = os.path.join(save_dir, "{}_test_confusion.png".format(tag))
     save_txt = os.path.join(save_dir, "{}_test_eval.txt".format(tag))
     
+    if args['use_GB']:
+        model_type = "multi-GB"
+    else:
+        model_type = "multi"
+    
     test_loss, test_acc, test_f1 = evaluate(
         test_loader,
         model,
@@ -344,7 +427,7 @@ if __name__ == "__main__":
         device,
         save_conf = save_conf,
         save_txt = save_txt,
-        model_type = 'multi'
+        model_type = model_type
     )
     
     # Additional analyzation

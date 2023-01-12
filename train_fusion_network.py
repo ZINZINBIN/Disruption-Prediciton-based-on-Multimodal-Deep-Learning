@@ -4,7 +4,7 @@ import numpy as np
 import argparse
 import copy
 from torch.utils.data import DataLoader
-from src.CustomDataset import DEFAULT_TS_COLS, MultiModalDataset
+from src.dataset import DEFAULT_TS_COLS, MultiModalDataset
 from src.utils.sampler import ImbalancedDatasetSampler
 from src.train import train, train_DRW
 from src.evaluate import evaluate

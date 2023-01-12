@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 import argparse
-from src.CustomDataset import DatasetForVideo2
+from src.dataset import DatasetForVideo2
 from torch.utils.data import DataLoader
 from src.utils.sampler import ImbalancedDatasetSampler
 from src.utils.utility import preparing_video_dataset, plot_learning_curve, generate_prob_curve
@@ -12,12 +12,16 @@ from src.train import train, train_DRW
 from src.evaluate import evaluate
 from src.loss import FocalLoss, LDAMLoss
 from src.models.ViViT import ViViT
+from src.models.R2Plus1D import R2Plus1DClassifier
+from src.models.resnet import Bottleneck3D
+from src.models.slowfast import SlowFast
 
 # argument parser
 def parsing():
     parser = argparse.ArgumentParser(description="training disruption prediction model with video data")
     
     # tag and result directory
+    parser.add_argument("--model", type = str, default = 'ViViT', choices=['ViViT', 'SlowFast', 'R2Plus1D'])
     parser.add_argument("--tag", type = str, default = "ViViT")
     parser.add_argument("--save_dir", type = str, default = "./results")
     
@@ -81,7 +85,7 @@ def parsing():
     parser.add_argument("--beta", type = float, default = 0.25)
 
     # loss type : CE, Focal, LDAM
-    parser.add_argument("--loss_type", type = str, default = "Focal")
+    parser.add_argument("--loss_type", type = str, default = "Focal", choices = ['CE','Focal', 'LDAM'])
     
     # LDAM Loss parameter
     parser.add_argument("--max_m", type = float, default = 0.5)
@@ -94,7 +98,8 @@ def parsing():
     parser.add_argument("--verbose", type = int, default = 4)
     
     # model setup
-    parser.add_argument("--alpha", type = float, default = 0.01)
+    # ViViT
+    parser.add_argument("--alpha", type = float, default = 1.0)
     parser.add_argument("--dropout", type = float, default = 0.25)
     parser.add_argument("--embedd_dropout", type = float, default = 0.25)
     parser.add_argument("--dim", type = int, default = 128)
@@ -102,6 +107,13 @@ def parsing():
     parser.add_argument("--d_head", type = int, default = 64)
     parser.add_argument("--scale_dim", type = int, default = 4)
     parser.add_argument("--depth", type = int, default = 4)
+    
+    # SlowFast
+    parser.add_argument("--tau_alpha", type = int, default = 4)
+    parser.add_argument("--tau_fast", type = int, default = 1)
+    
+    # R2Plus1D + SlowFast
+    parser.add_argument("--n_layer", type = int, default = 1)
     
     args = vars(parser.parse_args())
 
@@ -126,8 +138,33 @@ if __name__ == "__main__":
     
     if not os.path.isdir(save_dir):
         os.mkdir(save_dir)
+        
+    if args['model'] == 'SlowFast' and args['seq_len'] % 2 == 1:
+        print("SlowFast : seq_len must be even number, seq_len-1 as input")
+        args['seq_len'] -= 1
     
-    tag = "{}_clip_{}_dist_{}".format(args["tag"], args["seq_len"], args["dist"])
+    # tag : {model_name}_clip_{seq_len}_dist_{pred_len}_{Loss-type}_{Boosting-type}
+    loss_type = args['loss_type']
+    
+    if args['use_sampling'] and not args['use_weighting'] and not args['use_DRW']:
+        boost_type = "RS"
+    elif args['use_sampling'] and args['use_weighting'] and not args['use_DRW']:
+        boost_type = "RS_RW"
+    elif args['use_sampling'] and not args['use_weighting'] and args['use_DRW']:
+        boost_type = "RS_DRW"
+    elif args['use_sampling'] and args['use_weighting'] and args['use_DRW']:
+        boost_type = "RS_DRW"
+    elif not args['use_sampling'] and args['use_weighting'] and not args['use_DRW']:
+        boost_type = "RW"
+    elif not args['use_sampling'] and not args['use_weighting'] and args['use_DRW']:
+        boost_type = "DRW"
+    elif not args['use_sampling'] and args['use_weighting'] and args['use_DRW']:
+        boost_type = "DRW"
+    elif not args['use_sampling'] and not args['use_weighting'] and not args['use_DRW']:
+        boost_type = "Normal"
+    
+    tag = "{}_clip_{}_dist_{}_{}_{}".format(args["tag"], args["seq_len"], args["dist"], loss_type, boost_type)
+
     save_best_dir = "./weights/{}_best.pt".format(tag)
     save_last_dir = "./weights/{}_last.pt".format(tag)
     exp_dir = os.path.join("./runs/", "tensorboard_{}".format(tag))
@@ -172,24 +209,48 @@ if __name__ == "__main__":
     cls_num_list = train_data.get_cls_num_list()
 
     # define model
-    model = ViViT(
-        image_size = args['image_size'],
-        patch_size = args['patch_size'],
-        n_classes = 2,
-        n_frames = args['seq_len'],
-        dim = args['dim'],
-        depth = args['depth'],
-        n_heads = args['n_heads'],
-        pool = "cls",
-        in_channels = 3,
-        d_head = args['d_head'],
-        dropout = args['dropout'],
-        embedd_dropout=args['embedd_dropout'],
-        scale_dim = args['scale_dim']
-    )
+    if args['model'] == 'ViViT':
+        model = ViViT(
+            image_size = args['image_size'],
+            patch_size = args['patch_size'],
+            n_classes = 2,
+            n_frames = args['seq_len'],
+            dim = args['dim'],
+            depth = args['depth'],
+            n_heads = args['n_heads'],
+            pool = "cls",
+            in_channels = 3,
+            d_head = args['d_head'],
+            dropout = args['dropout'],
+            embedd_dropout=args['embedd_dropout'],
+            scale_dim = args['scale_dim'],
+            alpha = args['alpha']
+        )
+        
+    elif args['model'] == 'SlowFast':
+                   
+        model = SlowFast(
+            input_shape = (3, args['seq_len'], args['image_size'], args['image_size']),
+            block = Bottleneck3D,
+            layers = [1,args['n_layer'],args['n_layer'],1],
+            alpha = args['tau_alpha'],
+            tau_fast = args['tau_fast'],
+            num_classes = 2,
+            alpha_elu = args['alpha'],
+        )
+        
+    elif args['model'] == 'R2Plus1D':
+        model = R2Plus1DClassifier(
+            input_size  = (3, args['seq_len'], args['image_size'], args['image_size']),
+            num_classes = 2, 
+            layer_sizes = [1,args['n_layer'],args['n_layer'],1],
+            pretrained = False, 
+            alpha = args['alpha']
+        )
+        
     
     print("\n################# model summary #################\n")
-    model.summary(show_hierarchical = False)
+    model.summary(show_hierarchical = False, show_parent_layers=True)
     model.to(device)
 
     # optimizer

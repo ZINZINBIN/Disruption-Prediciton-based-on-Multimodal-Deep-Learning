@@ -5,7 +5,7 @@ import argparse
 import glob2
 from typing import List
 from tqdm.auto import tqdm
-from CustomDataset import DEFAULT_TS_COLS
+from src.dataset import DEFAULT_TS_COLS
 
 # parser
 parser = argparse.ArgumentParser(description="generate dataframe for multi-modal dataset from video and numerical data")

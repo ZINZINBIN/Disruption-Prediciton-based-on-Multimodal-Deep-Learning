@@ -1,11 +1,3 @@
-# ignore files in datasets 
-# dataset/dataloaders
-# dataset/dur0.1_dis0
-# dataset/dur0.1_dis10
-# dataset/raw_videos
-# dataset/dataset.zip
-dataset/*
-
 # ignore weight and zip file
 *.pt
 *.zip
@@ -13,3 +5,12 @@ dataset/*
 
 # tensorboard data log
 runs/*
+
+# result file
+results/*
+
+# weights
+weights/*
+
+# dataset
+dataset/*

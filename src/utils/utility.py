@@ -3,12 +3,13 @@ from torch.utils.data import Dataset
 import cv2, os, glob2
 import pandas as pd
 import numpy as np
-from typing import Optional,List, Literal, Union
+from typing import Optional, List, Literal, Union, Tuple
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 import torchvision.transforms as T
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import RobustScaler, MinMaxScaler, StandardScaler
+from sklearn.base import BaseEstimator
 
 # train-test split for video data model
 def preparing_video_dataset(root_dir : str):
@@ -228,7 +229,6 @@ def load_frames_with_interval(file_path : str, height : int = 256, width : int =
     return buffer
 
 
-
 def crop(buffer, original_height, original_width, crop_size):
 
     mid_x, mid_y = original_height // 2, original_width // 2
@@ -444,6 +444,7 @@ class DatasetFor0D(Dataset):
         seq_len : int = 21, 
         dist:int = 3, 
         dt : float = 1.0 / 210 * 4,
+        scaler : BaseEstimator = None,
         ):
         
         self.ts_data = ts_data
@@ -454,7 +455,11 @@ class DatasetFor0D(Dataset):
         self.indices = [idx for idx in range(0, len(self.ts_data) - seq_len - dist)]
         
         from sklearn.preprocessing import RobustScaler
-        self.scaler = RobustScaler()
+        if scaler is None:
+            self.scaler = RobustScaler()
+        else:
+            self.scaler = scaler
+            
         self.ts_data[cols] = self.scaler.fit_transform(self.ts_data[cols].values)
    
     def __len__(self):
@@ -472,12 +477,143 @@ class DatasetFor0D(Dataset):
         return data
 
 class MultiModalDataset(Dataset):
-    def __init__(self):
-        pass
+    def __init__(
+        self,
+        root_dir : Optional[str],
+        ts_data : pd.DataFrame, 
+        ts_cols : List, 
+        resize_height : Optional[int] = 256,
+        resize_width : Optional[int] = 256,
+        crop_size : Optional[int] = 224,
+        frame_srt : int = 0,
+        frame_end : int = -1,
+        t_srt : int = 0,
+        t_end : int = -1,
+        seq_len : int = 21, 
+        dist:int = 3, 
+        dt : float = 1.0 / 210 * 4,
+        scaler : Optional[BaseEstimator] = None,
+        ):
+        # properties of multi-modal data
+        self.root_dir = root_dir
+        self.ts_data = ts_data
+        self.ts_cols = ts_cols
+        self.resize_height = resize_height
+        self.resize_width = resize_width
+        self.crop_size = crop_size
+        self.seq_len = seq_len
+        self.dist = dist
+        self.dt = dt
+        
+        # get this value from disruption_list data
+        self.frame_srt = frame_srt
+        self.frame_end = frame_end
+        self.t_srt = t_srt
+        self.t_end = t_end
+        
+        # we have to focus on the disruptive phase
+        # so, we will match the indices of video and ts data for backward direction
+        # video path for showing performance -> Not used for prediction
+        paths = glob2.glob(os.path.join(root_dir, "*"))
+        
+        # this is for showing performance : video path indices
+        self.paths = sorted(paths)
+        
+        # video indices :  this will be used for prediction
+        self.video_indices = None
+        
+        # ts data indices : tihs also will be used for prediction
+        self.ts_indices = None
+        
+        # scaler for ts data
+        if scaler is None:
+            self.scaler = RobustScaler()
+            self.ts_data[ts_cols] = self.scaler.fit_transform(self.ts_data[ts_cols].values)
+        else:
+            self.scaler = scaler
+            self.ts_data[ts_cols] = self.scaler.transform(self.ts_data[ts_cols].values)
+            
+        # indice matching process
+        video_indices = [i for i in reversed(range(frame_end, frame_srt, -1))]
+            
+        # ts indices
+        ts_idx_end = len(ts_data) - len(ts_data[ts_data.time > t_end])
+        ts_idx_start = int(t_srt * self.dt)
+        
+        ts_indices = [i for i in reversed(range(ts_idx_end, ts_idx_start, -1))]
+        
+        
+        
+        
+        
+        
     def __getitem__(self, idx : int):
-        pass
+        data_vis = self.get_video_data(idx)
+        data_ts = self.get_ts_data(idx)
+        return data_vis, data_ts
+    
     def __len__(self):
         pass
+
+    def get_video_data(self, index : int):
+        buffer = self.load_frames(index)
+        
+        if buffer.shape[0] < self.seq_len:
+            buffer = self.refill_temporal_slide(buffer)
+            
+        buffer = self.crop(buffer, self.seq_len, self.crop_size)
+        buffer = self.normalize(buffer)
+        buffer = self.to_tensor(buffer)
+        return torch.from_numpy(buffer)
+    
+    def refill_temporal_slide(self, buffer:np.ndarray):
+        for _ in range(self.seq_len - buffer.shape[0]):
+            frame_new = buffer[-1].reshape(1, self.resize_height, self.resize_width, 3)
+            buffer = np.concatenate((buffer, frame_new))
+        return buffer
+
+    def normalize(self, buffer):
+        for i, frame in enumerate(buffer):
+            frame -= np.array([[[90.0, 98.0, 102.0]]])
+            buffer[i] = frame
+        return buffer
+
+    def to_tensor(self, buffer:Union[np.ndarray, torch.Tensor]):
+        return buffer.transpose((3, 0, 1, 2))
+
+    def crop(self, buffer : Union[np.ndarray, torch.Tensor], clip_len : int, crop_size : int, is_random : bool = False):
+        # randomly select time index for temporal jittering
+        if buffer.shape[0] < clip_len :
+            time_index = np.random.randint(abs(buffer.shape[0] - clip_len))
+        elif buffer.shape[0] == clip_len :
+            time_index = 0
+        else :
+            time_index = np.random.randint(buffer.shape[0] - clip_len)
+
+        if not is_random:
+            original_height = self.resize_height
+            original_width = self.resize_width
+            mid_x, mid_y = original_height // 2, original_width // 2
+            offset_x, offset_y = crop_size // 2, crop_size // 2
+            buffer = buffer[time_index : time_index + clip_len, mid_x - offset_x:mid_x+offset_x, mid_y - offset_y: mid_y+ offset_y, :]
+        else:
+            # Randomly select start indices in order to crop the video
+            height_index = np.random.randint(buffer.shape[1] - crop_size)
+            width_index = np.random.randint(buffer.shape[2] - crop_size)
+
+            buffer = buffer[time_index:time_index + clip_len,
+                    height_index:height_index + crop_size,
+                    width_index:width_index + crop_size, :]
+
+        return buffer
+
+    def get_ts_data(self, idx : int):
+        idx_srt = self.ts_indices[idx]
+        idx_end = idx_srt + self.seq_len
+        data = self.ts_data[self.ts_cols].iloc[idx_srt + 1: idx_end + 1].values
+        data = torch.from_numpy(data)
+        return data
+
 
 # function for ploting the probability curve for video network
 def generate_prob_curve(
@@ -513,7 +649,7 @@ def generate_prob_curve(
     ts_data_0D = ts_data[ts_data['shot'] == shot_num]
     
     t = ts_data_0D.time
-    ip = ts_data_0D['\\ipmhd'] * (-1)
+    ip = ts_data_0D['\\ipmhd']
     kappa = ts_data_0D['\\kappa']
     betap = ts_data_0D['\\betap']
     betan = ts_data_0D['\\betan']
@@ -660,6 +796,7 @@ def generate_prob_curve_from_0D(
     seq_len : Optional[int] = None,
     dist : Optional[int] = None,
     dt : Optional[int] = None,
+    scaler : Optional[BaseEstimator] = None,
     ):
     
     # obtain tTQend, tipmin and tftsrt
@@ -682,7 +819,7 @@ def generate_prob_curve_from_0D(
     ts_data_0D = ts_data[ts_data['shot'] == shot_num]
     
     t = ts_data_0D.time
-    ip = ts_data_0D['\\ipmhd'] * (-1)
+    ip = ts_data_0D['\\ipmhd']
     kappa = ts_data_0D['\\kappa']
     betap = ts_data_0D['\\betap']
     betan = ts_data_0D['\\betan']
@@ -696,7 +833,7 @@ def generate_prob_curve_from_0D(
     te = ts_data_0D['\\TS_CORE10:CORE10_TE']
     
     # video data
-    dataset = DatasetFor0D(ts_data_0D, ts_cols, seq_len, dist, dt)
+    dataset = DatasetFor0D(ts_data_0D, ts_cols, seq_len, dist, dt, scaler)
 
     prob_list = []
     is_disruption = []
@@ -825,8 +962,10 @@ def generate_prob_curve_from_0D(
 
     return time_x, prob_list
 
+def generate_prob_curve_from_multi():
+    pass
 
-from typing import Tuple
+
 def plot_learning_curve(train_loss, valid_loss, train_f1, valid_f1, figsize : Tuple[int,int] = (12,6), save_dir : str = "./results/learning_curve.png"):
     x_epochs = range(1, len(train_loss) + 1)
 
@@ -847,6 +986,7 @@ def plot_learning_curve(train_loss, valid_loss, train_f1, valid_f1, figsize : Tu
     plt.title("train and valid f1 score curve")
     plt.legend()
     plt.savefig(save_dir)
+    
 
 def show_data_composition(root_dir : str):
     path_disrupt = os.path.join(root_dir, 'disruption')

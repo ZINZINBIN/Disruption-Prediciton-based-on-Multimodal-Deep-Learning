@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 import argparse
-from src.CustomDataset import DatasetFor0D
+from src.dataset import DatasetFor0D
 from torch.utils.data import DataLoader
 from src.utils.sampler import ImbalancedDatasetSampler
 from src.utils.utility import preparing_0D_dataset, plot_learning_curve, generate_prob_curve_from_0D
@@ -45,7 +45,6 @@ Idea : core value or specific position (r = 1.8대비 r = 1.5 등), shot마다 �
 
 '''
 
-
 ts_cols = [
     '\\q95', '\\ipmhd', '\\kappa', '\\tritop', '\\tribot',
     '\\betap','\\betan','\\li', '\\WTOT_DLM03','\\ne_inter01', 
@@ -72,7 +71,7 @@ def parsing():
     parser.add_argument("--seq_len", type = int, default = 21)
     parser.add_argument("--dist", type = int, default = 3)
     parser.add_argument("--num_workers", type = int, default = 4)
-    parser.add_argument("--pin_memory", type = bool, default = False)
+    parser.add_argument("--pin_memory", type = bool, default = True)
 
     # model weight / save process
     # wandb setting
@@ -100,7 +99,7 @@ def parsing():
     parser.add_argument("--beta", type = float, default = 0.25)
 
     # loss type : CE, Focal, LDAM
-    parser.add_argument("--loss_type", type = str, default = "Focal")
+    parser.add_argument("--loss_type", type = str, default = "Focal", choices = ['CE','Focal', 'LDAM'])
     
     # LDAM Loss parameter
     parser.add_argument("--max_m", type = float, default = 0.5)
@@ -145,7 +144,28 @@ if __name__ == "__main__":
     if not os.path.isdir(save_dir):
         os.mkdir(save_dir)
     
-    tag = "{}_clip_{}_dist_{}".format(args["tag"], args["seq_len"], args["dist"])
+    # tag : {model_name}_clip_{seq_len}_dist_{pred_len}_{Loss-type}_{Boosting-type}
+    loss_type = args['loss_type']
+    
+    if args['use_sampling'] and not args['use_weighting'] and not args['use_DRW']:
+        boost_type = "RS"
+    elif args['use_sampling'] and args['use_weighting'] and not args['use_DRW']:
+        boost_type = "RS_RW"
+    elif args['use_sampling'] and not args['use_weighting'] and args['use_DRW']:
+        boost_type = "RS_DRW"
+    elif args['use_sampling'] and args['use_weighting'] and args['use_DRW']:
+        boost_type = "RS_DRW"
+    elif not args['use_sampling'] and args['use_weighting'] and not args['use_DRW']:
+        boost_type = "RW"
+    elif not args['use_sampling'] and not args['use_weighting'] and args['use_DRW']:
+        boost_type = "DRW"
+    elif not args['use_sampling'] and args['use_weighting'] and args['use_DRW']:
+        boost_type = "DRW"
+    elif not args['use_sampling'] and not args['use_weighting'] and not args['use_DRW']:
+        boost_type = "Normal"
+    
+    tag = "{}_clip_{}_dist_{}_{}_{}".format(args["tag"], args["seq_len"], args["dist"], loss_type, boost_type)
+    
     save_best_dir = "./weights/{}_best.pt".format(tag)
     save_last_dir = "./weights/{}_last.pt".format(tag)
     exp_dir = os.path.join("./runs/", "tensorboard_{}".format(tag))
@@ -365,5 +385,6 @@ if __name__ == "__main__":
         shot_num = test_shot_num,
         seq_len = args['seq_len'],
         dist = args['dist'],
-        dt = 4 / 210
+        dt = 4 / 210,
+        scaler = ts_scaler
     )

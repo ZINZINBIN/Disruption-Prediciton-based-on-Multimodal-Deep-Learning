@@ -4,8 +4,8 @@ import numpy as np
 import pandas as pd
 import gc
 import os
-from src.CustomDataset import DatasetFor0D
-from src.models.ConvLSTM import ConvLSTM
+from src.dataset import DatasetFor0D
+from src.models.CnnLSTM import ConvLSTM
 from src.models.ts_transformer import TStransformer
 from src.utils.sampler import ImbalancedDatasetSampler
 from torch.utils.data import DataLoader

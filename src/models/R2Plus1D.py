@@ -6,6 +6,8 @@ from torch.nn.modules.utils import _triple
 from pytorch_model_summary import summary
 import torch.nn.functional as F
 
+torch.backends.cudnn.benchmark = True
+
 # Block Component
 # ConvBlock for Image
 class ConvBlock(nn.Module):
@@ -230,7 +232,7 @@ class R2Plus1DClassifier(nn.Module):
         num_classes : int = 2, 
         layer_sizes : List[int] = [4,4,4,4], 
         pretrained : bool = False, 
-        alpha : float = 0.01
+        alpha : float = 1.0
         ):
         super(R2Plus1DClassifier, self).__init__()
         self.input_size = input_size
@@ -239,10 +241,10 @@ class R2Plus1DClassifier(nn.Module):
         linear_dims = self.get_res2plus1d_output_size()[1]
 
         self.linear = nn.Sequential(
-            nn.Linear(linear_dims, 128),
-            nn.BatchNorm1d(128),
-            nn.LeakyReLU(alpha),
-            nn.Linear(128, num_classes)
+            nn.Linear(linear_dims, linear_dims//2),
+            nn.BatchNorm1d(linear_dims//2),
+            nn.ELU(alpha),
+            nn.Linear(linear_dims//2, num_classes)
         )
 
         self.__init_weight()
@@ -280,10 +282,10 @@ class R2Plus1DClassifier(nn.Module):
         x = self.linear(x)
         return x
 
-    def summary(self)->None:
-        input_size = (1, *self.input_size)
-        sample = torch.zeros(input_size).to(next(self.parameters()).device)
-        print(summary(self, sample, max_depth = None, show_parent_layers = False, show_input = True))
+    def summary(self, device : str = 'cpu', show_input : bool = True, show_hierarchical : bool = True, print_summary : bool = False, show_parent_layers : bool = False)->None:
+        input_size = (8, *self.input_size)
+        sample = torch.zeros(input_size, device = device)
+        return print(summary(self, sample, show_input = show_input, show_hierarchical=show_hierarchical, print_summary = print_summary, show_parent_layers=show_parent_layers))
 
 class SpatialTransformer3D(nn.Module):
     def __init__(self, 

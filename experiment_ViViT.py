@@ -2,7 +2,7 @@ import torch
 import argparse
 import numpy as np
 import gc, os, cv2
-from src.CustomDataset import CustomDataset
+from src.dataset import CustomDataset
 from src.models.ViViT import ViViT
 from src.utils.sampler import ImbalancedDatasetSampler
 from torch.utils.data import DataLoader

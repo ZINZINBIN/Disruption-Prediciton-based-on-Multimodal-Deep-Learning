@@ -124,6 +124,7 @@ class ViViT(nn.Module):
         dropout : float = 0.,
         embedd_dropout : float = 0., 
         scale_dim :int = 4, 
+        alpha : float = 1.0,
         ):
         super(ViViT, self).__init__()
         
@@ -162,8 +163,10 @@ class ViViT(nn.Module):
         self.dim = dim
 
         self.mlp = nn.Sequential(
-            nn.LayerNorm(dim),
-            nn.Linear(dim, n_classes)
+            nn.Linear(dim, dim//2),
+            nn.LayerNorm(dim//2),
+            nn.ELU(alpha),
+            nn.Linear(dim//2, n_classes)
         )
 
     def forward(self, x : torch.Tensor):

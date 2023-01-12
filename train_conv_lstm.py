@@ -2,8 +2,8 @@ import torch
 import argparse
 import numpy as np
 import pandas as pd
-from src.CustomDataset import DatasetFor0D
-from src.models.ConvLSTM import ConvLSTM
+from src.dataset import DatasetFor0D
+from src.models.CnnLSTM import ConvLSTM
 from src.utils.sampler import ImbalancedDatasetSampler
 from src.utils.utility import plot_learning_curve, generate_prob_curve_from_0D, preparing_0D_dataset
 from src.visualization.visualize_latent_space import visualize_2D_latent_space, visualize_3D_latent_space
