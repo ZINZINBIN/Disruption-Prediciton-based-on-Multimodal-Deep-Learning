@@ -2,14 +2,21 @@
 ## Introduction
 - This is git repository for research about predicting tokamak disruption prediction from video and 0D data using Deep Learning
 - We used KSTAR IVIS dataset and 0D parameters from iKSTAR and finally we implemented the multi-modal model for (semi) real-time prediction
-- Since video data have spatial-temporal information directly from the IVIS, the real-time prediction during the plasma operation can be possible without
-any specific data preprocessing.
+- Since video data have spatial-temporal information directly from the IVIS, the real-time prediction during the plasma operation can be possible without any specific data preprocessing.
 - We labeled the video data as a sequence of image data with different duration and distance (prediciton time) 
+
+### How to generate training data
 <div>
     <img src="/image/연구_소개_01.PNG"  width="640" height="196">
 </div>
 
-- We can proceed real-time disruption prediction using video data(left) and 0D data(right) for shot 21310. 
+- We set image sequence data as input tensor and label the fadeout frame as disruptive phase 
+- We set the last second frame of the video as current quench and predict the disruption before the current quench happens
+- This data generation method can be useful for small dataset since it uses all data obtained from each video
+- However, the severe imbalance data distribution due to the time scale of disruptive phase can happen
+- Therefore, we use specific learning algorithms to handle this issue
+
+### The model performance of disruption prediction
 <div>
     <p float = 'left'>
         <img src="/results/real_time_disruption_prediction_21310.gif"  width="320" height="200">
@@ -17,25 +24,34 @@ any specific data preprocessing.
     </p>
 </div>
 
-- We also analyze the trained model by visualizing the latent vectors that the neural networks generate by compressing the data
-- We can see that the prediction time is longer, the separation between disruptive and non-disruptive data decreases
+- We can proceed real-time disruption prediction using video data(left) and 0D data(right) for shot 21310. 
+- The sensitivity of the model controled by the threshold affects the missing alarm rate
+- Each data has different characteristics for disruption prediction : How about combining two data at once?
+
+### Analysis of the models using visualization of embedding space
 <div>
     <p float = "left">
         <img src="/image/연구_소개_02.PNG"  width="640" height="224">
     </p>
 </div>
 
-- We also used attention rollout to visualize the attention matrix of the Video Vision Transformers to understand the importance of the video image to predict the disruption
-- But, there would be no effective / important difference between two cases below. 
+- We also analyze the trained model by visualizing the latent vectors that the neural networks generate by compressing the data
+- We can see that the prediction time is longer, the separation between disruptive and non-disruptive data decreases
 
+### Analysis of the models using attention rollout for vision model
 <div>
     <p float = 'left'>
         <img src="/image/연구_소개_03.PNG"  width="640" height="224">
     </p>
 </div>
 
+- We also used attention rollout to visualize the attention matrix of the Video Vision Transformers to understand the importance of the video image to predict the disruption
+- But, there would be no effective / important difference between two cases below. 
+
+### Summary
 - We tried to show that video data would be helpful to detect VDE(Vertical Displacement Error) and time-varying shape characteristics.
 - This means that we can effectivly predict the disruption with low false positive alarms with both video and 0D data since multi-modal learning is robust for data noise due to multi-modality
+- The result of multi-modal data will soon be showned layer
 
 ## How to Run
 ### setting
@@ -60,50 +76,78 @@ python3 ./src/preprocessing.py --test_ratio 0.2 --valid_ratio 0.2 --video_data_p
 python3 ./src/generate_numerical_data.py 
 ```
 
-### Training
+### Test
+```
+'''Test before model training : check the invalid data or issues from model architecture'''
+# test all process : data + model
+pytest test
 
+# test the data validity
+pytest test/test_data.py
+
+# test the model validity
+pytest test/test_model.py
+```
+
+### Model training process
 - Models for video data
 ```
-# ViViT model
-python3 train_vivit.py --batch_size {batch size} --gpu_num {gpu num} --use_LDAM {bool : use LDAM loss}
-
-# slowfast model
-python3 train_slowfast.py --batch_size {batch size} --alpha {alpha} --gpu_num {gpu num} --use_LDAM {bool : use LDAM loss}
-
-# R2Plus1D model
-python3 train_R2Plus1D.py --batch_size {batch size} --gpu_num {gpu num} --use_LDAM {bool : use LDAM loss}
+python3 train_vision_nework.py --batch_size {batch size} --gpu_num {gpu num} 
+                                --use_LDAM {bool : use LDAM loss} --model_type {model name} 
+                                --tag {name of experiment / info} --use_DRW {bool : use Deferred re-weighting} 
+                                --use_RS {bool : use re-sampling} --seq_len {int : input sequence length} 
+                                --pred_len {int : prediction time} --image_size {int}
 ```
 
 - Models for 0D data
 ```
-# Conv-LSTM
-python3 train_conv_lstm.py --batch_size {batch size} --gpu_num {gpu num} --use_LDAM {bool : use LDAM loss}
-
-# Transformer
-python3 train_ts_transformer.py --batch_size {batch size} --alpha {alpha} --gpu_num {gpu num} --use_LDAM {bool : use LDAM loss}
+python3 train_0D_nework.py --batch_size {batch size} --gpu_num {gpu num} 
+                            --use_LDAM {bool : use LDAM loss} --model_type {model name} 
+                            --tag {name of experiment / info} --use_DRW {bool : use Deferred re-weighting} 
+                            --use_RS {bool : use re-sampling} --seq_len {int : input sequence length} 
+                            --pred_len {int : prediction time}
 ```
 
 - Models for MultiModal(video + 0D data)
 ```
-python3 train_multi_modal.py --batch_size {batch size} --alpha {alpha} --gpu_num {gpu num --use_LDAM {bool : use LDAM loss}
+python3 train_multi_modal.py --batch_size {batch size} --gpu_num {gpu num} 
+                            --use_LDAM {bool : use LDAM loss} --use_GB {bool : use Deferred re-weighting} 
+                            --tag {name of experiment / info} --use_DRW {bool : use Deferred re-weighting} 
+                            --use_RS {bool : use re-sampling} --seq_len {int : input sequence length} 
+                            --pred_len {int : prediction time}
 ```
 
 ### Experiment
+- Experiment for each vision network with different prediction time
 ```
-# experiment with different learning algorithm and models
+# R1Plus1D
+bashrc ./exp_r1plus1d.sh
+
+# Slowfast
+bashrc ./exp_slowfast.sh
+
+# ViViT
+bashrc ./exp_vivit.sh
+
+# Transformer
+bashrc ./exp_0D.sh
+```
+
+- Experiment with different learning algorithms and models
+```
 python3 experiment.py --gpu_num {gpu_num} --loss_type {'CE', 'FOCAL', 'LDAM'}
 ```
 
 ## Detail
 ### Model to use
 - Video encoder
-    - R2Plus1D
-    - Slowfast
-    - ViViT (selected)
+    - R2Plus1D : https://github.com/irhum/R2Plus1D-PyTorch
+    - Slowfast : https://github.com/facebookresearch/SlowFast 
+    - ViViT : https://github.com/rishikksh20/ViViT-pytorch
 
 - 0D data encoder
-    - Transformer
-    - Conv1D-LSTM using self-attention (selected)
+    - Transformer : paper(https://proceedings.neurips.cc/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf), application code(https://www.kaggle.com/general/200913)
+    - Conv1D-LSTM using self-attention : https://pseudo-lab.github.io/Tutorial-Book/chapters/time-series/Ch5-CNN-LSTM.html
 
 - Multimodal Model
     - Multimodal fusion model: video encoder + 0D data encoder
@@ -121,9 +165,9 @@ python3 experiment.py --gpu_num {gpu_num} --loss_type {'CE', 'FOCAL', 'LDAM'}
     - Multimodal Learning : CCA Learning for enhancement
 
 - Analysis on physical characteristics of disruptive video data
-    - CAM
-    - Grad CAM
-    - attention rollout (selected)
+    - CAM : proceeding
+    - Grad CAM : proceeding
+    - attention rollout : done
 
 - Data augmentation
     - Video Mixup Algorithm for Data augmentation(done, not effective)
@@ -141,7 +185,7 @@ python3 experiment.py --gpu_num {gpu_num} --loss_type {'CE', 'FOCAL', 'LDAM'}
 ### Additional Task
 - Multi-GPU distributed Learning : done
 - Database contruction : Tabular dataset(IKSTAR) + Video dataset, done
-- ML Pipeline : Tensorboard (not yet)
+- ML Pipeline : Tensorboard, done
 
 ### Dataset
 - Disruption : disruptive state at t = tipminf (current-quench)
@@ -149,9 +193,9 @@ python3 experiment.py --gpu_num {gpu_num} --loss_type {'CE', 'FOCAL', 'LDAM'}
 - Normal : non-disruptive state
 
 ## Reference
-- R2Plus1D : A Spatial-temporal Attention Module for 3D Convolution Network in Action Recognition
-- Slowfast : SlowFast Networks for Video Recognition
-- Video Vision Transformer : ViViT: A Video Vision Transformer, Anurag Arnab et al, 2021
+- R2Plus1D : A Spatial-temporal Attention Module for 3D Convolution Network in Action Recognition(https://arxiv.org/abs/1711.11248)
+- Slowfast : SlowFast Networks for Video Recognition, Christoph Feichtenhofer et al, 2018(https://arxiv.org/abs/1812.03982)
+- Video Vision Transformer : ViViT: A Video Vision Transformer, Anurag Arnab et al, 2021(https://arxiv.org/pdf/2103.15691.pdf)
 - Multigrid : A Multigrid Method for Efficiently Training Video Models, Chao-Yuan Wu et al, 2020
 - Video Data Augmentation : VideoMix: Rethinking Data Augmentation for Video Classification
 - LDAM : Label-distribution-aware Margin Loss

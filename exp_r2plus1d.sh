@@ -1,0 +1,5 @@
+python3 train_vision_network.py --gpu_num 1 --dist 1 --batch_size 16 --model 'R2Plus1D' --tag 'R2Plus1D'
+python3 train_vision_network.py --gpu_num 1 --dist 2 --batch_size 16 --model 'R2Plus1D' --tag 'R2Plus1D'
+python3 train_vision_network.py --gpu_num 1 --dist 3 --batch_size 16 --model 'R2Plus1D' --tag 'R2Plus1D'
+python3 train_vision_network.py --gpu_num 1 --dist 4 --batch_size 16 --model 'R2Plus1D' --tag 'R2Plus1D'
+python3 train_vision_network.py --gpu_num 1 --dist 5 --batch_size 16 --model 'R2Plus1D' --tag 'R2Plus1D'

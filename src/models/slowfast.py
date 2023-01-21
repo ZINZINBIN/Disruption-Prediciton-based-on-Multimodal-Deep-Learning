@@ -47,17 +47,19 @@ class FastNet(ResNet3D):
         kernel_size = (alpha+2,1,1)
         stride = (alpha,1,1)
         padding = (1,0,0)
+        
+        m = 16
 
         stride_maxpool = (alpha, 1, 1)
         kernel_maxpool = (alpha + 2, 1, 1)
 
-        self.l_maxpool = nn.Conv3d(64//self.alpha, 64//self.alpha,
+        self.l_maxpool = nn.Conv3d(m//self.alpha, m//self.alpha,
                                    kernel_size=kernel_maxpool, stride=stride_maxpool, bias=False, padding=padding)
-        self.l_layer1 = nn.Conv3d(4*64//self.alpha, 4*64//self.alpha,
+        self.l_layer1 = nn.Conv3d(4*m//self.alpha, 4*m//self.alpha,
                                   kernel_size=kernel_size, stride=stride, bias=False, padding=padding)
-        self.l_layer2 = nn.Conv3d(8*64//self.alpha, 8*64//self.alpha,
+        self.l_layer2 = nn.Conv3d(8*m//self.alpha, 8*m//self.alpha,
                                   kernel_size=kernel_size, stride=stride, bias=False, padding=padding)
-        self.l_layer3 = nn.Conv3d(16*64//self.alpha, 16*64//self.alpha,
+        self.l_layer3 = nn.Conv3d(16*m//self.alpha, 16*m//self.alpha,
                                   kernel_size=kernel_size, stride=stride, bias=False, padding=padding)
         self.init_params()
 

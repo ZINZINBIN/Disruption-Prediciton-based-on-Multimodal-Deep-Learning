@@ -205,12 +205,14 @@ class ResNet3D(nn.Module):
         in_channels = kwargs['in_channels']
         self.alpha = kwargs['alpha']
         self.slow = kwargs['slow']  # slow->1 else fast->0
+        
+        m = 16
 
-        self.inplanes = (64 + 64//self.alpha) if self.slow else 64//self.alpha
+        self.inplanes = (m + m//self.alpha) if self.slow else m//self.alpha
         self.base_bn_splits = kwargs["base_bn_splits"]
 
         # layer 0 parameters
-        out_channels = 64//(1 if self.slow else self.alpha)
+        out_channels = m//(1 if self.slow else self.alpha)
         kernel_size = (1 if self.slow else 1, 7, 7)
         stride = (1, 2, 2)
         padding = (0, 3, 3)
@@ -223,13 +225,13 @@ class ResNet3D(nn.Module):
         )
 
         # layer 1 to layer 4
-        self.layer1 = self._make_layer(block, 64//(1 if self.slow else self.alpha), layers[0],
+        self.layer1 = self._make_layer(block, m//(1 if self.slow else self.alpha), layers[0],
                                        head_conv=1 if self.slow else 3, base_bn_splits=self.base_bn_splits)
-        self.layer2 = self._make_layer(block, 128//(1 if self.slow else self.alpha), layers[1], stride=2,
+        self.layer2 = self._make_layer(block, 2*m//(1 if self.slow else self.alpha), layers[1], stride=2,
                                        head_conv=1 if self.slow else 3, base_bn_splits=self.base_bn_splits)
-        self.layer3 = self._make_layer(block, 256//(1 if self.slow else self.alpha), layers[2], stride=2,
+        self.layer3 = self._make_layer(block, 4*m//(1 if self.slow else self.alpha), layers[2], stride=2,
                                        head_conv=3, base_bn_splits=self.base_bn_splits)
-        self.layer4 = self._make_layer(block, 512//(1 if self.slow else self.alpha), layers[3], stride=2,
+        self.layer4 = self._make_layer(block, 8*m//(1 if self.slow else self.alpha), layers[3], stride=2,
                                        head_conv=3, base_bn_splits=self.base_bn_splits)
 
     def init_params(self):

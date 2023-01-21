@@ -207,11 +207,11 @@ class SpatioTemporalResLayer(nn.Module):
 class R2Plus1DNet(nn.Module):
     def __init__(self, layer_sizes : List[int] = [4,4,4,4], alpha : float = 0.01):
         super(R2Plus1DNet, self).__init__()
-        self.conv1 = SpatioTemporalConv(3, 64, kernel_size = (1,7,7), stride = (1,2,2), padding = (0,3,3), dilation = 1, is_first = True, alpha = alpha)
-        self.conv2 = SpatioTemporalResLayer(64, 64, 3, dilation = 1, alpha = alpha, layer_size = layer_sizes[0])
-        self.conv3 = SpatioTemporalResLayer(64, 128, 3, dilation = 1, alpha = alpha, layer_size = layer_sizes[1], downsample=True)
-        self.conv4 = SpatioTemporalResLayer(128, 256, 3, dilation = 1, alpha = alpha, layer_size = layer_sizes[2], downsample=True)
-        self.conv5 = SpatioTemporalResLayer(256, 512, 3, dilation = 1, alpha = alpha, layer_size = layer_sizes[3], downsample=True)
+        self.conv1 = SpatioTemporalConv(3, 32, kernel_size = (1,7,7), stride = (1,2,2), padding = (0,3,3), dilation = 1, is_first = True, alpha = alpha)
+        self.conv2 = SpatioTemporalResLayer(32, 32, 3, dilation = 1, alpha = alpha, layer_size = layer_sizes[0])
+        self.conv3 = SpatioTemporalResLayer(32, 64, 3, dilation = 1, alpha = alpha, layer_size = layer_sizes[1], downsample=True)
+        self.conv4 = SpatioTemporalResLayer(64, 64, 3, dilation = 1, alpha = alpha, layer_size = layer_sizes[2], downsample=True)
+        self.conv5 = SpatioTemporalResLayer(64, 128, 3, dilation = 1, alpha = alpha, layer_size = layer_sizes[3], downsample=True)
         self.pool = nn.AdaptiveAvgPool3d(1)
     
     def forward(self, x:torch.Tensor)->torch.Tensor:

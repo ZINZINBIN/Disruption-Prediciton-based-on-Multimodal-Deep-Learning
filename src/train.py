@@ -34,6 +34,10 @@ def train_per_epoch(
         
         # optimizer.zero_grad()
         
+        # check that the batch_size = 1, if batch_size = 1, skip the process
+        if data.size()[0] <=1:
+            continue
+        
         # Efficient zero-out gradients
         for param in model.parameters():
             param.grad = None

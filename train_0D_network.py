@@ -13,6 +13,7 @@ from src.train import train, train_DRW
 from src.evaluate import evaluate
 from src.loss import FocalLoss, LDAMLoss
 from src.models.ts_transformer import TStransformer
+from src.models.CnnLSTM import CnnLSTM
 from src.feature_importance import compute_permute_feature_importance
 
 # columns for use
@@ -31,7 +32,6 @@ from src.feature_importance import compute_permute_feature_importance
 # abrupt disruption shot 
 
 # input_shape : [Batch, sequence lenth, ]
-
 
 '''
 Te = [x1,x2,x3,x4,x5, .... , x50]
@@ -56,6 +56,7 @@ def parsing():
     parser = argparse.ArgumentParser(description="training disruption prediction model with 0D data")
     
     # tag and result directory
+    parser.add_argument("--model", type = str, default = 'Transformer', choices=['Transformer', 'CnnLSTM'])
     parser.add_argument("--tag", type = str, default = "Transformer")
     parser.add_argument("--save_dir", type = str, default = "./results")
     
@@ -111,7 +112,7 @@ def parsing():
     # monitoring the training process
     parser.add_argument("--verbose", type = int, default = 4)
     
-    # model setup
+    # model setup : transformer
     parser.add_argument("--alpha", type = float, default = 0.01)
     parser.add_argument("--dropout", type = float, default = 0.25)
     parser.add_argument("--feature_dims", type = int, default = 128)
@@ -120,6 +121,15 @@ def parsing():
     parser.add_argument("--dim_feedforward", type = int, default = 512)
     parser.add_argument("--cls_dims", type = int, default = 128)
     
+    # model setup : cnn lstm
+    parser.add_argument("--conv_dim", type = int, default = 32)
+    parser.add_argument("--conv_kernel", type = int, default = 3)
+    parser.add_argument("--conv_stride", type = int, default = 1)
+    parser.add_argument("--conv_padding", type = int, default = 1)
+    parser.add_argument("--lstm_dim", type = int, default = 64)
+    parser.add_argument("--lstm_layers", type = int, default = 1)
+    parser.add_argument("--bidirectional", type = bool, default = True)
+        
     args = vars(parser.parse_args())
 
     return args
@@ -193,17 +203,34 @@ if __name__ == "__main__":
     cls_num_list = train_data.get_cls_num_list()
 
     # define model
-    model = TStransformer(
-        n_features=len(ts_cols),
-        feature_dims = args['feature_dims'],
-        max_len = args['seq_len'],
-        n_layers = args['n_layers'],
-        n_heads = args['n_heads'],
-        dim_feedforward=args['dim_feedforward'],
-        dropout = args['dropout'],
-        cls_dims = args['cls_dims'],
-        n_classes = 2
-    )
+    if args['model'] == 'Transformer':
+        
+        model = TStransformer(
+            n_features=len(ts_cols),
+            feature_dims = args['feature_dims'],
+            max_len = args['seq_len'],
+            n_layers = args['n_layers'],
+            n_heads = args['n_heads'],
+            dim_feedforward=args['dim_feedforward'],
+            dropout = args['dropout'],
+            cls_dims = args['cls_dims'],
+            n_classes = 2
+        )
+        
+    elif args['model'] == 'CnnLSTM':
+        
+        model = CnnLSTM(
+            seq_len = args['seq_len'],
+            n_features=len(ts_cols),
+            conv_dim = args['conv_dim'],
+            conv_kernel = args['conv_kernel'],
+            conv_stride=args['conv_stride'],
+            conv_padding=args['conv_padding'],
+            lstm_dim=args['lstm_dim'],
+            n_layers=args['lstm_layers'],
+            bidirectional=args['bidirectional'],
+            n_classes=2
+        )
     
     print("\n################# model summary #################\n")
     model.summary()
@@ -350,7 +377,7 @@ if __name__ == "__main__":
     # Additional analyzation
     save_2D_latent_dir = os.path.join(save_dir, "{}_2D_latent.png".format(tag))
     save_3D_latent_dir = os.path.join(save_dir, "{}_3D_latent.png".format(tag))
-    
+    print("\n################# Visualization process #################\n")
     try:
         visualize_2D_latent_space(
             model, 
@@ -375,6 +402,7 @@ if __name__ == "__main__":
     # plot probability curve
     test_shot_num = args['test_shot_num']
     
+    print("\n################# Probability curve generation process #################\n")
     generate_prob_curve_from_0D(
         model, 
         device = device, 

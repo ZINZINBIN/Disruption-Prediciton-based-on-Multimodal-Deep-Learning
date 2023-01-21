@@ -69,14 +69,18 @@ def evaluate(
             pred = torch.nn.functional.softmax(output, dim = 1)[:,0]
             pred = torch.logical_not((pred > torch.FloatTensor([threshold]).to(device)))
             test_acc += pred.eq(target.view_as(pred)).sum().item()
-
             total_size += pred.size(0)
             
-            total_pred = np.concatenate((total_pred, pred.cpu().numpy().reshape(-1,)))
+            pred_normal = torch.nn.functional.softmax(output, dim = 1)[:,1].detach()
+            
+            total_pred = np.concatenate((total_pred, pred_normal.cpu().numpy().reshape(-1,)))
             total_label = np.concatenate((total_label, target.cpu().numpy().reshape(-1,)))
-
+            
     test_loss /= (idx + 1)
     test_acc /= total_size
+            
+    '''
+    # method 1 : only compute the f1 score and classification report
     test_f1 = f1_score(total_label, total_pred, average = "macro")
     test_auc = roc_auc_score(total_label, total_pred, average='macro')
     
@@ -109,7 +113,71 @@ def evaluate(
             f.write(classification_report(total_label, total_pred, labels = [0,1]))
             summary = "\n# test score : {:.2f}, test loss : {:.3f}, test f1 : {:.3f}, test_auc : {:.3f}".format(test_acc, test_loss, test_f1, test_auc)
             f.write(summary)
+    '''
+    
+    # method 2 : compute f1, auc, roc and classification report
+    # data clipping / postprocessing for ignoring nan, inf, too large data
+    total_pred = np.nan_to_num(total_pred, copy = True, nan = 0, posinf = 1.0, neginf = 0)
+    lr_probs = total_pred
+    total_pred = np.where(total_pred > 1 - threshold, 1, 0)
+    
+    # f1 score
+    test_f1 = f1_score(total_label, total_pred, average = "macro")
+    
+    # auc score
+    test_auc = roc_auc_score(total_label, total_pred, average='macro')
+    
+    # roc score
+    ns_probs = [0 for _ in range(len(total_label))]
+    ns_auc = roc_auc_score(total_label, ns_probs, average="macro")
+    lr_auc = roc_auc_score(total_label, lr_probs, average = "macro")
+    
+    fig, axes = plt.subplots(2,2, sharex = False, figsize = (15, 10))
+    
+    # confusion matrix
+    conf_mat = confusion_matrix(total_label, total_pred)
+    s = sns.heatmap(
+        conf_mat, # conf_mat / np.sum(conf_mat),
+        annot = True,
+        fmt ='04d' ,# fmt = '.2f',
+        cmap = 'Blues',
+        xticklabels=["disruption","normal"],
+        yticklabels=["disruption","normal"],
+        ax = axes[0,0]
+    )
 
+    s.set_xlabel("Prediction")
+    s.set_ylabel("Actual")
+
+    # roc curve
+    ns_fpr, ns_tpr, _ = roc_curve(total_label, ns_probs)
+    lr_fpr, lr_tpr, _ = roc_curve(total_label, lr_probs)
+    
+    axes[0,1].plot(ns_fpr, ns_tpr, linestyle = '--', label = 'Random')
+    axes[0,1].plot(lr_fpr, lr_tpr, marker = '.', label = 'Model')
+    axes[0,1].set_xlabel('False Positive Rate')
+    axes[0,1].set_ylabel('True Positive Rate')
+    
+    lr_precision, lr_recall, _ = precision_recall_curve(total_label, lr_probs)
+    axes[1,0].plot(lr_recall, lr_precision, marker = '.', label = 'Model')
+    axes[1,0].set_xlabel("Recall")
+    axes[1,0].set_ylabel("Precision")
+    
+    clf_report = classification_report(total_label, total_pred, labels = [0,1], target_names = ["Disrupt", "Normal"], output_dict = True)
+    s2 = sns.heatmap(pd.DataFrame(clf_report).iloc[:-1, :].T, annot = True, ax = axes[1,1])
+    fig.tight_layout()
+    plt.savefig(save_conf)
+
+    print("############### Classification Report ####################")
+    print(classification_report(total_label, total_pred, labels = [0,1]))
+    print("\n# test acc : {:.2f}, test f1 : {:.2f}, test AUC : {:.2f}, test loss : {:.3f}".format(test_acc, test_f1, test_auc, test_loss))
+
+    if save_txt:
+        with open(save_txt, 'w') as f:
+            f.write(classification_report(total_label, total_pred, labels = [0,1]))
+            summary = "\n# test score : {:.2f}, test loss : {:.3f}, test f1 : {:.3f}, test_auc : {:.3f}".format(test_acc, test_loss, test_f1, test_auc)
+            f.write(summary)
+    
     return test_loss, test_acc, test_f1
 
 

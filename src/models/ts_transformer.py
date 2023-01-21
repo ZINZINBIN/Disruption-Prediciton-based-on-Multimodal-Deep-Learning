@@ -46,14 +46,16 @@ class TStransformer(nn.Module):
         self.noise = NoiseLayer(mean = 0, std = 1e-2)
         self.encoder_input_layer = nn.Linear(in_features = n_features, out_features = feature_dims)
         self.pos_enc = PositionalEncoding(d_model = feature_dims, max_len = max_len)
-        self.encoder = nn.TransformerEncoderLayer(
+        
+        encoder = nn.TransformerEncoderLayer(
             d_model = feature_dims, 
             nhead = n_heads, 
             dropout = dropout,
             dim_feedforward = dim_feedforward,
             activation = GELU()
         )
-        self.transformer_encoder = nn.TransformerEncoder(self.encoder, num_layers=n_layers)
+        
+        self.transformer_encoder = nn.TransformerEncoder(encoder, num_layers=n_layers)
         self.classifier = nn.Sequential(
             nn.Linear(feature_dims, cls_dims),
             nn.BatchNorm1d(cls_dims),
@@ -109,14 +111,14 @@ class TStransformerEncoder(nn.Module):
         self.noise = NoiseLayer(mean = 0, std = 1e-2)
         self.encoder_input_layer = nn.Linear(in_features = n_features, out_features = feature_dims)
         self.pos_enc = PositionalEncoding(d_model = feature_dims, max_len = max_len)
-        self.encoder = nn.TransformerEncoderLayer(
+        encoder = nn.TransformerEncoderLayer(
             d_model = feature_dims, 
             nhead = n_heads, 
             dropout = dropout,
             dim_feedforward = dim_feedforward,
             activation = GELU()
         )
-        self.transformer_encoder = nn.TransformerEncoder(self.encoder, num_layers=n_layers)
+        self.transformer_encoder = nn.TransformerEncoder(encoder, num_layers=n_layers)
         
     def forward(self, x : torch.Tensor):
         x = self.noise(x)

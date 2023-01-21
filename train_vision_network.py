@@ -41,7 +41,7 @@ def parsing():
     parser.add_argument("--num_epoch", type = int, default = 128)
     parser.add_argument("--seq_len", type = int, default = 21)
     parser.add_argument("--dist", type = int, default = 3)
-    parser.add_argument("--num_workers", type = int, default = 8)
+    parser.add_argument("--num_workers", type = int, default = 4)
     parser.add_argument("--pin_memory", type = bool, default = False)
 
     # model weight / save process
@@ -113,7 +113,7 @@ def parsing():
     parser.add_argument("--tau_fast", type = int, default = 1)
     
     # R2Plus1D + SlowFast
-    parser.add_argument("--n_layer", type = int, default = 1)
+    parser.add_argument("--n_layer", type = int, default = 2)
     
     args = vars(parser.parse_args())
 
@@ -380,7 +380,7 @@ if __name__ == "__main__":
     # Additional analyzation
     save_2D_latent_dir = os.path.join(save_dir, "{}_2D_latent.png".format(tag))
     save_3D_latent_dir = os.path.join(save_dir, "{}_3D_latent.png".format(tag))
-    
+    print("\n################# Visualization process #################\n")
     try:
         visualize_2D_latent_space(
             model, 
@@ -404,7 +404,7 @@ if __name__ == "__main__":
         
     # plot the disruption probability curve
     test_shot_num = args['test_shot_num']
-
+    print("\n################# Probability curve generation process #################\n")
     time_x, prob_list = generate_prob_curve(
         file_path = "./dataset/temp/{}".format(test_shot_num),
         model = model, 

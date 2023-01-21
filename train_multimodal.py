@@ -431,6 +431,7 @@ if __name__ == "__main__":
     )
     
     # Additional analyzation
+    print("\n################# Visualization process #################\n")
     save_3D_latent_dir = os.path.join(save_dir, "{}_3D_latent.png".format(tag))
     
     try:
