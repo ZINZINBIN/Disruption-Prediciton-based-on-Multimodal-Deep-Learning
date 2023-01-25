@@ -127,7 +127,7 @@ def parsing():
     parser.add_argument("--conv_stride", type = int, default = 1)
     parser.add_argument("--conv_padding", type = int, default = 1)
     parser.add_argument("--lstm_dim", type = int, default = 64)
-    parser.add_argument("--lstm_layers", type = int, default = 1)
+    parser.add_argument("--lstm_layers", type = int, default = 2)
     parser.add_argument("--bidirectional", type = bool, default = True)
         
     args = vars(parser.parse_args())

@@ -137,7 +137,12 @@ if __name__ == "__main__":
     args = parsing()
     
     # 0D data columns
-    ts_cols = ['\\q95', '\\ipmhd', '\\kappa', '\\tritop', '\\tribot','\\betap','\\betan','\\li', '\\WTOT_DLM03', '\\TS_NE_CORE_AVG', '\\TS_TE_CORE_AVG',]
+    ts_cols = [
+        '\\q95', '\\ipmhd', '\\kappa', 
+        '\\tritop', '\\tribot','\\betap',
+        '\\betan','\\li', '\\WTOT_DLM03', 
+        '\\ne_inter01', '\\TS_NE_CORE_AVG', '\\TS_TE_CORE_AVG',
+        ]
     
     # default argument
     args_video = {
@@ -329,7 +334,6 @@ if __name__ == "__main__":
     else:
         loss_fn = torch.nn.CrossEntropyLoss(reduction = "mean", weight = per_cls_weights)
         
-        
     # Gradient Blending
     if args['use_GB']:
         w_fusion = 0.5
@@ -359,8 +363,10 @@ if __name__ == "__main__":
             args['verbose'],
             save_best_dir,
             save_last_dir,
+            exp_dir,
             1.0,
-            "f1_score"
+            "f1_score",
+            test_for_check_per_epoch=test_loader
         )
         
     elif args['use_DRW']:

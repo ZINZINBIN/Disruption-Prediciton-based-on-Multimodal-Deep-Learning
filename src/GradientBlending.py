@@ -5,12 +5,15 @@
 import torch
 import torch.nn as nn
 import numpy as np
+import os
 from tqdm.auto import tqdm
 from sklearn.metrics import f1_score
 from torch.utils.data import DataLoader
 from typing import Optional, Literal, Dict, Union
 from src.models.MultiModal import TFN_GB, MultiModalModel_GB
 from src.train import train_per_epoch, valid_per_epoch
+from src.evaluate import evaluate_tensorboard
+from torch.utils.tensorboard import SummaryWriter
 
 # Gradient Bleding with weighted loss sum
 class GradientBlending(nn.Module):
@@ -170,8 +173,10 @@ def train_GB(
     verbose : Optional[int] = 8,
     save_best_dir : str = "./weights/best.pt",
     save_last_dir : str = "./weights/last.pt",
+    exp_dir : Optional[str] = None,
     max_norm_grad : Optional[float] = None,
     criteria : Literal["f1_score", "acc", "loss"] = "f1_score",
+    test_for_check_per_epoch : Optional[DataLoader] = None,
     ):
     
     train_loss_list = []
@@ -187,7 +192,16 @@ def train_GB(
     best_epoch = 0
     best_f1 = 0
     best_loss = torch.inf
-
+    
+    if not os.path.isdir(exp_dir):
+        os.mkdir(exp_dir)
+    
+    # tensorboard
+    if exp_dir:
+        writer = SummaryWriter(exp_dir)
+    else:
+        writer = None
+    
     for epoch in tqdm(range(num_epoch), desc = "(multi-modal) training process with Gradient Blending"):
         
         # training process
@@ -220,6 +234,20 @@ def train_GB(
 
         train_f1_list.append(train_f1)
         valid_f1_list.append(valid_f1)
+        
+        # tensorboard recording : loss and score
+        if writer:
+            writer.add_scalar('Loss/train', train_loss, epoch)
+            writer.add_scalar('Loss/valid', valid_loss, epoch)
+            
+            writer.add_scalar('F1_score/train', train_f1, epoch)
+            writer.add_scalar('F1_score/valid', valid_f1, epoch)
+        
+        if test_for_check_per_epoch and writer is not None:
+            model.eval()
+            fig = evaluate_tensorboard(test_for_check_per_epoch, model, optimizer, loss_GB, device, 0.5, "multi-GB")
+            writer.add_figure('Model-performance', fig, epoch)
+            model.train()
         
         # evaluate process : monitoring
         train_f1_fusion, train_f1_vis, train_f1_0D = evaluate_GB(
@@ -272,6 +300,9 @@ def train_GB(
     print("(Report) training process finished, best loss : {:.3f} and best acc : {:.3f}, best f1 : {:.3f}, best epoch : {}".format(
         best_loss, best_acc, best_f1, best_epoch
     ))
+    
+    if writer:
+        writer.close()
     
     return  train_loss_list, train_acc_list, train_f1_list,  valid_loss_list,  valid_acc_list, valid_f1_list
 

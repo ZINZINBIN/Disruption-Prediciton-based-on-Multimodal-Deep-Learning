@@ -581,7 +581,7 @@ class MultiModalDataset(Dataset):
         return len(self.ts_indices)
 
     def refill_temporal_slide(self, buffer:np.ndarray):
-        for _ in range(self.seq_len - buffer.shape[0]):
+        for _ in range(self.vis_seq_len - buffer.shape[0]):
             frame_new = buffer[-1].reshape(1, self.resize_height, self.resize_width, 3)
             buffer = np.concatenate((buffer, frame_new))
         return buffer
@@ -622,7 +622,7 @@ class MultiModalDataset(Dataset):
         return buffer
     
     def load_frames(self, filepaths : List):
-        buffer = np.empty((self.seq_len, self.resize_height, self.resize_width, 3), np.dtype('float32'))
+        buffer = np.empty((self.vis_seq_len, self.resize_height, self.resize_width, 3), np.dtype('float32'))
         for i, filepath in enumerate(filepaths):
             frame = np.array(cv2.imread(filepath)).astype(np.float32) 
             buffer[i] = frame
@@ -630,9 +630,9 @@ class MultiModalDataset(Dataset):
     
     def get_video_data(self, idx : int):
         buffer = self.load_frames(self.video_file_path[idx])
-        if buffer.shape[0] < self.seq_len:
+        if buffer.shape[0] < self.vis_seq_len:
             buffer = self.refill_temporal_slide(buffer)
-        buffer = self.crop(buffer, self.seq_len, self.crop_size)
+        buffer = self.crop(buffer, self.vis_seq_len, self.crop_size)
         buffer = self.normalize(buffer)
         buffer = self.to_tensor(buffer)
         return torch.from_numpy(buffer)
@@ -1019,11 +1019,9 @@ def generate_prob_curve_from_0D(
     return time_x, prob_list
 
 
-
-
 ################ Implemented ##################
-
 def generate_prob_curve_from_multi(
+    file_path : str,
     model : torch.nn.Module, 
     device : str = "cpu", 
     save_dir : Optional[str] = "./results/disruption_probs_curve.png",
@@ -1031,7 +1029,8 @@ def generate_prob_curve_from_multi(
     ts_cols : Optional[List] = None,
     shot_list_dir : Optional[str] = './dataset/KSTAR_Disruption_Shot_List_extend.csv',
     shot_num : Optional[int] = None,
-    seq_len : Optional[int] = None,
+    vis_seq_len : Optional[int] = None,
+    ts_seq_len : Optional[int] = None,
     dist : Optional[int] = None,
     dt : Optional[int] = None,
     scaler : Optional[BaseEstimator] = None,
@@ -1043,8 +1042,13 @@ def generate_prob_curve_from_multi(
     tftsrt = shot_list_dir[shot_list_dir.shot == shot_num].tftsrt.values[0]
     tipminf = shot_list_dir[shot_list_dir.shot == shot_num].tipminf.values[0]
     
+    # define the start frame and end frame
     frame_srt = shot_list_dir[shot_list_dir.shot == shot_num].frame_startup.values[0]
     frame_end = shot_list_dir[shot_list_dir.shot == shot_num].frame_cutoff.values[0]
+    
+    # define the start time and end time
+    t_srt = tftsrt
+    t_end = tipminf
 
     # input data generation
     ts_data = pd.read_csv(ts_data_dir).reset_index()
@@ -1071,8 +1075,8 @@ def generate_prob_curve_from_multi(
     # te = ts_data_0D['\\TS_CORE10:CORE10_TE']
     te = ts_data_0D['\\TS_TE_CORE_AVG']
     
-    # video data
-    dataset = DatasetFor0D(ts_data_0D, ts_cols, seq_len, dist, dt, scaler)
+    # Multi-modal data
+    dataset = MultiModalDataset(file_path, ts_data_0D, ts_cols, 256, 256, 128, frame_srt, frame_end, t_srt, t_end, vis_seq_len, ts_seq_len, dist, dt, scaler)
 
     prob_list = []
     is_disruption = []
@@ -1084,9 +1088,10 @@ def generate_prob_curve_from_multi(
     
     for idx in tqdm(range(dataset.__len__())):
         with torch.no_grad():
-            data = dataset.__getitem__(idx)
-            data = data.to(device).unsqueeze(0)
-            output = model(data)
+            data_vis, data_ts = dataset.__getitem__(idx)
+            data_vis = data_vis.to(device).unsqueeze(0)
+            data_ts = data_ts.to(device).unsqueeze(0)
+            output = model(data_vis, data_ts)
             probs = torch.nn.functional.softmax(output, dim = 1)[:,0]
             probs = probs.cpu().detach().numpy().tolist()
 
@@ -1098,10 +1103,14 @@ def generate_prob_curve_from_multi(
                 torch.nn.functional.softmax(output, dim = 1).max(1, keepdim = True)[1].cpu().detach().numpy().tolist()
             )
             
-    interval = 4
+    t_srt = dataset.ts_data.iloc[dataset.ts_indices[0]].time.item()
+    t_end = dataset.ts_data.iloc[dataset.ts_indices[-1]].time.item()
+    dt_end = 1.0
+            
+    interval = 1
     fps = 210
     
-    prob_list = [0] * seq_len + prob_list
+    prob_list = [0] * int(t_srt * fps) + prob_list + [0] * int(dt_end * fps)
     
     # correction for startup peaking effect : we will soon solve this problem
     for idx, prob in enumerate(prob_list):
@@ -1110,10 +1119,12 @@ def generate_prob_curve_from_multi(
             prob_list[idx] = 0
             
     from scipy.interpolate import interp1d
-    prob_x = np.linspace(0, len(prob_list) * interval, num = len(prob_list), endpoint = True)
+    
+    prob_x = np.linspace(0, t_end + dt_end, num = len(prob_list), endpoint = True)
     prob_y = np.array(prob_list)
+    
     f_prob = interp1d(prob_x, prob_y, kind = 'cubic')
-    prob_list = f_prob(np.linspace(0, len(prob_list) * interval, num = len(prob_list) * interval, endpoint = False))
+    prob_list = f_prob(np.linspace(0, t_end + dt_end, num = len(prob_list) * interval, endpoint = False))
     
     time_x = np.arange(0, len(prob_list)) * (1/fps)
     

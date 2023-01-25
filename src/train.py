@@ -31,13 +31,16 @@ def train_per_epoch(
     total_size = 0
 
     for batch_idx, (data, target) in enumerate(train_loader):
+        # check that the batch_size = 1, if batch_size = 1, skip the process        
+        if model_type == "single":
+            if data.size()[0] <=1:
+                continue
+        else:
+            data_video = data['video']
+            if data_video.size()[0] <=1:
+                continue
         
         # optimizer.zero_grad()
-        
-        # check that the batch_size = 1, if batch_size = 1, skip the process
-        if data.size()[0] <=1:
-            continue
-        
         # Efficient zero-out gradients
         for param in model.parameters():
             param.grad = None
@@ -218,11 +221,12 @@ def train(
         valid_f1_list.append(valid_f1)
         
         # tensorboard recording : loss and score
-        writer.add_scalar('Loss/train', train_loss, epoch)
-        writer.add_scalar('Loss/valid', valid_loss, epoch)
-        
-        writer.add_scalar('F1_score/train', train_f1, epoch)
-        writer.add_scalar('F1_score/valid', valid_f1, epoch)
+        if writer:
+            writer.add_scalar('Loss/train', train_loss, epoch)
+            writer.add_scalar('Loss/valid', valid_loss, epoch)
+            
+            writer.add_scalar('F1_score/train', train_f1, epoch)
+            writer.add_scalar('F1_score/valid', valid_f1, epoch)
         
         if test_for_check_per_epoch and writer is not None:
             model.eval()

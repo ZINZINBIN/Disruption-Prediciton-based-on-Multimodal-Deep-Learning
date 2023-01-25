@@ -267,8 +267,8 @@ class CnnLSTM(nn.Module):
         with torch.no_grad():
             x = self.noise(x)
             x_conv = self.conv(x.permute(0,2,1))
-            h_0 = Variable(torch.zeros(2, x.size()[0], self.lstm_dim)).to(x.device)
-            c_0 = Variable(torch.zeros(2, x.size()[0], self.lstm_dim)).to(x.device)
+            h_0 = Variable(torch.zeros(2 * self.n_layers if self.bidirectional else self.n_layers, x.size()[0], self.lstm_dim)).to(x.device)
+            c_0 = Variable(torch.zeros(2 * self.n_layers if self.bidirectional else self.n_layers, x.size()[0], self.lstm_dim)).to(x.device)
 
             lstm_output, (h_n,c_n) = self.lstm(x_conv.permute(1,0,2), (h_0, c_0))
             lstm_output = lstm_output.permute(1,0,2)
@@ -282,8 +282,8 @@ class CnnLSTM(nn.Module):
         # x : (batch, seq_len, col_dim)
         x = self.noise(x)
         x_conv = self.conv(x.permute(0,2,1))
-        h_0 = Variable(torch.zeros(2, x.size()[0], self.lstm_dim)).to(x.device)
-        c_0 = Variable(torch.zeros(2, x.size()[0], self.lstm_dim)).to(x.device)
+        h_0 = Variable(torch.zeros(2 * self.n_layers if self.bidirectional else self.n_layers, x.size()[0], self.lstm_dim)).to(x.device)
+        c_0 = Variable(torch.zeros(2 * self.n_layers if self.bidirectional else self.n_layers, x.size()[0], self.lstm_dim)).to(x.device)
 
         lstm_output, (h_n,c_n) = self.lstm(x_conv.permute(1,0,2), (h_0, c_0))
         lstm_output = lstm_output.permute(1,0,2)
@@ -294,7 +294,7 @@ class CnnLSTM(nn.Module):
         return output
     
     def summary(self, device : str = 'cpu', show_input : bool = True, show_hierarchical : bool = False, print_summary : bool = False, show_parent_layers : bool = False):
-        sample = torch.zeros((1, self.seq_len, self.col_dim), device = device)
+        sample = torch.zeros((1, self.seq_len, self.n_features), device = device)
         return print(summary(self, sample, show_input = show_input, show_hierarchical=show_hierarchical, print_summary = print_summary, show_parent_layers=show_parent_layers))
 
 if __name__ == "__main__":
