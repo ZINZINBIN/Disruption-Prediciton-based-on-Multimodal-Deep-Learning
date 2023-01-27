@@ -56,87 +56,118 @@
 ## How to Run
 ### setting
 - Environment
-```
-conda create env -f environment.yaml
-conda activate research-env
-```
+    ```
+    conda create env -f environment.yaml
+    conda activate research-env
+    ```
 
-- Video Data Generation
-```
-# generate disruptive video data and normal video data from .avi
-python3 ./src/generate_video_data.py --fps 210 --duration 21 --distance 5 --save_path './dataset/'
+- Video Dataset Generation : old version, inefficient memory usage and scalability
+    ```
+    # generate disruptive video data and normal video data from .avi
+    python3 ./src/generate_video_data.py    --fps 210 
+                                            --duration 21 
+                                            --distance 5 
+                                            --save_path './dataset/'
 
-# train and test split with converting video as image sequences
-python3 ./src/preprocessing.py --test_ratio 0.2 --valid_ratio 0.2 --video_data_path './dataset/dur21_dis0' --save_path './dataset/dur21_dis0'
-```
+    # train and test split with converting video as image sequences
+    python3 ./src/preprocessing.py  --test_ratio 0.2 
+                                    --valid_ratio 0.2 
+                                    --video_data_path './dataset/dur21_dis0' 
+                                    --save_path './dataset/dur21_dis0'
+    ```
 
-- 0D Data(Numerical Data) Generation
-```
-# interpolate KSTAR data and convert as tabular dataframe
-python3 ./src/generate_numerical_data.py 
-```
+- Video Dataset Generation : new version, more efficient than old version
+    ```
+    # additional KSTAR shot log with frame information of the video data
+    python3 ./src/generate_modified_shot_log.py
+
+    # generate video dataset from extended KSTAR shot log : you don't need to split the train-test set for every distance
+    python3 ./src/generate_video_data2.py   --fps 210
+                                            --raw_video_path "./dataset/raw_videos/raw_videos/"
+                                            --df_shot_list_path "./dataset/KSTAR_Disruption_Shot_List_extend.csv"
+                                            --save_path "./dataset/temp"
+                                            --width 256
+                                            --height 256
+                                            --overwrite True
+    ```
+
+- 0D Dataset Generation (Numerical dataset)
+    ```
+    # interpolate KSTAR data and convert as tabular dataframe
+    python3 ./src/generate_numerical_data.py 
+    ```
 
 ### Test
-```
-'''Test before model training : check the invalid data or issues from model architecture'''
-# test all process : data + model
-pytest test
+- Test code before model training : check the invalid data or issues from model architecture
+    ```
+    # test all process : data + model
+    pytest test
 
-# test the data validity
-pytest test/test_data.py
+    # test the data validity
+    pytest test/test_data.py
 
-# test the model validity
-pytest test/test_model.py
-```
+    # test the model validity
+    pytest test/test_model.py
+    ```
 
 ### Model training process
 - Models for video data
-```
-python3 train_vision_nework.py --batch_size {batch size} --gpu_num {gpu num} 
+    ```
+    python3 train_vision_nework.py --batch_size {batch size} --gpu_num {gpu num} 
+                                    --use_LDAM {bool : use LDAM loss} --model_type {model name} 
+                                    --tag {name of experiment / info} --use_DRW {bool : use Deferred re-weighting} 
+                                    --use_RS {bool : use re-sampling} --seq_len {int : input sequence length} 
+                                    --pred_len {int : prediction time} --image_size {int}
+    ```
+
+- Models for 0D data
+    ```
+    python3 train_0D_nework.py --batch_size {batch size} --gpu_num {gpu num} 
                                 --use_LDAM {bool : use LDAM loss} --model_type {model name} 
                                 --tag {name of experiment / info} --use_DRW {bool : use Deferred re-weighting} 
                                 --use_RS {bool : use re-sampling} --seq_len {int : input sequence length} 
-                                --pred_len {int : prediction time} --image_size {int}
-```
-
-- Models for 0D data
-```
-python3 train_0D_nework.py --batch_size {batch size} --gpu_num {gpu num} 
-                            --use_LDAM {bool : use LDAM loss} --model_type {model name} 
-                            --tag {name of experiment / info} --use_DRW {bool : use Deferred re-weighting} 
-                            --use_RS {bool : use re-sampling} --seq_len {int : input sequence length} 
-                            --pred_len {int : prediction time}
-```
+                                --pred_len {int : prediction time}
+    ```
 
 - Models for MultiModal(video + 0D data)
-```
-python3 train_multi_modal.py --batch_size {batch size} --gpu_num {gpu num} 
-                            --use_LDAM {bool : use LDAM loss} --use_GB {bool : use Deferred re-weighting} 
-                            --tag {name of experiment / info} --use_DRW {bool : use Deferred re-weighting} 
-                            --use_RS {bool : use re-sampling} --seq_len {int : input sequence length} 
-                            --pred_len {int : prediction time}
-```
+    ```
+    python3 train_multi_modal.py --batch_size {batch size} --gpu_num {gpu num} 
+                                --use_LDAM {bool : use LDAM loss} --use_GB {bool : use Deferred re-weighting} 
+                                --tag {name of experiment / info} --use_DRW {bool : use Deferred re-weighting} 
+                                --use_RS {bool : use re-sampling} --seq_len {int : input sequence length} 
+                                --pred_len {int : prediction time}
+    ```
 
 ### Experiment
-- Experiment for each vision network with different prediction time
-```
-# R1Plus1D
-bashrc ./exp_r1plus1d.sh
+- Experiment for each network(vision, 0D, multimodal) with different prediction time
+    ```
+    # R1Plus1D
+    bashrc ./exp_r1plus1d.sh
 
-# Slowfast
-bashrc ./exp_slowfast.sh
+    # Slowfast
+    bashrc ./exp_slowfast.sh
 
-# ViViT
-bashrc ./exp_vivit.sh
+    # ViViT
+    bashrc ./exp_vivit.sh
 
-# Transformer
-bashrc ./exp_0D.sh
-```
+    # Transformer
+    bashrc ./exp_0D.sh
+
+    # Multimodal model
+    bashrc ./exp_multi.sh
+
+    # Multimodal model with Gradient Blending
+    bashrc ./exp_multi_gb.sh
+    ```
 
 - Experiment with different learning algorithms and models
-```
-python3 experiment.py --gpu_num {gpu_num} --loss_type {'CE', 'FOCAL', 'LDAM'}
-```
+    ```
+    # use python file
+    python3 experiment.py --gpu_num {gpu_num} --loss_type {'CE', 'FOCAL', 'LDAM'}
+
+    # use bash file
+    bashrc ./exp_learning_algorithm.sh
+    ```
 
 ## Detail
 ### Model to use

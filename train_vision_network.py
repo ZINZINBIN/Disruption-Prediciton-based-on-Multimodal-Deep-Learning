@@ -41,7 +41,7 @@ def parsing():
     parser.add_argument("--num_epoch", type = int, default = 128)
     parser.add_argument("--seq_len", type = int, default = 21)
     parser.add_argument("--dist", type = int, default = 3)
-    parser.add_argument("--num_workers", type = int, default = 4)
+    parser.add_argument("--num_workers", type = int, default = 2)
     parser.add_argument("--pin_memory", type = bool, default = False)
 
     # model weight / save process
@@ -301,18 +301,19 @@ if __name__ == "__main__":
         
     # loss
     if args['loss_type'] == "CE":
+        betas = [0, args['beta'], args['beta'] * 2, args['beta']*3]
         loss_fn = torch.nn.CrossEntropyLoss(reduction = "mean", weight = per_cls_weights,)
     elif args['loss_type'] == 'LDAM':
         max_m = args['max_m']
         s = args['s']
         betas = [0, args['beta'], args['beta'] * 2, args['beta']*3]
         loss_fn = LDAMLoss(cls_num_list, max_m = max_m, s = s, weight = per_cls_weights)
-        
     elif args['loss_type'] == 'Focal':
+        betas = [0, args['beta'], args['beta'] * 2, args['beta']*3]
         focal_gamma = args['focal_gamma']
         loss_fn = FocalLoss(weight = per_cls_weights, gamma = focal_gamma)
-        
     else:
+        betas = [0, args['beta'], args['beta'] * 2, args['beta']*3]
         loss_fn = torch.nn.CrossEntropyLoss(reduction = "mean", weight = per_cls_weights)
 
     # training process
@@ -332,6 +333,7 @@ if __name__ == "__main__":
             exp_dir = exp_dir,
             max_norm_grad = 1.0,
             criteria = "f1_score",
+            cls_num_list=cls_num_list,
             betas = betas,
             model_type = "single"
         )
@@ -356,6 +358,7 @@ if __name__ == "__main__":
             test_for_check_per_epoch=test_loader
         )
     
+    
     # plot the learning curve
     save_learning_curve = os.path.join(save_dir, "{}_lr_curve.png".format(tag))
     plot_learning_curve(train_loss, valid_loss, train_f1, valid_f1, figsize = (12,6), save_dir = save_learning_curve)
@@ -374,7 +377,7 @@ if __name__ == "__main__":
         loss_fn,
         device,
         save_conf = save_conf,
-        save_txt = save_txt
+        save_txt = save_txt,
     )
     
     # Additional analyzation

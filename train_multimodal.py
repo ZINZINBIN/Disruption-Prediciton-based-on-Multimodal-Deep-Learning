@@ -39,7 +39,7 @@ def parsing():
     parser.add_argument("--num_epoch", type = int, default = 128)
     parser.add_argument("--seq_len", type = int, default = 21)
     parser.add_argument("--dist", type = int, default = 4)
-    parser.add_argument("--num_workers", type = int, default = 8)
+    parser.add_argument("--num_workers", type = int, default = 4)
     parser.add_argument("--pin_memory", type = bool, default = False)
 
     # model weight / save process
@@ -84,6 +84,8 @@ def parsing():
     
     # Gradient Blending for Multi-modal learning
     parser.add_argument("--use_GB", type = bool, default = False)
+    parser.add_argument("--epoch_per_GB_estimate", type = int, default = 16)
+    parser.add_argument("--num_epoch_GB_estimate", type = int, default = 4)
     parser.add_argument("--w_fusion", type = float, default = 0.5)
     parser.add_argument("--w_vis", type = float, default = 0.2)
     parser.add_argument("--w_0D", type = float, default = 0.3)
@@ -339,7 +341,7 @@ if __name__ == "__main__":
         w_fusion = 0.5
         w_vis = 0.1
         w_0D = 0.4
-        loss_fn = GradientBlending(
+        loss_fn_gb = GradientBlending(
             copy.deepcopy(loss_fn),
             copy.deepcopy(loss_fn),
             copy.deepcopy(loss_fn),
@@ -351,15 +353,37 @@ if __name__ == "__main__":
     # training process
     print("\n################# training process #################\n")
     if args['use_GB']:
-        train_loss, train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train_GB(
+        
+        # train_loss, train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train_GB(
+        #     train_loader,
+        #     valid_loader,
+        #     model,
+        #     optimizer,
+        #     scheduler,
+        #     loss_fn_gb,
+        #     device,
+        #     args['num_epoch'],
+        #     args['verbose'],
+        #     save_best_dir,
+        #     save_last_dir,
+        #     exp_dir,
+        #     1.0,
+        #     "f1_score",
+        #     test_for_check_per_epoch=test_loader
+        # )
+        
+        train_loss, train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train_GB_dynamic(
             train_loader,
             valid_loader,
             model,
             optimizer,
             scheduler,
+            loss_fn_gb,
             loss_fn,
             device,
             args['num_epoch'],
+            args['epoch_per_GB_estimate'],
+            args['num_epoch_GB_estimate'],
             args['verbose'],
             save_best_dir,
             save_last_dir,
@@ -368,7 +392,7 @@ if __name__ == "__main__":
             "f1_score",
             test_for_check_per_epoch=test_loader
         )
-        
+          
     elif args['use_DRW']:
         train_loss,  train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train_DRW(
             train_loader,

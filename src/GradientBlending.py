@@ -2,6 +2,7 @@
 # To avoid overfitting from multimodal training, we use gradient blending method
 # see reference : https://arxiv.org/abs/1905.12681
 # online G-Blend and offline G-Blend
+
 import torch
 import torch.nn as nn
 import numpy as np
@@ -321,8 +322,10 @@ def train_GB_dynamic(
     verbose : Optional[int] = 8,
     save_best_dir : str = "./weights/best.pt",
     save_last_dir : str = "./weights/last.pt",
+    exp_dir : Optional[str] = None,
     max_norm_grad : Optional[float] = None,
     criteria : Literal["f1_score", "acc", "loss"] = "f1_score",
+    test_for_check_per_epoch : Optional[DataLoader] = None,
     ):
     
     model_type = "multi-GB"
@@ -340,6 +343,15 @@ def train_GB_dynamic(
     best_epoch = 0
     best_f1 = 0
     best_loss = torch.inf
+    
+    if not os.path.isdir(exp_dir):
+        os.mkdir(exp_dir)
+    
+    # tensorboard
+    if exp_dir:
+        writer = SummaryWriter(exp_dir)
+    else:
+        writer = None
 
     for epoch in tqdm(range(num_epoch), desc = "(multi-modal) training process with Gradient Blending"):
         
@@ -375,14 +387,28 @@ def train_GB_dynamic(
 
         train_f1_list.append(train_f1)
         valid_f1_list.append(valid_f1)
-
+        
+        # tensorboard recording : loss and score
+        if writer:
+            writer.add_scalar('Loss/train', train_loss, epoch)
+            writer.add_scalar('Loss/valid', valid_loss, epoch)
+            
+            writer.add_scalar('F1_score/train', train_f1, epoch)
+            writer.add_scalar('F1_score/valid', valid_f1, epoch)
+        
         if verbose:
             if epoch % verbose == 0:
                 print("epoch : {}, train loss : {:.3f}, valid loss : {:.3f}, train acc : {:.3f}, valid acc : {:.3f}, train f1 : {:.3f}, valid f1 : {:.3f}".format(
                     epoch+1, train_loss, valid_loss, train_acc, valid_acc, train_f1, valid_f1
                 ))
+                
+            if test_for_check_per_epoch and writer is not None:
+                model.eval()
+                fig = evaluate_tensorboard(test_for_check_per_epoch, model, optimizer, loss_GB, device, 0.5, "multi-GB")
+                writer.add_figure('Model-performance', fig, epoch)
+                model.train()
         
-        if epoch % epoch_per_GB_estimate:
+        if epoch % epoch_per_GB_estimate and epoch != 0:
             ws = GB_estimate(num_epoch_GB_estimate, train_loader, valid_loader, save_last_dir, model, optimizer, scheduler, loss_unimodal, device, max_norm_grad)
             loss_GB.update_weights(ws)
 

@@ -22,7 +22,7 @@ def parsing():
     parser.add_argument("--gpu_num", type = int, default = 0)
 
     # data input shape 
-    parser.add_argument("--image_size", type = int, default = 256)
+    parser.add_argument("--image_size", type = int, default = 128)
     parser.add_argument("--patch_size", type = int, default = 16)
 
     # common argument

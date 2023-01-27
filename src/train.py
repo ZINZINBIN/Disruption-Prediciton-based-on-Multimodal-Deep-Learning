@@ -228,17 +228,17 @@ def train(
             writer.add_scalar('F1_score/train', train_f1, epoch)
             writer.add_scalar('F1_score/valid', valid_f1, epoch)
         
-        if test_for_check_per_epoch and writer is not None:
-            model.eval()
-            fig = evaluate_tensorboard(test_for_check_per_epoch, model, optimizer, loss_fn, device, 0.5, model_type)
-            writer.add_figure('Model-performance', fig, epoch)
-            model.train()
-        
         if verbose:
             if epoch % verbose == 0:
                 print("epoch : {}, train loss : {:.3f}, valid loss : {:.3f}, train acc : {:.3f}, valid acc : {:.3f}, train f1 : {:.3f}, valid f1 : {:.3f}".format(
                     epoch+1, train_loss, valid_loss, train_acc, valid_acc, train_f1, valid_f1
                 ))
+                
+            if test_for_check_per_epoch and writer is not None:
+                model.eval()
+                fig = evaluate_tensorboard(test_for_check_per_epoch, model, optimizer, loss_fn, device, 0.5, model_type)
+                writer.add_figure('Model-performance', fig, epoch)
+                model.train()
 
         # save the best parameters
         if criteria == "acc" and best_acc < valid_acc:
@@ -372,17 +372,17 @@ def train_DRW(
         writer.add_scalar('F1_score/train', train_f1, epoch)
         writer.add_scalar('F1_score/valid', valid_f1, epoch)
         
-        if test_for_check_per_epoch and writer is not None:
-            model.eval()
-            fig = evaluate_tensorboard(test_for_check_per_epoch, model, optimizer, loss_fn, device, 0.5, model_type)
-            writer.add_figure('Model-performance', fig, epoch)
-            model.train()
-
         if verbose:
             if epoch % verbose == 0:
                 print("epoch : {}, train loss : {:.3f}, valid loss : {:.3f}, train f1 : {:.3f}, valid f1 : {:.3f}".format(
                     epoch+1, train_loss, valid_loss, train_f1, valid_f1
                 ))
+                
+            if test_for_check_per_epoch and writer is not None:
+                model.eval()
+                fig = evaluate_tensorboard(test_for_check_per_epoch, model, optimizer, loss_fn, device, 0.5, model_type)
+                writer.add_figure('Model-performance', fig, epoch)
+                model.train()
 
         # save the best parameters
         if criteria == "f1_score" and best_f1 < valid_f1:

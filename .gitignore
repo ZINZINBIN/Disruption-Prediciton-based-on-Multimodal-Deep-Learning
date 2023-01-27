@@ -7,7 +7,7 @@
 runs/*
 
 # result file
-results/*
+# results/disruption_phase/*
 
 # weights
 weights/*

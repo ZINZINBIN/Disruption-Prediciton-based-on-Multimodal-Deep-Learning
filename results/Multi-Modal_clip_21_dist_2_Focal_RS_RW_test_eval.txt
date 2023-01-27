@@ -1,0 +1,10 @@
+              precision    recall  f1-score   support
+
+           0       0.90      0.96      0.93       276
+           1       1.00      1.00      1.00     10794
+
+    accuracy                           1.00     11070
+   macro avg       0.95      0.98      0.97     11070
+weighted avg       1.00      1.00      1.00     11070
+
+# test score : 1.00, test loss : 0.217, test f1 : 0.966, test_auc : 0.981
