@@ -1,0 +1,33 @@
+/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torchvision/io/image.py:11: UserWarning: Failed to load image Python extension: /home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torchvision/image.so: undefined symbol: _ZNK3c1010TensorImpl36is_contiguous_nondefault_policy_implENS_12MemoryFormatE
+  warn(f"Failed to load image Python extension: {e}")
+############### device setup ###################
+torch device avaliable :  True
+torch current device :  0
+torch device num :  4
+train data : 13447, disrupt : 227, non-disrupt : 13220
+valid data : 3119, disrupt : 57, non-disrupt : 3062
+test data : 3883, disrupt : 71, non-disrupt : 3812
+
+################# model summary #################
+
+-------------------------------------------------------------------------------------------------
+        Parent Layers       Layer (type)              Input Shape         Param #     Tr. Param #
+=================================================================================================
+   R2Plus1DClassifier      R2Plus1DNet-1     [8, 3, 21, 128, 128]       1,579,009       1,579,009
+   R2Plus1DClassifier           Linear-2                 [8, 128]           8,256           8,256
+   R2Plus1DClassifier      BatchNorm1d-3                  [8, 64]             128             128
+   R2Plus1DClassifier              ELU-4                  [8, 64]               0               0
+   R2Plus1DClassifier           Linear-5                  [8, 64]             130             130
+=================================================================================================
+Total params: 1,587,523
+Trainable params: 1,587,523
+Non-trainable params: 0
+-------------------------------------------------------------------------------------------------
+
+################# training process #################
+
+training process:   0%|          | 0/50 [00:00<?, ?it/s]epoch : 1, train loss : 0.014, valid loss : 0.089, train acc : 0.977, valid acc : 0.780, train f1 : 0.536, valid f1 : 0.483
+training process:   2%|▏         | 1/50 [17:04<13:56:31, 1024.32s/it]training process:   4%|▍         | 2/50 [34:40<13:54:26, 1043.06s/it]training process:   6%|▌         | 3/50 [52:30<13:46:49, 1055.53s/it]training process:   8%|▊         | 4/50 [1:10:47<13:41:47, 1071.91s/it]epoch : 5, train loss : 0.004, valid loss : 0.006, train acc : 0.994, valid acc : 0.992, train f1 : 0.890, valid f1 : 0.879
+training process:  10%|█         | 5/50 [1:27:54<13:11:44, 1055.66s/it]training process:  12%|█▏        | 6/50 [1:44:57<12:45:51, 1044.36s/it]training process:  14%|█▍        | 7/50 [2:02:27<12:29:46, 1046.20s/it]training process:  16%|█▌        | 8/50 [2:20:05<12:15:05, 1050.12s/it]epoch : 9, train loss : 0.003, valid loss : 0.005, train acc : 0.995, valid acc : 0.995, train f1 : 0.913, valid f1 : 0.919
+training process:  18%|█▊        | 9/50 [2:37:52<12:01:11, 1055.40s/it]training process:  20%|██        | 10/50 [2:54:54<11:36:46, 1045.17s/it]training process:  22%|██▏       | 11/50 [3:04:29<9:45:45, 901.16s/it]  training process:  24%|██▍       | 12/50 [3:12:21<8:07:59, 770.52s/it]epoch : 13, train loss : 0.003, valid loss : 0.006, train acc : 0.995, valid acc : 0.991, train f1 : 0.920, valid f1 : 0.868
+training process:  26%|██▌       | 13/50 [3:20:11<6:59:06, 679.63s/it]training process:  28%|██▊       | 14/50 [3:27:58<6:09:14, 615.41s/it]training process:  30%|███       | 15/50 [3:35:46<5:33:02, 570.92s/it]

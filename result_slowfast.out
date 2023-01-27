@@ -1,0 +1,57 @@
+/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torchvision/io/image.py:11: UserWarning: Failed to load image Python extension: /home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torchvision/image.so: undefined symbol: _ZNK3c1010TensorImpl36is_contiguous_nondefault_policy_implENS_12MemoryFormatE
+  warn(f"Failed to load image Python extension: {e}")
+############### device setup ###################
+torch device avaliable :  True
+torch current device :  0
+torch device num :  4
+SlowFast : seq_len must be even number, seq_len-1 as input
+train data : 14120, disrupt : 227, non-disrupt : 13893
+valid data : 3276, disrupt : 57, non-disrupt : 3219
+test data : 4079, disrupt : 71, non-disrupt : 4008
+
+################# model summary #################
+
+---------------------------------------------------------------------------------------------------------------
+                      Parent Layers       Layer (type)              Input Shape         Param #     Tr. Param #
+===============================================================================================================
+   SlowFast/SlowFastEncoder/FastNet           Conv3d-1     [8, 3, 20, 128, 128]             592             592
+   SlowFast/SlowFastEncoder/FastNet      BatchNorm3d-2       [8, 4, 20, 64, 64]               8               8
+   SlowFast/SlowFastEncoder/FastNet             ReLU-3       [8, 4, 20, 64, 64]               0               0
+   SlowFast/SlowFastEncoder/FastNet        MaxPool3d-4       [8, 4, 20, 64, 64]               0               0
+   SlowFast/SlowFastEncoder/FastNet           Conv3d-5       [8, 4, 20, 32, 32]              96              96
+   SlowFast/SlowFastEncoder/FastNet     Bottleneck3D-6       [8, 4, 20, 32, 32]             476             476
+   SlowFast/SlowFastEncoder/FastNet           Conv3d-7      [8, 16, 20, 32, 32]           1,536           1,536
+   SlowFast/SlowFastEncoder/FastNet     Bottleneck3D-8      [8, 16, 20, 32, 32]           2,032           2,032
+   SlowFast/SlowFastEncoder/FastNet     Bottleneck3D-9      [8, 32, 20, 16, 16]           1,840           1,840
+   SlowFast/SlowFastEncoder/FastNet          Conv3d-10      [8, 32, 20, 16, 16]           6,144           6,144
+   SlowFast/SlowFastEncoder/FastNet    Bottleneck3D-11      [8, 32, 20, 16, 16]           7,512           7,512
+   SlowFast/SlowFastEncoder/FastNet    Bottleneck3D-12        [8, 64, 20, 8, 8]           6,872           6,872
+   SlowFast/SlowFastEncoder/FastNet          Conv3d-13        [8, 64, 20, 8, 8]          24,576          24,576
+   SlowFast/SlowFastEncoder/FastNet    Bottleneck3D-14        [8, 64, 20, 8, 8]          28,840          28,840
+   SlowFast/SlowFastEncoder/SlowNet          Conv3d-15      [8, 3, 5, 128, 128]           2,368           2,368
+   SlowFast/SlowFastEncoder/SlowNet     BatchNorm3d-16       [8, 16, 5, 64, 64]              32              32
+   SlowFast/SlowFastEncoder/SlowNet            ReLU-17       [8, 16, 5, 64, 64]               0               0
+   SlowFast/SlowFastEncoder/SlowNet       MaxPool3d-18       [8, 16, 5, 64, 64]               0               0
+   SlowFast/SlowFastEncoder/SlowNet    Bottleneck3D-19       [8, 20, 5, 32, 32]           5,528           5,528
+   SlowFast/SlowFastEncoder/SlowNet    Bottleneck3D-20       [8, 80, 5, 32, 32]          27,304          27,304
+   SlowFast/SlowFastEncoder/SlowNet    Bottleneck3D-21      [8, 128, 5, 16, 16]          18,344          18,344
+   SlowFast/SlowFastEncoder/SlowNet    Bottleneck3D-22      [8, 160, 5, 16, 16]         127,304         127,304
+   SlowFast/SlowFastEncoder/SlowNet    Bottleneck3D-23        [8, 256, 5, 8, 8]         104,264         104,264
+   SlowFast/SlowFastEncoder/SlowNet    Bottleneck3D-24        [8, 320, 5, 8, 8]         504,456         504,456
+        SlowFast/SlowFastClassifier          Linear-25                 [8, 640]         205,120         205,120
+        SlowFast/SlowFastClassifier     BatchNorm1d-26                 [8, 320]             640             640
+        SlowFast/SlowFastClassifier             ELU-27                 [8, 320]               0               0
+        SlowFast/SlowFastClassifier          Linear-28                 [8, 320]             642             642
+===============================================================================================================
+Total params: 1,076,526
+Trainable params: 1,076,526
+Non-trainable params: 0
+---------------------------------------------------------------------------------------------------------------
+
+################# training process #################
+
+training process:   0%|          | 0/50 [00:00<?, ?it/s]epoch : 1, train loss : 0.013, valid loss : 0.248, train acc : 0.983, valid acc : 0.910, train f1 : 0.643, valid f1 : 0.536
+training process:   2%|▏         | 1/50 [17:22<14:11:18, 1042.42s/it]training process:   4%|▍         | 2/50 [35:06<14:03:58, 1054.96s/it]training process:   6%|▌         | 3/50 [53:15<13:58:31, 1070.46s/it]training process:   8%|▊         | 4/50 [1:12:11<14:00:37, 1096.46s/it]epoch : 5, train loss : 0.004, valid loss : 0.115, train acc : 0.995, valid acc : 0.989, train f1 : 0.917, valid f1 : 0.757
+training process:  10%|█         | 5/50 [1:29:05<13:20:12, 1066.94s/it]training process:  12%|█▏        | 6/50 [1:46:08<12:51:14, 1051.70s/it]training process:  14%|█▍        | 7/50 [2:03:32<12:31:54, 1049.17s/it]training process:  16%|█▌        | 8/50 [2:21:14<12:17:25, 1053.47s/it]epoch : 9, train loss : 0.003, valid loss : 0.004, train acc : 0.997, valid acc : 0.995, train f1 : 0.941, valid f1 : 0.913
+training process:  18%|█▊        | 9/50 [2:39:01<12:02:45, 1057.70s/it]training process:  20%|██        | 10/50 [2:55:30<11:30:51, 1036.28s/it]training process:  22%|██▏       | 11/50 [3:05:04<9:41:41, 894.91s/it]  training process:  24%|██▍       | 12/50 [3:13:02<8:06:32, 768.22s/it]epoch : 13, train loss : 0.003, valid loss : 0.006, train acc : 0.996, valid acc : 0.992, train f1 : 0.937, valid f1 : 0.858
+training process:  26%|██▌       | 13/50 [3:20:58<6:59:06, 679.63s/it]training process:  28%|██▊       | 14/50 [3:28:50<6:10:07, 616.88s/it]training process:  30%|███       | 15/50 [3:36:43<5:34:27, 573.35s/it]

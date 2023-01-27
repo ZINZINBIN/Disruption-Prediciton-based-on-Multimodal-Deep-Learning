@@ -1,0 +1,37 @@
+/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torchvision/io/image.py:11: UserWarning: Failed to load image Python extension: /home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torchvision/image.so: undefined symbol: _ZNK3c1010TensorImpl36is_contiguous_nondefault_policy_implENS_12MemoryFormatE
+  warn(f"Failed to load image Python extension: {e}")
+############### device setup ###################
+torch device avaliable :  True
+torch current device :  0
+torch device num :  4
+train data : 13447, disrupt : 227, non-disrupt : 13220
+valid data : 3119, disrupt : 57, non-disrupt : 3062
+test data : 3883, disrupt : 71, non-disrupt : 3812
+
+################# model summary #################
+
+--------------------------------------------------------------------------------------------
+   Parent Layers       Layer (type)              Input Shape         Param #     Tr. Param #
+============================================================================================
+           ViViT        Rearrange-1     [8, 21, 3, 128, 128]               0               0
+           ViViT           Linear-2         [8, 21, 64, 768]          98,432          98,432
+           ViViT          Dropout-3         [8, 21, 65, 128]               0               0
+           ViViT      Transformer-4           [168, 65, 128]       1,578,240       1,578,240
+           ViViT      Transformer-5             [8, 22, 128]       1,578,240       1,578,240
+           ViViT           Linear-6                 [8, 128]           8,256           8,256
+           ViViT        LayerNorm-7                  [8, 64]             128             128
+           ViViT              ELU-8                  [8, 64]               0               0
+           ViViT           Linear-9                  [8, 64]             130             130
+============================================================================================
+Total params: 3,263,426
+Trainable params: 3,263,426
+Non-trainable params: 0
+--------------------------------------------------------------------------------------------
+
+################# training process #################
+
+training process:   0%|          | 0/50 [00:00<?, ?it/s]epoch : 1, train loss : 0.011, valid loss : 0.011, train acc : 0.983, valid acc : 0.982, train f1 : 0.504, valid f1 : 0.495
+training process:   2%|▏         | 1/50 [17:05<13:57:42, 1025.77s/it]training process:   4%|▍         | 2/50 [34:01<13:35:47, 1019.75s/it]training process:   6%|▌         | 3/50 [51:54<13:37:57, 1044.21s/it]training process:   8%|▊         | 4/50 [1:10:22<13:39:49, 1069.34s/it]epoch : 5, train loss : 0.008, valid loss : 0.009, train acc : 0.987, valid acc : 0.987, train f1 : 0.718, valid f1 : 0.713
+training process:  10%|█         | 5/50 [1:26:25<12:53:08, 1030.86s/it]training process:  12%|█▏        | 6/50 [1:43:11<12:29:45, 1022.40s/it]training process:  14%|█▍        | 7/50 [2:00:15<12:13:12, 1023.09s/it]training process:  16%|█▌        | 8/50 [2:17:52<12:03:47, 1033.98s/it]epoch : 9, train loss : 0.007, valid loss : 0.008, train acc : 0.988, valid acc : 0.984, train f1 : 0.764, valid f1 : 0.773
+training process:  18%|█▊        | 9/50 [2:34:26<11:38:00, 1021.48s/it]training process:  20%|██        | 10/50 [2:51:08<11:16:48, 1015.22s/it]training process:  22%|██▏       | 11/50 [3:01:54<9:46:30, 902.32s/it]  training process:  24%|██▍       | 12/50 [3:09:56<8:10:25, 774.36s/it]epoch : 13, train loss : 0.007, valid loss : 0.008, train acc : 0.989, valid acc : 0.987, train f1 : 0.780, valid f1 : 0.784
+training process:  26%|██▌       | 13/50 [3:17:51<7:01:37, 683.72s/it]training process:  28%|██▊       | 14/50 [3:25:44<6:12:07, 620.22s/it]training process:  30%|███       | 15/50 [3:33:37<5:35:55, 575.86s/it]
