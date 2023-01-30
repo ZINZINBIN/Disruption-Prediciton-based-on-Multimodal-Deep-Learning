@@ -316,6 +316,10 @@ def train_DRW(
     # class per weight update
     def _update_per_cls_weights(epoch : int, betas : List, cls_num_list : List):
         idx = epoch // int(num_epoch / len(betas))
+        
+        if idx >= len(betas):
+            idx = len(betas) - 1
+        
         beta = betas[idx]
         effective_num = 1.0 - np.power(beta, cls_num_list)
         per_cls_weights = (1.0 - beta) / np.array(effective_num)

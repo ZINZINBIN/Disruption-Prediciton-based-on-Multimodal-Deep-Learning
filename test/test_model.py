@@ -19,6 +19,7 @@ from src.models.R2Plus1D import R2Plus1DClassifier
 from src.models.slowfast import SlowFast
 from src.models.ViViT import ViViT
 from src.models.ts_transformer import TStransformer
+from src.models.CnnLSTM import CnnLSTM
 from src.utils.sampler import ImbalancedDatasetSampler
 from src.loss import LDAMLoss, FocalLoss
 from src.models.resnet import Bottleneck3D
@@ -230,6 +231,20 @@ def test_ts_model(test_device):
                 cls_dims = 64,
                 n_classes = 2
             )
+        elif case == "CnnLSTM":
+            model = CnnLSTM(
+                seq_len = 21,
+                n_features=len(ts_cols),
+                conv_dim = 32,
+                conv_kernel = 3,
+                conv_stride=1,
+                conv_padding=1,
+                lstm_dim=64,
+                n_layers=2,
+                bidirectional=True,
+                n_classes=2
+            )    
+        
         else:
             ValueError("can not identify the model case ..!")
 

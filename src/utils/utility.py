@@ -722,7 +722,7 @@ def generate_prob_curve(
     interval = 1
     fps = 210
     
-    prob_list = [0] * clip_len + prob_list
+    prob_list = [0] * (clip_len + frame_srt)+ prob_list
     
     # correction for startup peaking effect : we will soon solve this problem
     for idx, prob in enumerate(prob_list):
@@ -741,7 +741,7 @@ def generate_prob_curve(
     t_current = tipminf
     
     # plot the disruption probability with plasma status
-    fig = plt.figure(figsize = (16, 8))
+    fig = plt.figure(figsize = (18, 8))
     fig.suptitle("Disruption prediction with shot : {}".format(shot_num))
     gs = GridSpec(nrows = 5, ncols = 3)
     
@@ -825,6 +825,7 @@ def generate_prob_curve(
     
     # probability
     threshold_line = [0.5] * len(time_x)
+    
     ax2 = fig.add_subplot(gs[:,2])
     ax2.plot(time_x, prob_list, 'b', label = 'disrupt prob')
     ax2.plot(time_x, threshold_line, 'k', label = "threshold(p = 0.5)")
@@ -1259,32 +1260,37 @@ def plot_learning_curve(train_loss, valid_loss, train_f1, valid_f1, figsize : Tu
     plt.title("train and valid f1 score curve")
     plt.legend()
     plt.savefig(save_dir)
+
+def measure_computation_time(model : torch.nn.Module, input_shape : Tuple, n_samples : int = 1, device : str = "cpu"):
     
-
-def show_data_composition(root_dir : str):
-    path_disrupt = os.path.join(root_dir, 'disruption')
-    path_normal = os.path.join(root_dir, 'normal')
-
-    if os.path.exists(os.path.join(root_dir, 'borderline')):
-        path_borderline = os.path.join(root_dir, 'borderline')
-    else:
-        path_borderline = None
-
-    print("########### Total Dataset Composition ########### ")
-    print("disruption : ", len(os.listdir(path_disrupt)))
-    print("normal : ", len(os.listdir(path_normal)))
-
-    if path_borderline is not None:
-        print("borderline : ", len(os.listdir(path_borderline)))
-
-    print("########### Train Dataset Composition ########### ")
-    print("disruption : ", len(os.listdir(os.path.join(root_dir, 'train', 'disruption'))))
-    print("normal : ", len(os.listdir(os.path.join(root_dir, 'train','normal'))))
-
-    print("########### Valid Dataset Composition ########### ")
-    print("disruption : ", len(os.listdir(os.path.join(root_dir, 'valid', 'disruption'))))
-    print("normal : ", len(os.listdir(os.path.join(root_dir, 'valid','normal'))))
-
-    print("########### Test Dataset Composition ########### ")
-    print("disruption : ", len(os.listdir(os.path.join(root_dir, 'test', 'disruption'))))
-    print("normal : ", len(os.listdir(os.path.join(root_dir, 'test','normal'))))
+    import time
+    import gc
+    
+    model.to(device)
+    model.eval()
+    
+    t_measures = []
+    
+    for n_iter in range(n_samples):
+        
+        torch.cuda.empty_cache()
+        torch.cuda.init()
+        
+        sample_data = torch.zeros(input_shape)
+        t_start = time.time()
+        sample_output = model(sample_data.to(device))
+        t_end = time.time()
+        dt = t_end - t_start
+        t_measures.append(dt)
+        
+        sample_output.cpu()
+        sample_data.cpu()
+        
+        del sample_data
+        del sample_output
+        
+    # statistical summary
+    dt_means = np.mean(t_measures)
+    dt_std = np.std(t_measures)
+    
+    return dt_means, dt_std, t_measures    

@@ -301,19 +301,19 @@ if __name__ == "__main__":
         
     # loss
     if args['loss_type'] == "CE":
-        betas = [0, args['beta'], args['beta'] * 2, args['beta']*3]
+        betas = [0, args['beta'], args['beta'] * 2, args['beta']*3, 1.0]
         loss_fn = torch.nn.CrossEntropyLoss(reduction = "mean", weight = per_cls_weights,)
     elif args['loss_type'] == 'LDAM':
         max_m = args['max_m']
         s = args['s']
-        betas = [0, args['beta'], args['beta'] * 2, args['beta']*3]
+        betas = [0, args['beta'], args['beta'] * 2, args['beta']*3, 1.0]
         loss_fn = LDAMLoss(cls_num_list, max_m = max_m, s = s, weight = per_cls_weights)
     elif args['loss_type'] == 'Focal':
-        betas = [0, args['beta'], args['beta'] * 2, args['beta']*3]
+        betas = [0, args['beta'], args['beta'] * 2, args['beta']*3, 1.0]
         focal_gamma = args['focal_gamma']
         loss_fn = FocalLoss(weight = per_cls_weights, gamma = focal_gamma)
     else:
-        betas = [0, args['beta'], args['beta'] * 2, args['beta']*3]
+        betas = [0, args['beta'], args['beta'] * 2, args['beta']*3, 1.0]
         loss_fn = torch.nn.CrossEntropyLoss(reduction = "mean", weight = per_cls_weights)
 
     # training process
