@@ -14,6 +14,7 @@ from src.evaluate import evaluate
 from src.loss import FocalLoss, LDAMLoss
 from src.models.ts_transformer import TStransformer
 from src.models.CnnLSTM import CnnLSTM
+from src.models.MLSTM_FCN import MLSTM_FCN
 from src.feature_importance import compute_permute_feature_importance
 
 # columns for use
@@ -56,7 +57,7 @@ def parsing():
     parser = argparse.ArgumentParser(description="training disruption prediction model with 0D data")
     
     # tag and result directory
-    parser.add_argument("--model", type = str, default = 'Transformer', choices=['Transformer', 'CnnLSTM'])
+    parser.add_argument("--model", type = str, default = 'Transformer', choices=['Transformer', 'CnnLSTM', 'MLSTM_FCN'])
     parser.add_argument("--tag", type = str, default = "Transformer")
     parser.add_argument("--save_dir", type = str, default = "./results")
     
@@ -129,7 +130,11 @@ def parsing():
     parser.add_argument("--lstm_dim", type = int, default = 64)
     parser.add_argument("--lstm_layers", type = int, default = 2)
     parser.add_argument("--bidirectional", type = bool, default = True)
-        
+    
+    # model setup : MLSTM_FCN
+    parser.add_argument("--fcn_dim", type = int, default = 64)
+    parser.add_argument("--reduction", type = int, default = 16)
+    
     args = vars(parser.parse_args())
 
     return args
@@ -230,6 +235,22 @@ if __name__ == "__main__":
             n_layers=args['lstm_layers'],
             bidirectional=args['bidirectional'],
             n_classes=2
+        )
+    
+    elif args['model'] == 'MLSTM_FCN':
+        model = MLSTM_FCN(
+            n_features = len(ts_cols),
+            fcn_dim = args['fcn_dim'],
+            kernel_size = args['conv_kernel'],
+            stride = args['conv_stride'],
+            seq_len = args['seq_len'],
+            lstm_dim = args['lstm_dim'],
+            lstm_n_layers=args['lstm_layers'],
+            lstm_bidirectional=args['bidirectional'],
+            lstm_dropout=0.1,
+            reduction = args['reduction'],
+            alpha = args['alpha'],
+            n_classes = 2
         )
     
     print("\n################# model summary #################\n")

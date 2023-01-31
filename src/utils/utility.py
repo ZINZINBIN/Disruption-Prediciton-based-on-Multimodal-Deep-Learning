@@ -545,7 +545,7 @@ class MultiModalDataset(Dataset):
             
         # ts indices
         ts_idx_end = len(ts_data) - len(ts_data[ts_data.time > t_end])
-        ts_idx_start = int(t_srt * self.dt)
+        ts_idx_start = int(t_srt / self.dt)
         
         ts_indices = [i for i in reversed(range(ts_idx_end, ts_idx_start, -1))]
         
@@ -944,7 +944,7 @@ def generate_prob_curve_from_0D(
     t_current = tipminf
     
     # plot the disruption probability with plasma status
-    fig = plt.figure(figsize = (14, 6))
+    fig = plt.figure(figsize = (16, 8))
     fig.suptitle("Disruption prediction with shot : {}".format(shot_num))
     gs = GridSpec(nrows = 4, ncols = 3)
     
@@ -955,21 +955,29 @@ def generate_prob_curve_from_0D(
     ax_kappa = fig.add_subplot(gs[0,0])
     ax_kappa.plot(t, kappa, label = 'kappa')
     ax_kappa.text(0.85, 0.8, "kappa", transform = ax_kappa.transAxes)
+    ax_kappa.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
+    ax_kappa.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
 
     # tri top
     ax_tri_top = fig.add_subplot(gs[1,0])
     ax_tri_top.plot(t, tritop, label = 'tri_top')
     ax_tri_top.text(0.85, 0.8, "tri_top", transform = ax_tri_top.transAxes)
+    ax_tri_top.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
+    ax_tri_top.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
     
     # tri bot
     ax_tri_bot = fig.add_subplot(gs[2,0])
     ax_tri_bot.plot(t, tribot, label = 'tri_bot')
     ax_tri_bot.text(0.85, 0.8, "tri_bot", transform = ax_tri_bot.transAxes)
+    ax_tri_bot.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
+    ax_tri_bot.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
     
     # plasma current
     ax_Ip = fig.add_subplot(gs[3,0])
     ax_Ip.plot(t, ip, label = 'Ip')
     ax_Ip.text(0.85, 0.8, "Ip", transform = ax_Ip.transAxes)
+    ax_Ip.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
+    ax_Ip.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
     
     ax_Ip.set_xlabel("time(s)")
     ax_Ip.set_xticks(t_quantile)
@@ -979,22 +987,30 @@ def generate_prob_curve_from_0D(
     ax_li = fig.add_subplot(gs[0,1])
     ax_li.plot(t, li, label = 'line density')
     ax_li.text(0.85, 0.8, "li", transform = ax_li.transAxes)
+    ax_li.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
+    ax_li.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
     
     # q95
     ax_q95 = fig.add_subplot(gs[1,1])
     ax_q95.plot(t, q95, label = 'q95')
     ax_q95.text(0.85, 0.8, "q95", transform = ax_q95.transAxes)
     ax_q95.set_ylim([0,10])
+    ax_q95.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
+    ax_q95.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
     
     # betap
     ax_bp = fig.add_subplot(gs[2,1])
     ax_bp.plot(t, betap, label = 'beta p')
     ax_bp.text(0.85, 0.8, "betap", transform = ax_bp.transAxes)
+    ax_bp.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
+    ax_bp.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
 
     # electron density
     ax_ne = fig.add_subplot(gs[3,1])
     ax_ne.plot(t, ne, label = 'ne')
     ax_ne.text(0.85, 0.8, "ne", transform = ax_ne.transAxes)
+    ax_ne.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
+    ax_ne.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
     
     ax_ne.set_xlabel("time(s)")
     ax_ne.set_xticks(t_quantile)
@@ -1111,7 +1127,7 @@ def generate_prob_curve_from_multi(
     interval = 1
     fps = 210
     
-    prob_list = [0] * int(t_srt * fps) + prob_list + [0] * int(dt_end * fps)
+    prob_list = [0] * int(t_srt * fps + vis_seq_len + dist) + prob_list + [0] * int(dt_end * fps)
     
     # correction for startup peaking effect : we will soon solve this problem
     for idx, prob in enumerate(prob_list):
@@ -1127,7 +1143,7 @@ def generate_prob_curve_from_multi(
     f_prob = interp1d(prob_x, prob_y, kind = 'cubic')
     prob_list = f_prob(np.linspace(0, t_end + dt_end, num = len(prob_list) * interval, endpoint = False))
     
-    time_x = np.arange(0, len(prob_list)) * (1/fps)
+    time_x = np.arange(dist, len(prob_list) + dist) * (1/fps)
     
     print("time : ", len(time_x))
     print("prob : ", len(prob_list))
