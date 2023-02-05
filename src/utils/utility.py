@@ -495,6 +495,7 @@ class MultiModalDataset(Dataset):
         dist:int = 3, 
         dt : float = 1.0 / 210 * 4,
         scaler : Optional[BaseEstimator] = None,
+        tau_0D : int = 4,
         ):
         # properties of multi-modal data
         self.root_dir = root_dir

@@ -10,7 +10,7 @@ from src.utils.utility import preparing_video_dataset, plot_learning_curve, gene
 from src.visualization.visualize_latent_space import visualize_2D_latent_space, visualize_3D_latent_space
 from src.train import train, train_DRW
 from src.evaluate import evaluate
-from src.loss import FocalLoss, LDAMLoss
+from src.loss import FocalLoss, LDAMLoss, CELoss
 from src.models.ViViT import ViViT
 from src.models.R2Plus1D import R2Plus1DClassifier
 from src.models.resnet import Bottleneck3D
@@ -33,7 +33,6 @@ def parsing():
 
     # data input shape 
     parser.add_argument("--image_size", type = int, default = 128)
-    parser.add_argument("--patch_size", type = int, default = 16)
 
     # common argument
     # batch size / sequence length / epochs / distance / num workers / pin memory use
@@ -41,7 +40,7 @@ def parsing():
     parser.add_argument("--num_epoch", type = int, default = 128)
     parser.add_argument("--seq_len", type = int, default = 21)
     parser.add_argument("--dist", type = int, default = 3)
-    parser.add_argument("--num_workers", type = int, default = 2)
+    parser.add_argument("--num_workers", type = int, default = 4)
     parser.add_argument("--pin_memory", type = bool, default = False)
 
     # model weight / save process
@@ -73,6 +72,12 @@ def parsing():
     parser.add_argument("--step_size", type = int, default = 4)
     parser.add_argument("--gamma", type = float, default = 0.95)
     
+    # early stopping
+    parser.add_argument('--early_stopping', type = bool, default = True)
+    parser.add_argument("--early_stopping_patience", type = int, default = 12)
+    parser.add_argument("--early_stopping_verbose", type = bool, default = True)
+    parser.add_argument("--early_stopping_delta", type = float, default = 1e-3)
+    
     # imbalanced dataset processing
     # Re-sampling
     parser.add_argument("--use_sampling", type = bool, default = True)
@@ -99,14 +104,15 @@ def parsing():
     
     # model setup
     # ViViT
+    parser.add_argument("--patch_size", type = int, default = 16)
     parser.add_argument("--alpha", type = float, default = 1.0)
-    parser.add_argument("--dropout", type = float, default = 0.25)
-    parser.add_argument("--embedd_dropout", type = float, default = 0.25)
+    parser.add_argument("--dropout", type = float, default = 0.1)
+    parser.add_argument("--embedd_dropout", type = float, default = 0.1)
     parser.add_argument("--dim", type = int, default = 128)
-    parser.add_argument("--n_heads", type = int, default = 8)
+    parser.add_argument("--n_heads", type = int, default = 4)
     parser.add_argument("--d_head", type = int, default = 64)
-    parser.add_argument("--scale_dim", type = int, default = 4)
-    parser.add_argument("--depth", type = int, default = 4)
+    parser.add_argument("--scale_dim", type = int, default = 8)
+    parser.add_argument("--depth", type = int, default = 2)
     
     # SlowFast
     parser.add_argument("--tau_alpha", type = int, default = 4)
@@ -164,6 +170,8 @@ if __name__ == "__main__":
         boost_type = "Normal"
     
     tag = "{}_clip_{}_dist_{}_{}_{}".format(args["tag"], args["seq_len"], args["dist"], loss_type, boost_type)
+    
+    print("running : {}".format(tag))
 
     save_best_dir = "./weights/{}_best.pt".format(tag)
     save_last_dir = "./weights/{}_last.pt".format(tag)
@@ -218,7 +226,7 @@ if __name__ == "__main__":
             dim = args['dim'],
             depth = args['depth'],
             n_heads = args['n_heads'],
-            pool = "cls",
+            pool = "mean",
             in_channels = 3,
             d_head = args['d_head'],
             dropout = args['dropout'],
@@ -301,20 +309,20 @@ if __name__ == "__main__":
         
     # loss
     if args['loss_type'] == "CE":
-        betas = [0, args['beta'], args['beta'] * 2, args['beta']*3, 1.0]
-        loss_fn = torch.nn.CrossEntropyLoss(reduction = "mean", weight = per_cls_weights,)
+        betas = [0, args['beta'], args['beta'] * 2, args['beta']*3]
+        loss_fn = CELoss(weight = per_cls_weights)
     elif args['loss_type'] == 'LDAM':
         max_m = args['max_m']
         s = args['s']
-        betas = [0, args['beta'], args['beta'] * 2, args['beta']*3, 1.0]
+        betas = [0, args['beta'], args['beta'] * 2, args['beta']*3]
         loss_fn = LDAMLoss(cls_num_list, max_m = max_m, s = s, weight = per_cls_weights)
     elif args['loss_type'] == 'Focal':
-        betas = [0, args['beta'], args['beta'] * 2, args['beta']*3, 1.0]
+        betas = [0, args['beta'], args['beta'] * 2, args['beta']*3]
         focal_gamma = args['focal_gamma']
         loss_fn = FocalLoss(weight = per_cls_weights, gamma = focal_gamma)
     else:
-        betas = [0, args['beta'], args['beta'] * 2, args['beta']*3, 1.0]
-        loss_fn = torch.nn.CrossEntropyLoss(reduction = "mean", weight = per_cls_weights)
+        betas = [0, args['beta'], args['beta'] * 2, args['beta']*3]
+        loss_fn = CELoss(weight = per_cls_weights)
 
     # training process
     print("\n################# training process #################\n")
@@ -332,10 +340,14 @@ if __name__ == "__main__":
             save_last_dir = save_last_dir,
             exp_dir = exp_dir,
             max_norm_grad = 1.0,
-            criteria = "f1_score",
             cls_num_list=cls_num_list,
             betas = betas,
-            model_type = "single"
+            model_type = "single",
+            test_for_check_per_epoch=test_loader,
+            is_early_stopping = args['early_stopping'],
+            early_stopping_verbose = args['early_stopping_verbose'],
+            early_stopping_patience = args['early_stopping_patience'],
+            early_stopping_delta = args['early_stopping_delta']
         )
         
     else:
@@ -353,9 +365,12 @@ if __name__ == "__main__":
             save_last_dir = save_last_dir,
             exp_dir = exp_dir,
             max_norm_grad = 1.0,
-            criteria = "f1_score",
             model_type = "single",
-            test_for_check_per_epoch=test_loader
+            test_for_check_per_epoch=test_loader,
+            is_early_stopping = args['early_stopping'],
+            early_stopping_verbose = args['early_stopping_verbose'],
+            early_stopping_patience = args['early_stopping_patience'],
+            early_stopping_delta = args['early_stopping_delta']
         )
     
     

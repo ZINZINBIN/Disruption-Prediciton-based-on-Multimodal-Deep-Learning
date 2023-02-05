@@ -67,3 +67,15 @@ class LDAMLoss(nn.Module):
         output = torch.where(idx, x_m, x)
 
         return F.cross_entropy(self.s * output, target, weight = self.weight)
+    
+class CELoss(nn.Module):
+    def __init__(self, weight : Optional[torch.Tensor] = None):
+        super(CELoss, self).__init__()
+        self.model_type = "CE"
+        self.weight = weight
+        
+    def update_weight(self, weight : Optional[torch.Tensor] = None):
+        self.weight = weight
+    
+    def forward(self, x : torch.Tensor, target : torch.Tensor):
+        return F.cross_entropy(x, target, weight = self.weight, reduction = 'sum')

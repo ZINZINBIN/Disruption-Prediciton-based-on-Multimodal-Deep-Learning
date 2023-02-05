@@ -803,8 +803,12 @@ class MultiModalDataset2(Dataset):
         seq_len : int = 21,
         dist : int = 3,
         dt : float = 1.0 / 210 * 4,
-        scaler = None
+        scaler = None,
+        tau : int = 1,
         ):
+        
+        # integer interval
+        self.tau = tau
         
         self.n_classes = 2
         
@@ -910,12 +914,12 @@ class MultiModalDataset2(Dataset):
             
             # indices for video and ts data per shot
             # video indices
-            video_indices = [i for i in reversed(range(dis_frame, tftsrt_frame, -seq_len//3))]
+            video_indices = [i for i in reversed(range(dis_frame, tftsrt_frame, -tau*seq_len//3))]
             
             # ts indices
             ts_idx_last = len(df_shot) - len(df_shot[df_shot.time > t_disrupt])
             ts_idx_start = int(tftsrt * self.dt)
-            ts_indices = [i for i in reversed(range(ts_idx_last, ts_idx_start, -seq_len//3))]
+            ts_indices = [i for i in reversed(range(ts_idx_last, ts_idx_start, -tau*seq_len//3))]
             
             # video path per shot
             video_path = sorted(glob2.glob(os.path.join(shot_dir, "*")))
@@ -939,9 +943,13 @@ class MultiModalDataset2(Dataset):
             
             # video indices
             for idx in video_indices:
-                self.video_file_path.append(video_path[idx + 1 : idx + seq_len + 1])
+                # without tau
+                # self.video_file_path.append(video_path[idx + 1 : idx + tau*seq_len + 1])
                 
-                if idx >= dis_frame - self.seq_len - self.seq_len // 6:
+                # with tau
+                self.video_file_path.append(video_path[idx + tau*seq_len + 1:idx+1:-tau][::-1])
+                
+                if idx >= dis_frame - tau * self.seq_len - tau * self.seq_len // 6:
                     self.labels.append(0)
                 else:
                     self.labels.append(1)
@@ -1001,7 +1009,12 @@ class MultiModalDataset2(Dataset):
     
     def get_tabular_data(self, index : int):
         ts_idx = self.ts_data_indices[index]
-        data = self.ts_data[self.ts_cols].loc[ts_idx+1:ts_idx+self.seq_len].values
+        # without tau
+        # data = self.ts_data[self.ts_cols].loc[ts_idx+1:ts_idx+self.seq_len].values
+        
+        # without tau
+        data = self.ts_data[self.ts_cols].loc[ts_idx+1:ts_idx+self.seq_len*self.tau].values[::self.tau,:]
+        
         return torch.from_numpy(data).float()
 
     def refill_temporal_slide(self, buffer:np.ndarray):

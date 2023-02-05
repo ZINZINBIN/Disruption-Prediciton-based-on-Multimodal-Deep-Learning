@@ -1,13 +1,18 @@
 from typing import Optional, List, Literal, Union
 from src.loss import LDAMLoss, FocalLoss
 import os
+import pdb
 import torch
 import numpy as np
 from tqdm.auto import tqdm
 from torch.utils.data import DataLoader
 from sklearn.metrics import f1_score
 from src.evaluate import evaluate_tensorboard
+from src.utils.EarlyStopping import EarlyStopping
 from torch.utils.tensorboard import SummaryWriter
+
+# anomaly detection from training process : backward process
+torch.autograd.set_detect_anomaly(True)
 
 def train_per_epoch(
     train_loader : DataLoader, 
@@ -63,8 +68,14 @@ def train_per_epoch(
             loss = loss_fn(output, output_vis, output_ts, target)
         else:
             loss = loss_fn(output, target)
-
-        loss.backward()
+            
+        # if loss == nan, we have to break the training process
+        # then, nan does not affect the weight of the parameters
+        if not torch.isfinite(loss):
+            print("train_per_epoch | Warning : loss nan occurs at batch_idx : {}".format(batch_idx))
+            continue
+        else:
+            loss.backward()
 
         # use gradient clipping
         if max_norm_grad:
@@ -84,10 +95,15 @@ def train_per_epoch(
     if scheduler:
         scheduler.step()
 
-    train_loss /= total_size
-    train_acc /= total_size
-
-    train_f1 = f1_score(total_label, total_pred, average = "macro")
+    if total_size > 0:
+        train_loss /= total_size
+        train_acc /= total_size
+        train_f1 = f1_score(total_label, total_pred, average = "macro")
+        
+    else:
+        train_loss = 0
+        train_acc = 0
+        train_f1 = 0
 
     return train_loss, train_acc, train_f1
 
@@ -161,9 +177,12 @@ def train(
     save_last_dir : str = "./weights/last.pt",
     exp_dir : Optional[str] = None,
     max_norm_grad : Optional[float] = None,
-    criteria : Literal["f1_score", "acc", "loss"] = "f1_score",
     model_type : Literal["single","multi"] = "single",
     test_for_check_per_epoch : Optional[DataLoader] = None,
+    is_early_stopping : bool = False,
+    early_stopping_verbose : bool = True,
+    early_stopping_patience : int = 12,
+    early_stopping_delta : float = 1e-3
     ):
 
     train_loss_list = []
@@ -188,6 +207,11 @@ def train(
         writer = SummaryWriter(exp_dir)
     else:
         writer = None
+        
+    if is_early_stopping:
+        early_stopping = EarlyStopping(save_best_dir, early_stopping_patience, early_stopping_verbose, early_stopping_delta)
+    else:
+        early_stopping = None
 
     for epoch in tqdm(range(num_epoch), desc = "training process"):
 
@@ -234,36 +258,29 @@ def train(
                     epoch+1, train_loss, valid_loss, train_acc, valid_acc, train_f1, valid_f1
                 ))
                 
-            if test_for_check_per_epoch and writer is not None:
-                model.eval()
-                fig = evaluate_tensorboard(test_for_check_per_epoch, model, optimizer, loss_fn, device, 0.5, model_type)
-                writer.add_figure('Model-performance', fig, epoch)
-                model.train()
-
-        # save the best parameters
-        if criteria == "acc" and best_acc < valid_acc:
-            best_acc = valid_acc
-            best_f1 = valid_f1
-            best_loss = valid_loss
-            best_epoch  = epoch
-            torch.save(model.state_dict(), save_best_dir)
-            
-        elif criteria == "f1_score" and best_f1 < valid_f1:
-            best_acc = valid_acc
-            best_f1 = valid_f1
-            best_loss = valid_loss
-            best_epoch  = epoch
-            torch.save(model.state_dict(), save_best_dir)
-            
-        elif criteria == "loss" and best_loss > valid_loss:
-            best_acc = valid_acc
-            best_f1 = valid_f1
-            best_loss = valid_loss
-            best_epoch  = epoch
-            torch.save(model.state_dict(), save_best_dir)
-
+                if test_for_check_per_epoch and writer is not None:
+                    model.eval()
+                    fig = evaluate_tensorboard(test_for_check_per_epoch, model, optimizer, loss_fn, device, 0.5, model_type)
+                    writer.add_figure('Model-performance', fig, epoch)
+                    model.train()
+                    
         # save the last parameters
         torch.save(model.state_dict(), save_last_dir)
+
+        # save the best parameters
+        if  best_f1 < valid_f1:
+            best_acc = valid_acc
+            best_f1 = valid_f1
+            best_loss = valid_loss
+            best_epoch  = epoch
+
+        if early_stopping:
+            early_stopping(valid_f1, model)
+            if early_stopping.early_stop:
+                print("Early stopping | epoch : {}, best f1 score : {:.3f}".format(epoch, best_f1))
+                break
+        else:
+            torch.save(model.state_dict(), save_best_dir)
 
     # print("\n============ Report ==============\n")
     print("training process finished, best loss : {:.3f} and best acc : {:.3f}, best f1 : {:.3f}, best epoch : {}".format(
@@ -289,11 +306,14 @@ def train_DRW(
     save_last_dir : str = "./weights/last.pt",
     exp_dir : str = './results',
     max_norm_grad : Optional[float] = None,
-    criteria : Literal["f1_score", "acc", "loss"] = "f1_score",
     cls_num_list : Optional[List] = None,
     betas : List = [0, 0.25, 0.75, 0.9],
     model_type : Literal['single','multi'] = 'single',
     test_for_check_per_epoch : Optional[DataLoader] = None,
+    is_early_stopping : bool = False,
+    early_stopping_verbose : bool = True,
+    early_stopping_patience : int = 12,
+    early_stopping_delta : float = 1e-3
     ):
 
     train_loss_list = []
@@ -332,6 +352,11 @@ def train_DRW(
         writer = SummaryWriter(exp_dir)
     else:
         writer = None
+        
+    if is_early_stopping:
+        early_stopping = EarlyStopping(save_best_dir, early_stopping_patience, early_stopping_verbose, early_stopping_delta)
+    else:
+        early_stopping = None
     
     for epoch in tqdm(range(num_epoch), desc = "training process - Deferred Re-weighting"):
 
@@ -382,34 +407,29 @@ def train_DRW(
                     epoch+1, train_loss, valid_loss, train_f1, valid_f1
                 ))
                 
-            if test_for_check_per_epoch and writer is not None:
-                model.eval()
-                fig = evaluate_tensorboard(test_for_check_per_epoch, model, optimizer, loss_fn, device, 0.5, model_type)
-                writer.add_figure('Model-performance', fig, epoch)
-                model.train()
-
-        # save the best parameters
-        if criteria == "f1_score" and best_f1 < valid_f1:
-            best_acc = valid_acc
-            best_f1 = valid_f1
-            best_loss = valid_loss
-            best_epoch  = epoch
-            torch.save(model.state_dict(), save_best_dir)
-        elif criteria == "acc" and best_acc < valid_acc:
-            best_acc = valid_acc
-            best_f1 = valid_f1
-            best_loss = valid_loss
-            best_epoch  = epoch
-            torch.save(model.state_dict(), save_best_dir)
-        elif criteria == "loss" and best_loss > valid_loss:
-            best_acc = valid_acc
-            best_f1 = valid_f1
-            best_loss = valid_loss
-            best_epoch  = epoch
-            torch.save(model.state_dict(), save_best_dir)
+                if test_for_check_per_epoch and writer is not None:
+                    model.eval()
+                    fig = evaluate_tensorboard(test_for_check_per_epoch, model, optimizer, loss_fn, device, 0.5, model_type)
+                    writer.add_figure('Model-performance', fig, epoch)
+                    model.train()
 
         # save the last parameters
         torch.save(model.state_dict(), save_last_dir)
+
+        # save the best parameters
+        if  best_f1 < valid_f1:
+            best_acc = valid_acc
+            best_f1 = valid_f1
+            best_loss = valid_loss
+            best_epoch  = epoch
+
+        if early_stopping:
+            early_stopping(valid_f1, model)
+            if early_stopping.early_stop:
+                print("Early stopping | epoch : {}, best f1 score : {:.3f}".format(epoch, best_f1))
+                break
+        else:
+            torch.save(model.state_dict(), save_best_dir)
 
     print("training process finished, best loss : {:.3f}, best acc : {:.3f}, best f1 : {:.3f}, best epoch : {}".format(
         best_loss, best_acc, best_f1, best_epoch

@@ -11,7 +11,7 @@ from src.visualization.visualize_latent_space import visualize_2D_latent_space, 
 from src.visualization.visualize_application import generate_real_time_experiment_0D
 from src.train import train, train_DRW
 from src.evaluate import evaluate
-from src.loss import FocalLoss, LDAMLoss
+from src.loss import FocalLoss, LDAMLoss, CELoss
 from src.models.ts_transformer import TStransformer
 from src.models.CnnLSTM import CnnLSTM
 from src.models.MLSTM_FCN import MLSTM_FCN
@@ -88,6 +88,12 @@ def parsing():
     parser.add_argument("--use_scheduler", type = bool, default = True)
     parser.add_argument("--step_size", type = int, default = 4)
     parser.add_argument("--gamma", type = float, default = 0.95)
+    
+    # early stopping
+    parser.add_argument('--early_stopping', type = bool, default = True)
+    parser.add_argument("--early_stopping_patience", type = int, default = 12)
+    parser.add_argument("--early_stopping_verbose", type = bool, default = True)
+    parser.add_argument("--early_stopping_delta", type = float, default = 1e-3)
 
     # imbalanced dataset processing
     # Re-sampling
@@ -180,6 +186,8 @@ if __name__ == "__main__":
         boost_type = "Normal"
     
     tag = "{}_clip_{}_dist_{}_{}_{}".format(args["tag"], args["seq_len"], args["dist"], loss_type, boost_type)
+    
+    print("running : {}".format(tag))
     
     save_best_dir = "./weights/{}_best.pt".format(tag)
     save_last_dir = "./weights/{}_last.pt".format(tag)
@@ -305,19 +313,20 @@ if __name__ == "__main__":
         
     # loss
     if args['loss_type'] == "CE":
-        loss_fn = torch.nn.CrossEntropyLoss(reduction = "mean", weight = per_cls_weights,)
+        betas = [0, args['beta'], args['beta'] * 2, args['beta']*3]
+        loss_fn = CELoss(weight = per_cls_weights)
     elif args['loss_type'] == 'LDAM':
         max_m = args['max_m']
         s = args['s']
         betas = [0, args['beta'], args['beta'] * 2, args['beta']*3]
         loss_fn = LDAMLoss(cls_num_list, max_m = max_m, s = s, weight = per_cls_weights)
-        
     elif args['loss_type'] == 'Focal':
+        betas = [0, args['beta'], args['beta'] * 2, args['beta']*3]
         focal_gamma = args['focal_gamma']
         loss_fn = FocalLoss(weight = per_cls_weights, gamma = focal_gamma)
-        
     else:
-        loss_fn = torch.nn.CrossEntropyLoss(reduction = "mean", weight = per_cls_weights)
+        betas = [0, args['beta'], args['beta'] * 2, args['beta']*3]
+        loss_fn = CELoss(weight = per_cls_weights)
 
     # training process
     print("\n################# training process #################\n")
@@ -335,10 +344,13 @@ if __name__ == "__main__":
             save_last_dir = save_last_dir,
             exp_dir = exp_dir,
             max_norm_grad = 1.0,
-            criteria = "f1_score",
             betas = betas,
             model_type = "single",
-            test_for_check_per_epoch=test_loader
+            test_for_check_per_epoch=test_loader,
+            is_early_stopping = args['early_stopping'],
+            early_stopping_verbose = args['early_stopping_verbose'],
+            early_stopping_patience = args['early_stopping_patience'],
+            early_stopping_delta = args['early_stopping_delta']
         )
         
     else:
@@ -356,9 +368,12 @@ if __name__ == "__main__":
             save_last_dir = save_last_dir,
             exp_dir = exp_dir,
             max_norm_grad = 1.0,
-            criteria = "f1_score",
             model_type = "single",
-            test_for_check_per_epoch=test_loader
+            test_for_check_per_epoch=test_loader,
+            is_early_stopping = args['early_stopping'],
+            early_stopping_verbose = args['early_stopping_verbose'],
+            early_stopping_patience = args['early_stopping_patience'],
+            early_stopping_delta = args['early_stopping_delta']
         )
     
     # plot the learning curve

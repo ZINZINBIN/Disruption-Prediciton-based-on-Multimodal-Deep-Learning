@@ -10,6 +10,7 @@
 
 import torch
 import torch.nn as nn
+from src.models.NoiseLayer import NoiseLayer
 from pytorch_model_summary import summary
 
 # Squeeze - Excite block
@@ -109,9 +110,13 @@ class MLSTM_FCN(nn.Module):
             SqueezeExciteBlock(2*fcn_dim, reduction),
         )
         
+        self.noise = NoiseLayer(mean = 0, std = 1e-2)
+        
         self.rnn = SelfAttentionRnn(n_features, lstm_dim, lstm_n_layers, lstm_bidirectional, lstm_dropout)
         
         feature_dims = self.rnn.output_dim + 2 * fcn_dim
+        
+        self.converter = nn.Linear(feature_dims, feature_dims)
         
         self.classifier = nn.Sequential(
             nn.Linear(feature_dims, feature_dims//2),
@@ -122,6 +127,8 @@ class MLSTM_FCN(nn.Module):
         
     def forward(self, x : torch.Tensor):
         # x : (N,T,C)
+        x = self.noise(x)
+        
         # RNN 
         x_rnn = self.rnn(x)
         
@@ -131,9 +138,28 @@ class MLSTM_FCN(nn.Module):
 
         # classifier
         x = torch.concat([x_rnn, x_fcn], axis = 1)
+        x = self.converter(x)
         x = self.classifier(x)
     
         return x
+    
+    def encode(self, x : torch.Tensor):
+        
+        with torch.no_grad():
+            
+            x = self.noise(x)
+            
+            x_rnn = self.rnn(x)
+        
+            # FCN
+            x_fcn = self.shuffle(x) # (N, C, T)
+            x_fcn = self.fcn(x_fcn).mean(axis = 2)
+
+            # classifier
+            x = torch.concat([x_rnn, x_fcn], axis = 1)
+            x = self.converter(x)
+            
+            return x        
     
     def shuffle(self, x : torch.Tensor):
         return x.permute(0,2,1)

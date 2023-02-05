@@ -1,802 +1,0 @@
-Terminated
-./exp_multi_gb.sh: line 9: GB: command not found
-/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torchvision/io/image.py:11: UserWarning: Failed to load image Python extension: /home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torchvision/image.so: undefined symbol: _ZNK3c1010TensorImpl36is_contiguous_nondefault_policy_implENS_12MemoryFormatE
-  warn(f"Failed to load image Python extension: {e}")
-Terminated
-/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torchvision/io/image.py:11: UserWarning: Failed to load image Python extension: /home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torchvision/image.so: undefined symbol: _ZNK3c1010TensorImpl36is_contiguous_nondefault_policy_implENS_12MemoryFormatE
-  warn(f"Failed to load image Python extension: {e}")
-############### device setup ###################
-torch device avaliable :  True
-torch current device :  0
-torch device num :  4
-
-extract the null data:   0%|          | 0/227 [00:00<?, ?it/s]
-extract the null data:  24%|██▍       | 54/227 [00:00<00:00, 538.23it/s]
-extract the null data:  50%|█████     | 114/227 [00:00<00:00, 570.00it/s]
-extract the null data:  75%|███████▌  | 171/227 [00:00<00:00, 560.59it/s]
-extract the null data: 100%|██████████| 227/227 [00:00<00:00, 570.58it/s]
-# check | video data : 36135, 0D data : 36135
-
-extract the null data:   0%|          | 0/57 [00:00<?, ?it/s]
-extract the null data: 100%|██████████| 57/57 [00:00<00:00, 702.38it/s]
-# check | video data : 9035, 0D data : 9035
-
-extract the null data:   0%|          | 0/71 [00:00<?, ?it/s]
-extract the null data:  97%|█████████▋| 69/71 [00:00<00:00, 683.50it/s]
-extract the null data: 100%|██████████| 71/71 [00:00<00:00, 681.72it/s]
-# check | video data : 11014, 0D data : 11014
-train data : 36135, disrupt : 860, non-disrupt : 35275
-valid data : 9035, disrupt : 216, non-disrupt : 8819
-test data : 11014, disrupt : 276, non-disrupt : 10738
-
-################# model summary #################
-
------------------------------------------------------------------------------------
-             Layer (type)              Input Shape         Param #     Tr. Param #
-===================================================================================
-           ViViTEncoder-1     [8, 3, 21, 128, 128]       3,429,888       3,429,888
-   TStransformerEncoder-2              [8, 21, 12]         794,752         794,752
-                 Linear-3                 [8, 256]          32,896          32,896
-            BatchNorm1d-4                 [8, 128]             256             256
-                   ReLU-5                 [8, 128]               0               0
-                 Linear-6                 [8, 128]             258             258
-===================================================================================
-Total params: 4,258,050
-Trainable params: 4,258,050
-Non-trainable params: 0
------------------------------------------------------------------------------------
-
-################# training process #################
-
-
-training process:   0%|          | 0/128 [00:00<?, ?it/s]
-training process:   1%|          | 1/128 [06:11<13:07:16, 371.94s/it]epoch : 1, train loss : 0.012, valid loss : 0.014, train acc : 0.725, valid acc : 0.511, train f1 : 0.706, valid f1 : 0.376
-
-training process:   2%|▏         | 2/128 [12:29<13:08:33, 375.50s/it]
-training process:   2%|▏         | 3/128 [18:41<12:58:27, 373.66s/it]
-training process:   3%|▎         | 4/128 [24:53<12:51:01, 373.08s/it]
-training process:   4%|▍         | 5/128 [31:04<12:43:10, 372.28s/it]epoch : 5, train loss : 0.003, valid loss : 0.008, train acc : 0.955, valid acc : 0.839, train f1 : 0.955, valid f1 : 0.565
-
-training process:   5%|▍         | 6/128 [37:15<12:36:26, 372.02s/it]
-training process:   5%|▌         | 7/128 [43:29<12:31:21, 372.58s/it]
-training process:   6%|▋         | 8/128 [49:42<12:25:31, 372.77s/it]
-training process:   7%|▋         | 9/128 [55:53<12:18:01, 372.12s/it]epoch : 9, train loss : 0.002, valid loss : 0.009, train acc : 0.974, valid acc : 0.906, train f1 : 0.974, valid f1 : 0.633
-
-training process:   8%|▊         | 10/128 [1:02:03<12:10:47, 371.59s/it]
-training process:   9%|▊         | 11/128 [1:08:13<12:03:20, 370.94s/it]
-training process:   9%|▉         | 12/128 [1:14:26<11:58:17, 371.53s/it]
-training process:  10%|█         | 13/128 [1:20:37<11:51:46, 371.36s/it]epoch : 13, train loss : 0.001, valid loss : 0.011, train acc : 0.983, valid acc : 0.906, train f1 : 0.983, valid f1 : 0.631
-
-training process:  11%|█         | 14/128 [1:26:46<11:44:21, 370.71s/it]
-training process:  12%|█▏        | 15/128 [1:32:56<11:37:41, 370.46s/it]
-training process:  12%|█▎        | 16/128 [1:39:06<11:31:15, 370.32s/it]
-training process:  13%|█▎        | 17/128 [1:45:15<11:24:29, 370.00s/it]epoch : 17, train loss : 0.001, valid loss : 0.015, train acc : 0.988, valid acc : 0.951, train f1 : 0.988, valid f1 : 0.711
-
-training process:  14%|█▍        | 18/128 [1:51:27<11:19:31, 370.65s/it]
-training process:  15%|█▍        | 19/128 [1:57:40<11:14:30, 371.29s/it]
-training process:  16%|█▌        | 20/128 [2:03:51<11:07:55, 371.07s/it]
-training process:  16%|█▋        | 21/128 [2:10:01<11:01:08, 370.73s/it]epoch : 21, train loss : 0.001, valid loss : 0.015, train acc : 0.990, valid acc : 0.934, train f1 : 0.990, valid f1 : 0.676
-
-training process:  17%|█▋        | 22/128 [2:16:09<10:53:51, 370.10s/it]
-training process:  18%|█▊        | 23/128 [2:22:20<10:47:56, 370.25s/it]
-training process:  19%|█▉        | 24/128 [2:28:30<10:41:59, 370.38s/it]
-training process:  20%|█▉        | 25/128 [2:34:41<10:35:39, 370.28s/it]epoch : 25, train loss : 0.001, valid loss : 0.015, train acc : 0.992, valid acc : 0.939, train f1 : 0.992, valid f1 : 0.687
-
-training process:  20%|██        | 26/128 [2:40:50<10:29:08, 370.08s/it]
-training process:  21%|██        | 27/128 [2:47:00<10:22:59, 370.09s/it]
-training process:  22%|██▏       | 28/128 [2:53:08<10:15:25, 369.25s/it]
-training process:  23%|██▎       | 29/128 [2:59:16<10:09:02, 369.11s/it]epoch : 29, train loss : 0.001, valid loss : 0.017, train acc : 0.992, valid acc : 0.948, train f1 : 0.992, valid f1 : 0.706
-
-training process:  23%|██▎       | 30/128 [3:05:28<10:04:15, 369.95s/it]
-training process:  24%|██▍       | 31/128 [3:11:38<9:57:50, 369.80s/it] 
-training process:  25%|██▌       | 32/128 [3:17:48<9:51:42, 369.82s/it]
-training process:  26%|██▌       | 33/128 [3:24:01<9:47:23, 370.98s/it]epoch : 33, train loss : 0.001, valid loss : 0.017, train acc : 0.994, valid acc : 0.958, train f1 : 0.994, valid f1 : 0.735
-
-training process:  27%|██▋       | 34/128 [3:30:14<9:41:57, 371.47s/it]
-training process:  27%|██▋       | 35/128 [3:36:26<9:36:06, 371.68s/it]
-training process:  28%|██▊       | 36/128 [3:42:35<9:28:35, 370.82s/it]
-training process:  29%|██▉       | 37/128 [3:48:46<9:22:37, 370.96s/it]epoch : 37, train loss : 0.001, valid loss : 0.019, train acc : 0.995, valid acc : 0.956, train f1 : 0.995, valid f1 : 0.726
-
-training process:  30%|██▉       | 38/128 [3:54:59<9:17:07, 371.42s/it]
-training process:  30%|███       | 39/128 [4:01:10<9:10:55, 371.40s/it]
-training process:  31%|███▏      | 40/128 [4:07:24<9:05:53, 372.20s/it]
-training process:  32%|███▏      | 41/128 [4:13:36<8:59:31, 372.09s/it]epoch : 41, train loss : 0.001, valid loss : 0.022, train acc : 0.996, valid acc : 0.977, train f1 : 0.996, valid f1 : 0.813
-
-training process:  33%|███▎      | 42/128 [4:19:46<8:52:25, 371.46s/it]
-training process:  34%|███▎      | 43/128 [4:25:56<8:45:42, 371.09s/it]
-training process:  34%|███▍      | 44/128 [4:32:07<8:39:33, 371.11s/it]
-training process:  35%|███▌      | 45/128 [4:38:21<8:34:16, 371.77s/it]epoch : 45, train loss : 0.000, valid loss : 0.024, train acc : 0.996, valid acc : 0.948, train f1 : 0.996, valid f1 : 0.705
-
-training process:  36%|███▌      | 46/128 [4:44:35<8:28:59, 372.43s/it]
-training process:  37%|███▋      | 47/128 [4:50:49<8:23:29, 372.96s/it]
-training process:  38%|███▊      | 48/128 [4:57:02<8:17:22, 373.03s/it]
-training process:  38%|███▊      | 49/128 [5:03:13<8:10:20, 372.42s/it]epoch : 49, train loss : 0.000, valid loss : 0.022, train acc : 0.997, valid acc : 0.966, train f1 : 0.997, valid f1 : 0.762
-
-training process:  39%|███▉      | 50/128 [5:09:24<8:03:29, 371.92s/it]
-training process:  40%|███▉      | 51/128 [5:15:38<7:58:17, 372.69s/it]
-training process:  41%|████      | 52/128 [5:21:52<7:52:24, 372.96s/it]
-training process:  41%|████▏     | 53/128 [5:28:07<7:47:02, 373.63s/it]epoch : 53, train loss : 0.000, valid loss : 0.025, train acc : 0.997, valid acc : 0.952, train f1 : 0.997, valid f1 : 0.718
-
-training process:  42%|████▏     | 54/128 [5:34:23<7:41:32, 374.23s/it]
-training process:  43%|████▎     | 55/128 [5:40:37<7:35:20, 374.26s/it]
-training process:  44%|████▍     | 56/128 [5:46:53<7:29:45, 374.79s/it]
-training process:  45%|████▍     | 57/128 [5:53:07<7:23:16, 374.60s/it]epoch : 57, train loss : 0.000, valid loss : 0.026, train acc : 0.997, valid acc : 0.955, train f1 : 0.997, valid f1 : 0.724
-
-training process:  45%|████▌     | 58/128 [5:59:21<7:16:51, 374.46s/it]
-training process:  46%|████▌     | 59/128 [6:05:35<7:10:27, 374.31s/it]
-training process:  47%|████▋     | 60/128 [6:11:48<7:03:36, 373.77s/it]
-training process:  48%|████▊     | 61/128 [6:18:00<6:57:00, 373.45s/it]epoch : 61, train loss : 0.000, valid loss : 0.027, train acc : 0.997, valid acc : 0.953, train f1 : 0.997, valid f1 : 0.716
-
-training process:  48%|████▊     | 62/128 [6:24:13<6:50:40, 373.34s/it]
-training process:  49%|████▉     | 63/128 [6:30:29<6:45:04, 373.92s/it]
-training process:  50%|█████     | 64/128 [6:36:42<6:38:29, 373.59s/it]
-training process:  51%|█████     | 65/128 [6:42:58<6:33:06, 374.39s/it]epoch : 65, train loss : 0.001, valid loss : 0.028, train acc : 0.998, valid acc : 0.963, train f1 : 0.998, valid f1 : 0.747
-
-training process:  52%|█████▏    | 66/128 [6:49:10<6:26:02, 373.59s/it]
-training process:  52%|█████▏    | 67/128 [6:55:21<6:19:16, 373.06s/it]
-training process:  53%|█████▎    | 68/128 [7:01:37<6:13:52, 373.88s/it]
-training process:  54%|█████▍    | 69/128 [7:07:53<6:08:11, 374.43s/it]epoch : 69, train loss : 0.000, valid loss : 0.030, train acc : 0.998, valid acc : 0.969, train f1 : 0.998, valid f1 : 0.765
-
-training process:  55%|█████▍    | 70/128 [7:14:10<6:02:35, 375.10s/it]
-training process:  55%|█████▌    | 71/128 [7:20:23<5:55:53, 374.62s/it]
-training process:  56%|█████▋    | 72/128 [7:26:39<5:50:04, 375.07s/it]
-training process:  57%|█████▋    | 73/128 [7:32:57<5:44:28, 375.80s/it]epoch : 73, train loss : 0.000, valid loss : 0.031, train acc : 0.998, valid acc : 0.951, train f1 : 0.998, valid f1 : 0.705
-
-training process:  58%|█████▊    | 74/128 [7:39:14<5:38:41, 376.32s/it]
-training process:  59%|█████▊    | 75/128 [7:45:32<5:32:46, 376.72s/it]
-training process:  59%|█████▉    | 76/128 [7:51:46<5:25:56, 376.08s/it]
-training process:  60%|██████    | 77/128 [7:57:58<5:18:32, 374.75s/it]epoch : 77, train loss : 0.000, valid loss : 0.029, train acc : 0.998, valid acc : 0.956, train f1 : 0.998, valid f1 : 0.721
-
-training process:  61%|██████    | 78/128 [8:04:09<5:11:25, 373.71s/it]
-training process:  62%|██████▏   | 79/128 [8:10:26<5:05:48, 374.45s/it]
-training process:  62%|██████▎   | 80/128 [8:16:39<4:59:21, 374.19s/it]
-training process:  63%|██████▎   | 81/128 [8:22:54<4:53:18, 374.43s/it]epoch : 81, train loss : 0.000, valid loss : 0.029, train acc : 0.998, valid acc : 0.955, train f1 : 0.998, valid f1 : 0.720
-
-training process:  64%|██████▍   | 82/128 [8:29:08<4:47:00, 374.37s/it]
-training process:  65%|██████▍   | 83/128 [8:35:21<4:40:29, 373.98s/it]
-training process:  66%|██████▌   | 84/128 [8:41:46<4:36:30, 377.05s/it]
-training process:  66%|██████▋   | 85/128 [8:48:58<4:42:07, 393.67s/it]epoch : 85, train loss : 0.000, valid loss : 0.026, train acc : 0.998, valid acc : 0.954, train f1 : 0.998, valid f1 : 0.722
-
-training process:  67%|██████▋   | 86/128 [8:56:21<4:45:53, 408.42s/it]
-training process:  68%|██████▊   | 87/128 [9:03:46<4:46:37, 419.44s/it]
-training process:  69%|██████▉   | 88/128 [9:11:11<4:44:44, 427.11s/it]
-training process:  70%|██████▉   | 89/128 [9:18:41<4:42:07, 434.04s/it]epoch : 89, train loss : 0.000, valid loss : 0.031, train acc : 0.998, valid acc : 0.954, train f1 : 0.998, valid f1 : 0.714
-
-training process:  70%|███████   | 90/128 [9:26:04<4:36:30, 436.59s/it]
-training process:  71%|███████   | 91/128 [9:33:24<4:29:55, 437.71s/it]
-training process:  72%|███████▏  | 92/128 [9:40:48<4:23:40, 439.46s/it]
-training process:  73%|███████▎  | 93/128 [9:48:12<4:17:07, 440.79s/it]epoch : 93, train loss : 0.000, valid loss : 0.032, train acc : 0.998, valid acc : 0.959, train f1 : 0.998, valid f1 : 0.725
-
-training process:  73%|███████▎  | 94/128 [9:55:34<4:10:00, 441.20s/it]
-training process:  74%|███████▍  | 95/128 [10:02:59<4:03:17, 442.36s/it]
-training process:  75%|███████▌  | 96/128 [10:10:22<3:56:02, 442.57s/it]
-training process:  76%|███████▌  | 97/128 [10:17:43<3:48:29, 442.25s/it]epoch : 97, train loss : 0.000, valid loss : 0.034, train acc : 0.999, valid acc : 0.964, train f1 : 0.999, valid f1 : 0.744
-
-training process:  77%|███████▋  | 98/128 [10:25:44<3:46:52, 453.74s/it]
-training process:  77%|███████▋  | 99/128 [10:34:05<3:46:12, 468.03s/it]
-training process:  78%|███████▊  | 100/128 [10:42:25<3:42:53, 477.64s/it]
-training process:  79%|███████▉  | 101/128 [10:50:55<3:39:14, 487.21s/it]epoch : 101, train loss : 0.000, valid loss : 0.033, train acc : 0.999, valid acc : 0.961, train f1 : 0.999, valid f1 : 0.735
-
-training process:  80%|███████▉  | 102/128 [10:59:09<3:32:02, 489.32s/it]
-training process:  80%|████████  | 103/128 [11:07:27<3:24:59, 491.97s/it]
-training process:  81%|████████▏ | 104/128 [11:15:49<3:18:00, 495.01s/it]
-training process:  82%|████████▏ | 105/128 [11:24:05<3:09:48, 495.15s/it]epoch : 105, train loss : 0.000, valid loss : 0.035, train acc : 0.999, valid acc : 0.969, train f1 : 0.999, valid f1 : 0.767
-
-training process:  83%|████████▎ | 106/128 [11:31:37<2:56:52, 482.37s/it]
-training process:  84%|████████▎ | 107/128 [11:42:08<3:04:22, 526.78s/it]
-training process:  84%|████████▍ | 108/128 [11:55:37<3:23:51, 611.57s/it]
-training process:  85%|████████▌ | 109/128 [12:09:47<3:36:16, 682.98s/it]epoch : 109, train loss : 0.000, valid loss : 0.034, train acc : 0.999, valid acc : 0.967, train f1 : 0.999, valid f1 : 0.759
-
-training process:  86%|████████▌ | 110/128 [12:23:53<3:39:34, 731.93s/it]
-training process:  87%|████████▋ | 111/128 [12:38:10<3:37:58, 769.35s/it]
-training process:  88%|████████▊ | 112/128 [12:51:03<3:25:27, 770.49s/it]
-training process:  88%|████████▊ | 113/128 [13:03:51<3:12:27, 769.84s/it]epoch : 113, train loss : 0.000, valid loss : 0.039, train acc : 0.999, valid acc : 0.969, train f1 : 0.999, valid f1 : 0.762
-
-training process:  89%|████████▉ | 114/128 [13:17:28<3:02:57, 784.08s/it]
-training process:  90%|████████▉ | 115/128 [13:30:21<2:49:09, 780.74s/it]
-training process:  91%|█████████ | 116/128 [13:43:19<2:35:56, 779.69s/it]
-training process:  91%|█████████▏| 117/128 [13:55:59<2:21:53, 773.92s/it]epoch : 117, train loss : 0.000, valid loss : 0.036, train acc : 0.999, valid acc : 0.965, train f1 : 0.999, valid f1 : 0.752
-
-training process:  92%|█████████▏| 118/128 [14:08:43<2:08:28, 770.90s/it]
-training process:  93%|█████████▎| 119/128 [14:21:01<1:54:09, 761.01s/it]
-training process:  94%|█████████▍| 120/128 [14:33:14<1:40:21, 752.72s/it]
-training process:  95%|█████████▍| 121/128 [14:45:02<1:26:14, 739.28s/it]epoch : 121, train loss : 0.000, valid loss : 0.037, train acc : 0.999, valid acc : 0.966, train f1 : 0.999, valid f1 : 0.753
-training process:  95%|█████████▌| 122/128 [14:57:13<1:13:40, 736.70s/it]bash: ./exp_la_r2plus1d.sh: Permission denied
-training process:  96%|█████████▌| 123/128 [15:09:27<1:01:19, 735.99s/it]training process:  97%|█████████▋| 124/128 [15:21:16<48:31, 727.90s/it]  training process:  98%|█████████▊| 125/128 [15:33:05<36:06, 722.28s/it]epoch : 125, train loss : 0.000, valid loss : 0.041, train acc : 1.000, valid acc : 0.971, train f1 : 1.000, valid f1 : 0.772
-training process:  98%|█████████▊| 126/128 [15:45:07<24:04, 722.01s/it]training process:  99%|█████████▉| 127/128 [15:56:52<11:56, 716.88s/it]training process: 100%|██████████| 128/128 [16:09:32<00:00, 729.78s/it]training process: 100%|██████████| 128/128 [16:09:32<00:00, 454.47s/it]
-training process finished, best loss : 0.022 and best acc : 0.977, best f1 : 0.813, best epoch : 40
-
-################# evaluation process #################
-
-############### Classification Report ####################
-              precision    recall  f1-score   support
-
-           0       0.66      0.80      0.72       276
-           1       0.99      0.99      0.99     10738
-
-    accuracy                           0.98     11014
-   macro avg       0.83      0.89      0.86     11014
-weighted avg       0.99      0.98      0.99     11014
-
-
-# test acc : 0.98, test f1 : 0.86, test AUC : 0.89, test loss : 1.654
-
-################# Visualization process #################
-
-/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torchvision/io/image.py:11: UserWarning: Failed to load image Python extension: /home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torchvision/image.so: undefined symbol: _ZNK3c1010TensorImpl36is_contiguous_nondefault_policy_implENS_12MemoryFormatE
-  warn(f"Failed to load image Python extension: {e}")
-############### device setup ###################
-torch device avaliable :  True
-torch current device :  0
-torch device num :  4
-extract the null data:   0%|          | 0/227 [00:00<?, ?it/s]extract the null data:  19%|█▊        | 42/227 [00:00<00:00, 410.25it/s]extract the null data:  40%|███▉      | 90/227 [00:00<00:00, 446.92it/s]extract the null data:  61%|██████    | 139/227 [00:00<00:00, 465.37it/s]extract the null data:  82%|████████▏ | 186/227 [00:00<00:00, 410.14it/s]extract the null data: 100%|██████████| 227/227 [00:00<00:00, 432.99it/s]
-# check | video data : 36013, 0D data : 36013
-extract the null data:   0%|          | 0/57 [00:00<?, ?it/s]extract the null data:  23%|██▎       | 13/57 [00:00<00:00, 103.63it/s]extract the null data:  46%|████▌     | 26/57 [00:00<00:00, 117.12it/s]extract the null data:  74%|███████▎  | 42/57 [00:00<00:00, 130.00it/s]extract the null data: 100%|██████████| 57/57 [00:00<00:00, 143.37it/s]
-# check | video data : 9002, 0D data : 9002
-extract the null data:   0%|          | 0/71 [00:00<?, ?it/s]extract the null data:  76%|███████▌  | 54/71 [00:00<00:00, 535.09it/s]extract the null data: 100%|██████████| 71/71 [00:00<00:00, 476.77it/s]
-# check | video data : 10968, 0D data : 10968
-train data : 36013, disrupt : 860, non-disrupt : 35153
-valid data : 9002, disrupt : 216, non-disrupt : 8786
-test data : 10968, disrupt : 276, non-disrupt : 10692
-
-################# model summary #################
-
------------------------------------------------------------------------------------
-             Layer (type)              Input Shape         Param #     Tr. Param #
-===================================================================================
-           ViViTEncoder-1     [8, 3, 21, 128, 128]       3,429,888       3,429,888
-   TStransformerEncoder-2              [8, 21, 12]         794,752         794,752
-                 Linear-3                 [8, 256]          32,896          32,896
-            BatchNorm1d-4                 [8, 128]             256             256
-                   ReLU-5                 [8, 128]               0               0
-                 Linear-6                 [8, 128]             258             258
-===================================================================================
-Total params: 4,258,050
-Trainable params: 4,258,050
-Non-trainable params: 0
------------------------------------------------------------------------------------
-
-################# training process #################
-
-training process:   0%|          | 0/128 [00:00<?, ?it/s]epoch : 1, train loss : 0.010, valid loss : 0.016, train acc : 0.666, valid acc : 0.365, train f1 : 0.624, valid f1 : 0.294
-training process:   1%|          | 1/128 [20:28<43:20:04, 1228.38s/it]training process:   2%|▏         | 2/128 [41:05<43:10:06, 1233.39s/it]training process:   2%|▏         | 3/128 [1:02:01<43:10:57, 1243.66s/it]training process:   3%|▎         | 4/128 [1:22:40<42:46:22, 1241.80s/it]epoch : 5, train loss : 0.003, valid loss : 0.011, train acc : 0.945, valid acc : 0.767, train f1 : 0.945, valid f1 : 0.514
-training process:   4%|▍         | 5/128 [1:43:12<42:18:24, 1238.25s/it]training process:   5%|▍         | 6/128 [2:03:38<41:49:40, 1234.27s/it]training process:   5%|▌         | 7/128 [2:24:05<41:24:32, 1232.01s/it]training process:   6%|▋         | 8/128 [2:46:06<42:00:36, 1260.30s/it]epoch : 9, train loss : 0.002, valid loss : 0.010, train acc : 0.969, valid acc : 0.926, train f1 : 0.969, valid f1 : 0.658
-training process:   7%|▋         | 9/128 [3:10:49<43:57:44, 1329.95s/it]training process:   8%|▊         | 10/128 [3:37:35<46:22:46, 1414.97s/it]training process:   9%|▊         | 11/128 [4:04:26<47:56:14, 1474.99s/it]training process:   9%|▉         | 12/128 [4:30:44<48:32:31, 1506.48s/it]epoch : 13, train loss : 0.002, valid loss : 0.011, train acc : 0.979, valid acc : 0.901, train f1 : 0.979, valid f1 : 0.621
-training process:  10%|█         | 13/128 [4:56:57<48:45:53, 1526.55s/it]training process:  11%|█         | 14/128 [5:23:33<49:00:15, 1547.51s/it]training process:  12%|█▏        | 15/128 [5:49:45<48:48:05, 1554.74s/it]training process:  12%|█▎        | 16/128 [6:04:09<41:54:10, 1346.88s/it]epoch : 17, train loss : 0.001, valid loss : 0.016, train acc : 0.984, valid acc : 0.941, train f1 : 0.984, valid f1 : 0.684
-training process:  13%|█▎        | 17/128 [6:16:44<36:02:52, 1169.12s/it]training process:  14%|█▍        | 18/128 [6:29:23<31:57:21, 1045.83s/it]training process:  15%|█▍        | 19/128 [6:41:57<29:00:27, 958.05s/it] training process:  16%|█▌        | 20/128 [6:54:28<26:52:38, 895.91s/it]epoch : 21, train loss : 0.001, valid loss : 0.013, train acc : 0.987, valid acc : 0.923, train f1 : 0.987, valid f1 : 0.649
-training process:  16%|█▋        | 21/128 [7:06:55<25:18:17, 851.38s/it]training process:  17%|█▋        | 22/128 [7:19:30<24:12:33, 822.21s/it]training process:  18%|█▊        | 23/128 [7:32:07<23:24:35, 802.63s/it]training process:  19%|█▉        | 24/128 [7:44:46<22:48:58, 789.80s/it]epoch : 25, train loss : 0.001, valid loss : 0.021, train acc : 0.990, valid acc : 0.955, train f1 : 0.990, valid f1 : 0.709
-training process:  20%|█▉        | 25/128 [7:57:16<22:14:59, 777.66s/it]training process:  20%|██        | 26/128 [8:09:45<21:47:37, 769.19s/it]training process:  21%|██        | 27/128 [8:22:15<21:24:58, 763.35s/it]training process:  22%|██▏       | 28/128 [8:34:44<21:05:11, 759.12s/it]epoch : 29, train loss : 0.001, valid loss : 0.020, train acc : 0.991, valid acc : 0.954, train f1 : 0.991, valid f1 : 0.715
-training process:  23%|██▎       | 29/128 [8:47:16<20:48:52, 756.89s/it]training process:  23%|██▎       | 30/128 [8:59:56<20:37:48, 757.84s/it]training process:  24%|██▍       | 31/128 [9:12:31<20:23:37, 756.88s/it]training process:  25%|██▌       | 32/128 [9:25:08<20:11:28, 757.17s/it]epoch : 33, train loss : 0.001, valid loss : 0.021, train acc : 0.993, valid acc : 0.952, train f1 : 0.993, valid f1 : 0.708
-training process:  26%|██▌       | 33/128 [9:37:40<19:55:57, 755.34s/it]training process:  27%|██▋       | 34/128 [9:50:20<19:45:56, 756.98s/it]training process:  27%|██▋       | 35/128 [10:03:02<19:35:16, 758.24s/it]training process:  28%|██▊       | 36/128 [10:15:40<19:22:43, 758.29s/it]epoch : 37, train loss : 0.001, valid loss : 0.025, train acc : 0.994, valid acc : 0.961, train f1 : 0.994, valid f1 : 0.733
-training process:  29%|██▉       | 37/128 [10:28:11<19:06:55, 756.21s/it]training process:  30%|██▉       | 38/128 [10:40:36<18:49:09, 752.77s/it]training process:  30%|███       | 39/128 [10:53:15<18:39:34, 754.76s/it]training process:  31%|███▏      | 40/128 [11:05:46<18:25:12, 753.55s/it]epoch : 41, train loss : 0.001, valid loss : 0.022, train acc : 0.994, valid acc : 0.961, train f1 : 0.994, valid f1 : 0.731
-training process:  32%|███▏      | 41/128 [11:18:20<18:12:35, 753.51s/it]training process:  33%|███▎      | 42/128 [11:30:44<17:56:11, 750.83s/it]training process:  34%|███▎      | 43/128 [11:43:09<17:40:57, 748.91s/it]training process:  34%|███▍      | 44/128 [11:55:35<17:27:31, 748.23s/it]epoch : 45, train loss : 0.001, valid loss : 0.029, train acc : 0.994, valid acc : 0.957, train f1 : 0.994, valid f1 : 0.712
-training process:  35%|███▌      | 45/128 [12:08:02<17:14:37, 747.92s/it]training process:  36%|███▌      | 46/128 [12:20:33<17:03:19, 748.78s/it]training process:  37%|███▋      | 47/128 [12:33:00<16:49:58, 748.12s/it]training process:  38%|███▊      | 48/128 [12:45:24<16:36:01, 747.01s/it]epoch : 49, train loss : 0.000, valid loss : 0.028, train acc : 0.996, valid acc : 0.956, train f1 : 0.996, valid f1 : 0.715
-training process:  38%|███▊      | 49/128 [12:57:49<16:22:44, 746.39s/it]training process:  39%|███▉      | 50/128 [13:10:23<16:13:01, 748.48s/it]training process:  40%|███▉      | 51/128 [13:22:42<15:56:58, 745.70s/it]training process:  41%|████      | 52/128 [13:35:07<15:44:22, 745.55s/it]epoch : 53, train loss : 0.001, valid loss : 0.039, train acc : 0.995, valid acc : 0.965, train f1 : 0.995, valid f1 : 0.731
-training process:  41%|████▏     | 53/128 [13:47:28<15:30:22, 744.30s/it]training process:  42%|████▏     | 54/128 [13:59:52<15:17:48, 744.17s/it]training process:  43%|████▎     | 55/128 [14:12:25<15:08:35, 746.79s/it]training process:  44%|████▍     | 56/128 [14:24:57<14:57:54, 748.25s/it]epoch : 57, train loss : 0.000, valid loss : 0.031, train acc : 0.996, valid acc : 0.957, train f1 : 0.996, valid f1 : 0.713
-training process:  45%|████▍     | 57/128 [14:37:31<14:47:29, 749.99s/it]training process:  45%|████▌     | 58/128 [14:50:01<14:35:02, 750.04s/it]training process:  46%|████▌     | 59/128 [15:02:33<14:23:15, 750.66s/it]training process:  47%|████▋     | 60/128 [15:15:05<14:11:20, 751.19s/it]epoch : 61, train loss : 0.001, valid loss : 0.034, train acc : 0.996, valid acc : 0.965, train f1 : 0.996, valid f1 : 0.740
-training process:  48%|████▊     | 61/128 [15:27:37<13:58:47, 751.15s/it]training process:  48%|████▊     | 62/128 [15:40:01<13:43:54, 749.01s/it]training process:  49%|████▉     | 63/128 [15:52:23<13:29:10, 746.93s/it]training process:  50%|█████     | 64/128 [16:04:56<13:18:38, 748.73s/it]epoch : 65, train loss : 0.000, valid loss : 0.039, train acc : 0.997, valid acc : 0.961, train f1 : 0.997, valid f1 : 0.726
-training process:  51%|█████     | 65/128 [16:17:28<13:07:23, 749.89s/it]training process:  52%|█████▏    | 66/128 [16:29:53<12:53:13, 748.28s/it]training process:  52%|█████▏    | 67/128 [16:42:21<12:40:53, 748.42s/it]training process:  53%|█████▎    | 68/128 [16:54:55<12:30:00, 750.01s/it]epoch : 69, train loss : 0.000, valid loss : 0.041, train acc : 0.997, valid acc : 0.956, train f1 : 0.997, valid f1 : 0.705
-training process:  54%|█████▍    | 69/128 [17:07:25<12:17:34, 750.08s/it]training process:  55%|█████▍    | 70/128 [17:19:56<12:05:10, 750.18s/it]training process:  55%|█████▌    | 71/128 [17:32:21<11:51:21, 748.79s/it]training process:  56%|█████▋    | 72/128 [17:44:50<11:38:44, 748.66s/it]epoch : 73, train loss : 0.001, valid loss : 0.039, train acc : 0.997, valid acc : 0.963, train f1 : 0.997, valid f1 : 0.723
-training process:  57%|█████▋    | 73/128 [17:57:13<11:24:55, 747.19s/it]training process:  58%|█████▊    | 74/128 [18:09:42<11:12:51, 747.62s/it]training process:  59%|█████▊    | 75/128 [18:22:14<11:01:26, 748.80s/it]training process:  59%|█████▉    | 76/128 [18:34:46<10:49:47, 749.76s/it]epoch : 77, train loss : 0.000, valid loss : 0.036, train acc : 0.998, valid acc : 0.959, train f1 : 0.998, valid f1 : 0.712
-training process:  60%|██████    | 77/128 [18:47:14<10:36:50, 749.22s/it]training process:  61%|██████    | 78/128 [18:59:43<10:24:29, 749.38s/it]training process:  62%|██████▏   | 79/128 [19:12:23<10:14:26, 752.39s/it]training process:  62%|██████▎   | 80/128 [19:24:50<10:00:35, 750.74s/it]epoch : 81, train loss : 0.000, valid loss : 0.048, train acc : 0.997, valid acc : 0.965, train f1 : 0.997, valid f1 : 0.730
-training process:  63%|██████▎   | 81/128 [19:37:20<9:47:59, 750.63s/it] training process:  64%|██████▍   | 82/128 [19:49:47<9:34:39, 749.56s/it]training process:  65%|██████▍   | 83/128 [20:02:22<9:23:15, 751.02s/it]training process:  66%|██████▌   | 84/128 [20:14:59<9:12:08, 752.93s/it]epoch : 85, train loss : 0.000, valid loss : 0.045, train acc : 0.998, valid acc : 0.965, train f1 : 0.998, valid f1 : 0.732
-training process:  66%|██████▋   | 85/128 [20:27:32<8:59:39, 753.01s/it]training process:  67%|██████▋   | 86/128 [20:39:58<8:45:38, 750.91s/it]training process:  68%|██████▊   | 87/128 [20:52:33<8:33:52, 752.02s/it]training process:  69%|██████▉   | 88/128 [21:04:54<8:19:17, 748.94s/it]epoch : 89, train loss : 0.000, valid loss : 0.055, train acc : 0.998, valid acc : 0.970, train f1 : 0.998, valid f1 : 0.747
-training process:  70%|██████▉   | 89/128 [21:17:22<8:06:35, 748.61s/it]training process:  70%|███████   | 90/128 [21:29:54<7:54:46, 749.65s/it]training process:  71%|███████   | 91/128 [21:42:23<7:42:09, 749.44s/it]training process:  72%|███████▏  | 92/128 [21:54:48<7:28:46, 747.96s/it]epoch : 93, train loss : 0.000, valid loss : 0.052, train acc : 0.998, valid acc : 0.972, train f1 : 0.998, valid f1 : 0.752
-training process:  73%|███████▎  | 93/128 [22:07:11<7:15:32, 746.66s/it]training process:  73%|███████▎  | 94/128 [22:19:37<7:02:51, 746.23s/it]training process:  74%|███████▍  | 95/128 [22:32:12<6:51:57, 749.01s/it]training process:  75%|███████▌  | 96/128 [22:44:40<6:39:19, 748.73s/it]epoch : 97, train loss : 0.000, valid loss : 0.047, train acc : 0.998, valid acc : 0.952, train f1 : 0.998, valid f1 : 0.686
-training process:  76%|███████▌  | 97/128 [22:57:16<6:27:55, 750.83s/it]training process:  77%|███████▋  | 98/128 [23:09:45<6:15:06, 750.23s/it]training process:  77%|███████▋  | 99/128 [23:22:13<6:02:15, 749.50s/it]training process:  78%|███████▊  | 100/128 [23:34:42<5:49:48, 749.58s/it]epoch : 101, train loss : 0.000, valid loss : 0.051, train acc : 0.999, valid acc : 0.964, train f1 : 0.999, valid f1 : 0.725
-training process:  79%|███████▉  | 101/128 [23:47:02<5:35:58, 746.62s/it]training process:  80%|███████▉  | 102/128 [23:59:22<5:22:39, 744.60s/it]training process:  80%|████████  | 103/128 [24:11:46<5:10:11, 744.48s/it]training process:  81%|████████▏ | 104/128 [24:24:06<4:57:13, 743.06s/it]epoch : 105, train loss : 0.001, valid loss : 0.066, train acc : 0.998, valid acc : 0.964, train f1 : 0.998, valid f1 : 0.719
-training process:  82%|████████▏ | 105/128 [24:36:27<4:44:40, 742.61s/it]training process:  83%|████████▎ | 106/128 [24:48:55<4:32:51, 744.18s/it]training process:  84%|████████▎ | 107/128 [25:01:20<4:20:30, 744.30s/it]training process:  84%|████████▍ | 108/128 [25:13:52<4:08:50, 746.53s/it]epoch : 109, train loss : 0.000, valid loss : 0.057, train acc : 0.999, valid acc : 0.961, train f1 : 0.999, valid f1 : 0.712
-training process:  85%|████████▌ | 109/128 [25:26:26<3:57:10, 749.00s/it]training process:  86%|████████▌ | 110/128 [25:38:53<3:44:28, 748.23s/it]training process:  87%|████████▋ | 111/128 [25:51:22<3:32:03, 748.43s/it]training process:  88%|████████▊ | 112/128 [26:03:48<3:19:24, 747.77s/it]epoch : 113, train loss : 0.000, valid loss : 0.058, train acc : 0.999, valid acc : 0.970, train f1 : 0.999, valid f1 : 0.745
-training process:  88%|████████▊ | 113/128 [26:16:13<3:06:42, 746.84s/it]training process:  89%|████████▉ | 114/128 [26:28:39<2:54:13, 746.65s/it]training process:  90%|████████▉ | 115/128 [26:41:08<2:41:57, 747.54s/it]training process:  91%|█████████ | 116/128 [26:53:36<2:29:30, 747.55s/it]epoch : 117, train loss : 0.000, valid loss : 0.056, train acc : 0.999, valid acc : 0.964, train f1 : 0.999, valid f1 : 0.726
-training process:  91%|█████████▏| 117/128 [27:05:59<2:16:48, 746.26s/it]training process:  92%|█████████▏| 118/128 [27:18:32<2:04:41, 748.14s/it]training process:  93%|█████████▎| 119/128 [27:31:02<1:52:18, 748.71s/it]training process:  94%|█████████▍| 120/128 [27:43:33<1:39:54, 749.29s/it]epoch : 121, train loss : 0.000, valid loss : 0.069, train acc : 0.999, valid acc : 0.968, train f1 : 0.999, valid f1 : 0.732
-training process:  95%|█████████▍| 121/128 [27:56:00<1:27:21, 748.84s/it]training process:  95%|█████████▌| 122/128 [28:08:32<1:14:57, 749.62s/it]training process:  96%|█████████▌| 123/128 [28:21:00<1:02:26, 749.26s/it]training process:  97%|█████████▋| 124/128 [28:33:31<49:59, 749.86s/it]  epoch : 125, train loss : 0.000, valid loss : 0.072, train acc : 0.999, valid acc : 0.962, train f1 : 0.999, valid f1 : 0.711
-training process:  98%|█████████▊| 125/128 [28:45:56<37:24, 748.29s/it]training process:  98%|█████████▊| 126/128 [28:58:22<24:55, 747.71s/it]training process:  99%|█████████▉| 127/128 [29:10:52<12:28, 748.28s/it]training process: 100%|██████████| 128/128 [29:23:27<00:00, 750.29s/it]training process: 100%|██████████| 128/128 [29:23:27<00:00, 826.62s/it]
-training process finished, best loss : 0.036 and best acc : 0.970, best f1 : 0.761, best epoch : 62
-
-################# evaluation process #################
-
-############### Classification Report ####################
-              precision    recall  f1-score   support
-
-           0       0.36      0.71      0.48       276
-           1       0.99      0.97      0.98     10692
-
-    accuracy                           0.96     10968
-   macro avg       0.68      0.84      0.73     10968
-weighted avg       0.98      0.96      0.97     10968
-
-
-# test acc : 0.96, test f1 : 0.73, test AUC : 0.84, test loss : 2.931
-
-################# Visualization process #################
-
-/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torchvision/io/image.py:11: UserWarning: Failed to load image Python extension: /home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torchvision/image.so: undefined symbol: _ZNK3c1010TensorImpl36is_contiguous_nondefault_policy_implENS_12MemoryFormatE
-  warn(f"Failed to load image Python extension: {e}")
-############### device setup ###################
-torch device avaliable :  True
-torch current device :  0
-torch device num :  4
-extract the null data:   0%|          | 0/227 [00:00<?, ?it/s]extract the null data:  20%|█▉        | 45/227 [00:00<00:00, 449.39it/s]extract the null data:  42%|████▏     | 96/227 [00:00<00:00, 483.44it/s]extract the null data:  64%|██████▍   | 145/227 [00:00<00:00, 483.69it/s]extract the null data:  86%|████████▋ | 196/227 [00:00<00:00, 492.44it/s]extract the null data: 100%|██████████| 227/227 [00:00<00:00, 491.56it/s]
-# check | video data : 35894, 0D data : 35894
-extract the null data:   0%|          | 0/57 [00:00<?, ?it/s]extract the null data:  98%|█████████▊| 56/57 [00:00<00:00, 555.67it/s]extract the null data: 100%|██████████| 57/57 [00:00<00:00, 554.70it/s]
-# check | video data : 8975, 0D data : 8975
-extract the null data:   0%|          | 0/71 [00:00<?, ?it/s]extract the null data:  80%|████████  | 57/71 [00:00<00:00, 563.04it/s]extract the null data: 100%|██████████| 71/71 [00:00<00:00, 560.15it/s]
-# check | video data : 10932, 0D data : 10932
-train data : 35894, disrupt : 860, non-disrupt : 35034
-valid data : 8975, disrupt : 216, non-disrupt : 8759
-test data : 10932, disrupt : 276, non-disrupt : 10656
-
-################# model summary #################
-
------------------------------------------------------------------------------------
-             Layer (type)              Input Shape         Param #     Tr. Param #
-===================================================================================
-           ViViTEncoder-1     [8, 3, 21, 128, 128]       3,429,888       3,429,888
-   TStransformerEncoder-2              [8, 21, 12]         794,752         794,752
-                 Linear-3                 [8, 256]          32,896          32,896
-            BatchNorm1d-4                 [8, 128]             256             256
-                   ReLU-5                 [8, 128]               0               0
-                 Linear-6                 [8, 128]             258             258
-===================================================================================
-Total params: 4,258,050
-Trainable params: 4,258,050
-Non-trainable params: 0
------------------------------------------------------------------------------------
-
-################# training process #################
-
-training process:   0%|          | 0/128 [00:00<?, ?it/s]epoch : 1, train loss : 0.012, valid loss : 0.024, train acc : 0.665, valid acc : 0.319, train f1 : 0.625, valid f1 : 0.264
-training process:   1%|          | 1/128 [12:31<26:31:27, 751.87s/it]training process:   2%|▏         | 2/128 [25:12<26:29:16, 756.80s/it]training process:   2%|▏         | 3/128 [37:43<26:11:32, 754.34s/it]training process:   3%|▎         | 4/128 [50:16<25:57:52, 753.81s/it]epoch : 5, train loss : 0.004, valid loss : 0.009, train acc : 0.927, valid acc : 0.808, train f1 : 0.927, valid f1 : 0.537
-training process:   4%|▍         | 5/128 [1:02:47<25:42:56, 752.65s/it]training process:   5%|▍         | 6/128 [1:15:10<25:23:41, 749.36s/it]training process:   5%|▌         | 7/128 [1:27:31<25:06:02, 746.80s/it]training process:   6%|▋         | 8/128 [1:39:51<24:48:55, 744.46s/it]epoch : 9, train loss : 0.003, valid loss : 0.012, train acc : 0.959, valid acc : 0.856, train f1 : 0.959, valid f1 : 0.573
-training process:   7%|▋         | 9/128 [1:52:22<24:40:40, 746.56s/it]training process:   8%|▊         | 10/128 [2:04:43<24:24:47, 744.81s/it]training process:   9%|▊         | 11/128 [2:17:10<24:14:10, 745.73s/it]training process:   9%|▉         | 12/128 [2:29:45<24:06:58, 748.44s/it]epoch : 13, train loss : 0.002, valid loss : 0.016, train acc : 0.972, valid acc : 0.922, train f1 : 0.972, valid f1 : 0.643
-training process:  10%|█         | 13/128 [2:42:18<23:57:13, 749.86s/it]training process:  11%|█         | 14/128 [2:54:54<23:48:24, 751.79s/it]training process:  12%|█▏        | 15/128 [3:07:25<23:35:05, 751.38s/it]training process:  12%|█▎        | 16/128 [3:19:44<23:15:51, 747.78s/it]epoch : 17, train loss : 0.001, valid loss : 0.022, train acc : 0.979, valid acc : 0.932, train f1 : 0.979, valid f1 : 0.653
-training process:  13%|█▎        | 17/128 [3:32:08<23:01:06, 746.54s/it]training process:  14%|█▍        | 18/128 [3:44:44<22:54:07, 749.52s/it]training process:  15%|█▍        | 19/128 [3:57:12<22:40:39, 748.99s/it]training process:  16%|█▌        | 20/128 [4:09:34<22:24:12, 746.78s/it]epoch : 21, train loss : 0.002, valid loss : 0.022, train acc : 0.984, valid acc : 0.929, train f1 : 0.984, valid f1 : 0.655
-training process:  16%|█▋        | 21/128 [4:21:50<22:06:11, 743.66s/it]training process:  17%|█▋        | 22/128 [4:34:24<21:59:13, 746.73s/it]training process:  18%|█▊        | 23/128 [4:46:54<21:48:42, 747.83s/it]training process:  19%|█▉        | 24/128 [4:59:14<21:31:41, 745.21s/it]epoch : 25, train loss : 0.002, valid loss : 0.025, train acc : 0.987, valid acc : 0.913, train f1 : 0.987, valid f1 : 0.625
-training process:  20%|█▉        | 25/128 [5:11:33<21:16:25, 743.55s/it]training process:  20%|██        | 26/128 [5:23:55<21:03:18, 743.13s/it]training process:  21%|██        | 27/128 [5:36:22<20:52:47, 744.23s/it]training process:  22%|██▏       | 28/128 [5:48:54<20:44:04, 746.45s/it]epoch : 29, train loss : 0.001, valid loss : 0.027, train acc : 0.989, valid acc : 0.921, train f1 : 0.989, valid f1 : 0.633
-training process:  23%|██▎       | 29/128 [6:01:24<20:33:40, 747.68s/it]training process:  23%|██▎       | 30/128 [6:14:00<20:24:55, 749.95s/it]training process:  24%|██▍       | 31/128 [6:26:38<20:16:39, 752.58s/it]training process:  25%|██▌       | 32/128 [6:39:07<20:02:03, 751.28s/it]epoch : 33, train loss : 0.001, valid loss : 0.027, train acc : 0.990, valid acc : 0.932, train f1 : 0.990, valid f1 : 0.658
-training process:  26%|██▌       | 33/128 [6:51:39<19:50:05, 751.64s/it]training process:  27%|██▋       | 34/128 [7:04:17<19:40:26, 753.48s/it]training process:  27%|██▋       | 35/128 [7:16:47<19:26:19, 752.46s/it]training process:  28%|██▊       | 36/128 [7:29:18<19:12:57, 751.93s/it]epoch : 37, train loss : 0.001, valid loss : 0.033, train acc : 0.992, valid acc : 0.927, train f1 : 0.992, valid f1 : 0.641
-training process:  29%|██▉       | 37/128 [7:41:48<18:59:49, 751.53s/it]training process:  30%|██▉       | 38/128 [7:54:24<18:49:21, 752.90s/it]training process:  30%|███       | 39/128 [8:06:55<18:35:56, 752.32s/it]training process:  31%|███▏      | 40/128 [8:19:26<18:22:54, 751.99s/it]epoch : 41, train loss : 0.001, valid loss : 0.041, train acc : 0.992, valid acc : 0.949, train f1 : 0.992, valid f1 : 0.683
-training process:  32%|███▏      | 41/128 [8:32:03<18:12:22, 753.36s/it]training process:  33%|███▎      | 42/128 [8:44:37<18:00:13, 753.64s/it]training process:  34%|███▎      | 43/128 [8:57:07<17:45:47, 752.33s/it]training process:  34%|███▍      | 44/128 [9:09:37<17:32:37, 751.87s/it]epoch : 45, train loss : 0.001, valid loss : 0.034, train acc : 0.993, valid acc : 0.931, train f1 : 0.993, valid f1 : 0.649
-training process:  35%|███▌      | 45/128 [9:22:16<17:22:53, 753.90s/it]training process:  36%|███▌      | 46/128 [9:34:41<17:06:30, 751.11s/it]training process:  37%|███▋      | 47/128 [9:47:09<16:52:46, 750.20s/it]training process:  38%|███▊      | 48/128 [9:59:36<16:39:03, 749.29s/it]epoch : 49, train loss : 0.001, valid loss : 0.040, train acc : 0.994, valid acc : 0.947, train f1 : 0.994, valid f1 : 0.679
-training process:  38%|███▊      | 49/128 [10:12:06<16:27:02, 749.65s/it]training process:  39%|███▉      | 50/128 [10:24:35<16:14:07, 749.33s/it]training process:  40%|███▉      | 51/128 [10:37:06<16:02:11, 749.77s/it]training process:  41%|████      | 52/128 [10:49:35<15:49:36, 749.70s/it]epoch : 53, train loss : 0.001, valid loss : 0.042, train acc : 0.994, valid acc : 0.949, train f1 : 0.994, valid f1 : 0.684
-training process:  41%|████▏     | 53/128 [11:02:04<15:36:48, 749.45s/it]training process:  42%|████▏     | 54/128 [11:14:41<15:27:05, 751.70s/it]training process:  43%|████▎     | 55/128 [11:27:19<15:16:51, 753.59s/it]training process:  44%|████▍     | 56/128 [11:39:51<15:03:31, 752.94s/it]epoch : 57, train loss : 0.001, valid loss : 0.043, train acc : 0.995, valid acc : 0.951, train f1 : 0.995, valid f1 : 0.686
-training process:  45%|████▍     | 57/128 [11:52:17<14:48:50, 751.13s/it]training process:  45%|████▌     | 58/128 [12:04:50<14:36:47, 751.53s/it]training process:  46%|████▌     | 59/128 [12:17:25<14:25:37, 752.72s/it]training process:  47%|████▋     | 60/128 [12:29:57<14:12:41, 752.37s/it]epoch : 61, train loss : 0.001, valid loss : 0.043, train acc : 0.995, valid acc : 0.944, train f1 : 0.995, valid f1 : 0.670
-training process:  48%|████▊     | 61/128 [12:42:27<13:59:31, 751.82s/it]training process:  48%|████▊     | 62/128 [12:55:04<13:48:25, 753.11s/it]training process:  49%|████▉     | 63/128 [13:07:34<13:35:04, 752.37s/it]training process:  50%|█████     | 64/128 [13:20:04<13:21:47, 751.68s/it]epoch : 65, train loss : 0.000, valid loss : 0.046, train acc : 0.996, valid acc : 0.953, train f1 : 0.996, valid f1 : 0.688
-training process:  51%|█████     | 65/128 [13:32:41<13:10:50, 753.19s/it]training process:  52%|█████▏    | 66/128 [13:45:19<12:59:37, 754.48s/it]training process:  52%|█████▏    | 67/128 [13:57:52<12:46:36, 754.04s/it]training process:  53%|█████▎    | 68/128 [14:10:25<12:33:50, 753.84s/it]epoch : 69, train loss : 0.000, valid loss : 0.051, train acc : 0.996, valid acc : 0.955, train f1 : 0.996, valid f1 : 0.695
-training process:  54%|█████▍    | 69/128 [14:23:03<12:22:32, 755.12s/it]training process:  55%|█████▍    | 70/128 [14:35:42<12:10:59, 756.20s/it]training process:  55%|█████▌    | 71/128 [14:48:15<11:57:39, 755.42s/it]training process:  56%|█████▋    | 72/128 [15:00:43<11:42:53, 753.09s/it]epoch : 73, train loss : 0.000, valid loss : 0.043, train acc : 0.997, valid acc : 0.939, train f1 : 0.997, valid f1 : 0.657
-training process:  57%|█████▋    | 73/128 [15:13:15<11:29:54, 752.63s/it]training process:  58%|█████▊    | 74/128 [15:25:41<11:15:39, 750.73s/it]training process:  59%|█████▊    | 75/128 [15:38:11<11:02:57, 750.52s/it]training process:  59%|█████▉    | 76/128 [15:50:46<10:51:33, 751.79s/it]epoch : 77, train loss : 0.000, valid loss : 0.053, train acc : 0.997, valid acc : 0.957, train f1 : 0.997, valid f1 : 0.702
-training process:  60%|██████    | 77/128 [16:03:12<10:37:32, 750.04s/it]training process:  61%|██████    | 78/128 [16:15:43<10:25:25, 750.50s/it]training process:  62%|██████▏   | 79/128 [16:28:20<10:14:21, 752.27s/it]training process:  62%|██████▎   | 80/128 [16:40:52<10:01:52, 752.34s/it]epoch : 81, train loss : 0.001, valid loss : 0.051, train acc : 0.996, valid acc : 0.955, train f1 : 0.996, valid f1 : 0.691
-training process:  63%|██████▎   | 81/128 [16:53:23<9:49:03, 752.00s/it] training process:  64%|██████▍   | 82/128 [17:05:54<9:36:14, 751.62s/it]training process:  65%|██████▍   | 83/128 [17:18:21<9:22:40, 750.23s/it]training process:  66%|██████▌   | 84/128 [17:30:43<9:08:22, 747.78s/it]epoch : 85, train loss : 0.000, valid loss : 0.054, train acc : 0.997, valid acc : 0.954, train f1 : 0.997, valid f1 : 0.690
-training process:  66%|██████▋   | 85/128 [17:43:09<8:55:32, 747.27s/it]training process:  67%|██████▋   | 86/128 [17:55:43<8:44:25, 749.17s/it]training process:  68%|██████▊   | 87/128 [18:08:16<8:32:51, 750.52s/it]training process:  69%|██████▉   | 88/128 [18:20:47<8:20:24, 750.62s/it]epoch : 89, train loss : 0.000, valid loss : 0.056, train acc : 0.997, valid acc : 0.960, train f1 : 0.997, valid f1 : 0.702
-training process:  70%|██████▉   | 89/128 [18:33:14<8:07:07, 749.42s/it]training process:  70%|███████   | 90/128 [18:45:42<7:54:18, 748.90s/it]training process:  71%|███████   | 91/128 [18:58:10<7:41:44, 748.77s/it]training process:  72%|███████▏  | 92/128 [19:10:37<7:28:56, 748.24s/it]epoch : 93, train loss : 0.000, valid loss : 0.062, train acc : 0.997, valid acc : 0.952, train f1 : 0.997, valid f1 : 0.682
-training process:  73%|███████▎  | 93/128 [19:23:14<7:18:01, 750.90s/it]training process:  73%|███████▎  | 94/128 [19:35:49<7:06:15, 752.23s/it]training process:  74%|███████▍  | 95/128 [19:48:22<6:53:48, 752.37s/it]training process:  75%|███████▌  | 96/128 [20:00:46<6:39:56, 749.88s/it]epoch : 97, train loss : 0.000, valid loss : 0.061, train acc : 0.997, valid acc : 0.967, train f1 : 0.997, valid f1 : 0.733
-training process:  76%|███████▌  | 97/128 [20:13:31<6:29:46, 754.41s/it]training process:  77%|███████▋  | 98/128 [20:25:55<6:15:34, 751.16s/it]training process:  77%|███████▋  | 99/128 [20:38:21<6:02:17, 749.59s/it]training process:  78%|███████▊  | 100/128 [20:50:47<5:49:24, 748.73s/it]epoch : 101, train loss : 0.000, valid loss : 0.062, train acc : 0.998, valid acc : 0.960, train f1 : 0.998, valid f1 : 0.703
-training process:  79%|███████▉  | 101/128 [21:03:20<5:37:30, 750.02s/it]training process:  80%|███████▉  | 102/128 [21:15:54<5:25:30, 751.18s/it]training process:  80%|████████  | 103/128 [21:28:29<5:13:26, 752.28s/it]training process:  81%|████████▏ | 104/128 [21:40:57<5:00:25, 751.08s/it]epoch : 105, train loss : 0.000, valid loss : 0.070, train acc : 0.998, valid acc : 0.964, train f1 : 0.998, valid f1 : 0.711
-training process:  82%|████████▏ | 105/128 [21:53:32<4:48:19, 752.16s/it]training process:  83%|████████▎ | 106/128 [22:06:04<4:35:44, 752.04s/it]training process:  84%|████████▎ | 107/128 [22:18:32<4:22:49, 750.93s/it]training process:  84%|████████▍ | 108/128 [22:30:58<4:09:46, 749.35s/it]epoch : 109, train loss : 0.000, valid loss : 0.072, train acc : 0.998, valid acc : 0.959, train f1 : 0.998, valid f1 : 0.697
-training process:  85%|████████▌ | 109/128 [22:43:30<3:57:31, 750.06s/it]training process:  86%|████████▌ | 110/128 [22:56:00<3:45:04, 750.27s/it]training process:  87%|████████▋ | 111/128 [23:08:24<3:32:00, 748.27s/it]training process:  88%|████████▊ | 112/128 [23:20:46<3:19:04, 746.54s/it]epoch : 113, train loss : 0.000, valid loss : 0.070, train acc : 0.998, valid acc : 0.965, train f1 : 0.998, valid f1 : 0.719
-training process:  88%|████████▊ | 113/128 [23:33:11<3:06:27, 745.81s/it]training process:  89%|████████▉ | 114/128 [23:45:35<2:53:53, 745.27s/it]training process:  90%|████████▉ | 115/128 [23:58:02<2:41:38, 746.03s/it]training process:  91%|█████████ | 116/128 [24:10:27<2:29:08, 745.67s/it]epoch : 117, train loss : 0.000, valid loss : 0.063, train acc : 0.998, valid acc : 0.958, train f1 : 0.998, valid f1 : 0.696
-training process:  91%|█████████▏| 117/128 [24:22:52<2:16:37, 745.25s/it]training process:  92%|█████████▏| 118/128 [24:35:19<2:04:20, 746.05s/it]training process:  93%|█████████▎| 119/128 [24:47:47<1:51:57, 746.40s/it]training process:  94%|█████████▍| 120/128 [25:00:14<1:39:33, 746.73s/it]epoch : 121, train loss : 0.000, valid loss : 0.066, train acc : 0.998, valid acc : 0.959, train f1 : 0.998, valid f1 : 0.703
-training process:  95%|█████████▍| 121/128 [25:12:40<1:27:04, 746.36s/it]training process:  95%|█████████▌| 122/128 [25:25:04<1:14:33, 745.63s/it]training process:  96%|█████████▌| 123/128 [25:37:28<1:02:06, 745.21s/it]training process:  97%|█████████▋| 124/128 [25:49:58<49:46, 746.59s/it]  epoch : 125, train loss : 0.000, valid loss : 0.066, train acc : 0.999, valid acc : 0.963, train f1 : 0.999, valid f1 : 0.711
-training process:  98%|█████████▊| 125/128 [26:02:23<37:18, 746.33s/it]training process:  98%|█████████▊| 126/128 [26:14:51<24:53, 746.73s/it]training process:  99%|█████████▉| 127/128 [26:27:31<12:30, 750.58s/it]training process: 100%|██████████| 128/128 [26:39:51<00:00, 747.67s/it]training process: 100%|██████████| 128/128 [26:39:51<00:00, 749.94s/it]
-training process finished, best loss : 0.061 and best acc : 0.967, best f1 : 0.733, best epoch : 96
-
-################# evaluation process #################
-
-############### Classification Report ####################
-              precision    recall  f1-score   support
-
-           0       0.44      0.57      0.49       276
-           1       0.99      0.98      0.98     10656
-
-    accuracy                           0.97     10932
-   macro avg       0.71      0.77      0.74     10932
-weighted avg       0.97      0.97      0.97     10932
-
-
-# test acc : 0.97, test f1 : 0.74, test AUC : 0.77, test loss : 4.774
-
-################# Visualization process #################
-
-/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torchvision/io/image.py:11: UserWarning: Failed to load image Python extension: /home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torchvision/image.so: undefined symbol: _ZNK3c1010TensorImpl36is_contiguous_nondefault_policy_implENS_12MemoryFormatE
-  warn(f"Failed to load image Python extension: {e}")
-############### device setup ###################
-torch device avaliable :  True
-torch current device :  0
-torch device num :  4
-extract the null data:   0%|          | 0/227 [00:00<?, ?it/s]extract the null data:  22%|██▏       | 49/227 [00:00<00:00, 487.78it/s]extract the null data:  46%|████▌     | 104/227 [00:00<00:00, 521.70it/s]extract the null data:  71%|███████   | 161/227 [00:00<00:00, 539.93it/s]extract the null data:  95%|█████████▌| 216/227 [00:00<00:00, 540.71it/s]extract the null data: 100%|██████████| 227/227 [00:00<00:00, 534.28it/s]
-# check | video data : 35760, 0D data : 35760
-extract the null data:   0%|          | 0/57 [00:00<?, ?it/s]extract the null data: 100%|██████████| 57/57 [00:00<00:00, 614.13it/s]
-# check | video data : 8936, 0D data : 8936
-extract the null data:   0%|          | 0/71 [00:00<?, ?it/s]extract the null data:  90%|█████████ | 64/71 [00:00<00:00, 630.77it/s]extract the null data: 100%|██████████| 71/71 [00:00<00:00, 628.17it/s]
-# check | video data : 10894, 0D data : 10894
-train data : 35760, disrupt : 860, non-disrupt : 34900
-valid data : 8936, disrupt : 216, non-disrupt : 8720
-test data : 10894, disrupt : 276, non-disrupt : 10618
-
-################# model summary #################
-
------------------------------------------------------------------------------------
-             Layer (type)              Input Shape         Param #     Tr. Param #
-===================================================================================
-           ViViTEncoder-1     [8, 3, 21, 128, 128]       3,429,888       3,429,888
-   TStransformerEncoder-2              [8, 21, 12]         794,752         794,752
-                 Linear-3                 [8, 256]          32,896          32,896
-            BatchNorm1d-4                 [8, 128]             256             256
-                   ReLU-5                 [8, 128]               0               0
-                 Linear-6                 [8, 128]             258             258
-===================================================================================
-Total params: 4,258,050
-Trainable params: 4,258,050
-Non-trainable params: 0
------------------------------------------------------------------------------------
-
-################# training process #################
-
-training process:   0%|          | 0/128 [00:00<?, ?it/s]epoch : 1, train loss : 0.012, valid loss : 0.023, train acc : 0.660, valid acc : 0.372, train f1 : 0.615, valid f1 : 0.298
-training process:   1%|          | 1/128 [12:28<26:23:43, 748.22s/it]training process:   2%|▏         | 2/128 [24:54<26:08:35, 746.95s/it]training process:   2%|▏         | 3/128 [37:16<25:52:04, 744.99s/it]training process:   3%|▎         | 4/128 [49:43<25:40:39, 745.48s/it]epoch : 5, train loss : 0.004, valid loss : 0.013, train acc : 0.916, valid acc : 0.785, train f1 : 0.915, valid f1 : 0.514
-training process:   4%|▍         | 5/128 [1:02:09<25:28:56, 745.83s/it]training process:   5%|▍         | 6/128 [1:14:34<25:15:36, 745.38s/it]training process:   5%|▌         | 7/128 [1:27:12<25:11:31, 749.52s/it]training process:   6%|▋         | 8/128 [1:39:41<24:59:00, 749.50s/it]epoch : 9, train loss : 0.003, valid loss : 0.021, train acc : 0.952, valid acc : 0.808, train f1 : 0.952, valid f1 : 0.524
-training process:   7%|▋         | 9/128 [1:52:08<24:44:40, 748.57s/it]training process:   8%|▊         | 10/128 [2:04:33<24:30:29, 747.71s/it]training process:   9%|▊         | 11/128 [2:16:57<24:15:22, 746.35s/it]training process:   9%|▉         | 12/128 [2:29:28<24:05:46, 747.81s/it]epoch : 13, train loss : 0.002, valid loss : 0.022, train acc : 0.966, valid acc : 0.842, train f1 : 0.966, valid f1 : 0.551
-training process:  10%|█         | 13/128 [2:42:06<23:59:31, 751.06s/it]training process:  11%|█         | 14/128 [2:54:38<23:47:16, 751.20s/it]training process:  12%|█▏        | 15/128 [3:07:05<23:32:41, 750.10s/it]training process:  12%|█▎        | 16/128 [3:19:32<23:18:06, 748.98s/it]epoch : 17, train loss : 0.002, valid loss : 0.028, train acc : 0.975, valid acc : 0.905, train f1 : 0.975, valid f1 : 0.596
-training process:  13%|█▎        | 17/128 [3:31:59<23:04:28, 748.36s/it]training process:  14%|█▍        | 18/128 [3:44:36<22:56:43, 750.94s/it]training process:  15%|█▍        | 19/128 [3:57:09<22:45:28, 751.64s/it]training process:  16%|█▌        | 20/128 [4:09:35<22:29:46, 749.87s/it]epoch : 21, train loss : 0.001, valid loss : 0.033, train acc : 0.981, valid acc : 0.907, train f1 : 0.981, valid f1 : 0.602
-training process:  16%|█▋        | 21/128 [4:22:08<22:18:52, 750.77s/it]training process:  17%|█▋        | 22/128 [4:34:44<22:09:26, 752.52s/it]training process:  18%|█▊        | 23/128 [4:47:21<21:58:57, 753.69s/it]training process:  19%|█▉        | 24/128 [4:59:52<21:45:10, 752.98s/it]epoch : 25, train loss : 0.001, valid loss : 0.038, train acc : 0.985, valid acc : 0.918, train f1 : 0.985, valid f1 : 0.612
-training process:  20%|█▉        | 25/128 [5:12:25<21:32:41, 753.02s/it]training process:  20%|██        | 26/128 [5:24:56<21:19:10, 752.45s/it]training process:  21%|██        | 27/128 [5:37:37<21:11:01, 755.07s/it]training process:  22%|██▏       | 28/128 [5:50:07<20:55:36, 753.37s/it]epoch : 29, train loss : 0.001, valid loss : 0.043, train acc : 0.986, valid acc : 0.927, train f1 : 0.986, valid f1 : 0.628
-training process:  23%|██▎       | 29/128 [6:02:45<20:45:42, 754.98s/it]./exp_multi.sh: line 9: 3110322 Killed                  python3 train_multimodal.py --gpu_num 0 --dist 20
-./exp_multi.sh: line 10: st: command not found
-/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torchvision/io/image.py:11: UserWarning: Failed to load image Python extension: /home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torchvision/image.so: undefined symbol: _ZNK3c1010TensorImpl36is_contiguous_nondefault_policy_implENS_12MemoryFormatE
-  warn(f"Failed to load image Python extension: {e}")
-############### device setup ###################
-torch device avaliable :  True
-torch current device :  0
-torch device num :  4
-Multimodal learning with Gradient Blending, DRW option is off
-extract the null data:   0%|          | 0/227 [00:00<?, ?it/s]extract the null data:  21%|██        | 47/227 [00:00<00:00, 469.23it/s]extract the null data:  43%|████▎     | 98/227 [00:00<00:00, 490.11it/s]extract the null data:  66%|██████▌   | 149/227 [00:00<00:00, 498.45it/s]extract the null data:  88%|████████▊ | 199/227 [00:00<00:00, 496.84it/s]extract the null data: 100%|██████████| 227/227 [00:00<00:00, 496.80it/s]
-# check | video data : 36258, 0D data : 36258
-extract the null data:   0%|          | 0/57 [00:00<?, ?it/s]extract the null data: 100%|██████████| 57/57 [00:00<00:00, 573.82it/s]
-# check | video data : 9065, 0D data : 9065
-extract the null data:   0%|          | 0/71 [00:00<?, ?it/s]extract the null data:  82%|████████▏ | 58/71 [00:00<00:00, 579.13it/s]extract the null data: 100%|██████████| 71/71 [00:00<00:00, 578.57it/s]
-# check | video data : 11053, 0D data : 11053
-train data : 36258, disrupt : 860, non-disrupt : 35398
-valid data : 9065, disrupt : 216, non-disrupt : 8849
-test data : 11053, disrupt : 276, non-disrupt : 10777
-
-################# model summary #################
-
-----------------------------------------------------------------------------
-      Layer (type)              Input Shape         Param #     Tr. Param #
-============================================================================
-           ViViT-1     [8, 3, 21, 128, 128]       3,438,402       3,438,402
-   TStransformer-2              [8, 21, 12]         811,778         811,778
-          Linear-3                 [8, 256]          32,896          32,896
-     BatchNorm1d-4                 [8, 128]             256             256
-            ReLU-5                 [8, 128]               0               0
-          Linear-6                 [8, 128]             258             258
-============================================================================
-Total params: 4,283,590
-Trainable params: 4,283,590
-Non-trainable params: 0
-----------------------------------------------------------------------------
-
-################# training process #################
-
-(multi-modal) training process with Gradient Blending:   0%|          | 0/128 [00:00<?, ?it/s]./exp_multi.sh: line 12: 3165114 Killed                  python3 train_multimodal.py --gpu_num 0 --dist 4 --use_GB True
-/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torchvision/io/image.py:11: UserWarning: Failed to load image Python extension: /home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torchvision/image.so: undefined symbol: _ZNK3c1010TensorImpl36is_contiguous_nondefault_policy_implENS_12MemoryFormatE
-  warn(f"Failed to load image Python extension: {e}")
-############### device setup ###################
-torch device avaliable :  True
-torch current device :  0
-torch device num :  4
-Multimodal learning with Gradient Blending, DRW option is off
-extract the null data:   0%|          | 0/227 [00:00<?, ?it/s]extract the null data:  20%|██        | 46/227 [00:00<00:00, 457.44it/s]extract the null data:  43%|████▎     | 97/227 [00:00<00:00, 482.96it/s]extract the null data:  66%|██████▌   | 149/227 [00:00<00:00, 499.38it/s]extract the null data:  89%|████████▊ | 201/227 [00:00<00:00, 507.08it/s]extract the null data: 100%|██████████| 227/227 [00:00<00:00, 500.09it/s]
-# check | video data : 36228, 0D data : 36228
-extract the null data:   0%|          | 0/57 [00:00<?, ?it/s]extract the null data:  98%|█████████▊| 56/57 [00:00<00:00, 539.50it/s]extract the null data: 100%|██████████| 57/57 [00:00<00:00, 482.83it/s]
-# check | video data : 9056, 0D data : 9056
-extract the null data:   0%|          | 0/71 [00:00<?, ?it/s]extract the null data:  90%|█████████ | 64/71 [00:00<00:00, 637.60it/s]extract the null data: 100%|██████████| 71/71 [00:00<00:00, 637.84it/s]
-# check | video data : 11037, 0D data : 11037
-train data : 36228, disrupt : 860, non-disrupt : 35368
-valid data : 9056, disrupt : 216, non-disrupt : 8840
-test data : 11037, disrupt : 276, non-disrupt : 10761
-
-################# model summary #################
-
-----------------------------------------------------------------------------
-      Layer (type)              Input Shape         Param #     Tr. Param #
-============================================================================
-           ViViT-1     [8, 3, 21, 128, 128]       3,438,402       3,438,402
-   TStransformer-2              [8, 21, 12]         811,778         811,778
-          Linear-3                 [8, 256]          32,896          32,896
-     BatchNorm1d-4                 [8, 128]             256             256
-            ReLU-5                 [8, 128]               0               0
-          Linear-6                 [8, 128]             258             258
-============================================================================
-Total params: 4,283,590
-Trainable params: 4,283,590
-Non-trainable params: 0
-----------------------------------------------------------------------------
-
-################# training process #################
-
-(multi-modal) training process with Gradient Blending:   0%|          | 0/128 [00:00<?, ?it/s]./exp_multi.sh: line 13: 3170817 Killed                  python3 train_multimodal.py --gpu_num 0 --dist 5 --use_GB True
-/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torchvision/io/image.py:11: UserWarning: Failed to load image Python extension: /home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torchvision/image.so: undefined symbol: _ZNK3c1010TensorImpl36is_contiguous_nondefault_policy_implENS_12MemoryFormatE
-  warn(f"Failed to load image Python extension: {e}")
-############### device setup ###################
-torch device avaliable :  True
-torch current device :  0
-torch device num :  4
-Multimodal learning with Gradient Blending, DRW option is off
-extract the null data:   0%|          | 0/227 [00:00<?, ?it/s]extract the null data:  17%|█▋        | 38/227 [00:00<00:00, 378.45it/s]extract the null data:  36%|███▌      | 81/227 [00:00<00:00, 404.79it/s]extract the null data:  56%|█████▌    | 126/227 [00:00<00:00, 424.00it/s]extract the null data:  76%|███████▌  | 172/227 [00:00<00:00, 435.02it/s]extract the null data:  96%|█████████▌| 217/227 [00:00<00:00, 436.93it/s]extract the null data: 100%|██████████| 227/227 [00:00<00:00, 427.58it/s]
-# check | video data : 36135, 0D data : 36135
-extract the null data:   0%|          | 0/57 [00:00<?, ?it/s]extract the null data:  96%|█████████▋| 55/57 [00:00<00:00, 542.72it/s]extract the null data: 100%|██████████| 57/57 [00:00<00:00, 543.23it/s]
-# check | video data : 9035, 0D data : 9035
-extract the null data:   0%|          | 0/71 [00:00<?, ?it/s]extract the null data:  77%|███████▋  | 55/71 [00:00<00:00, 543.95it/s]extract the null data: 100%|██████████| 71/71 [00:00<00:00, 546.36it/s]
-# check | video data : 11014, 0D data : 11014
-train data : 36135, disrupt : 860, non-disrupt : 35275
-valid data : 9035, disrupt : 216, non-disrupt : 8819
-test data : 11014, disrupt : 276, non-disrupt : 10738
-
-################# model summary #################
-
-----------------------------------------------------------------------------
-      Layer (type)              Input Shape         Param #     Tr. Param #
-============================================================================
-           ViViT-1     [8, 3, 21, 128, 128]       3,438,402       3,438,402
-   TStransformer-2              [8, 21, 12]         811,778         811,778
-          Linear-3                 [8, 256]          32,896          32,896
-     BatchNorm1d-4                 [8, 128]             256             256
-            ReLU-5                 [8, 128]               0               0
-          Linear-6                 [8, 128]             258             258
-============================================================================
-Total params: 4,283,590
-Trainable params: 4,283,590
-Non-trainable params: 0
-----------------------------------------------------------------------------
-
-################# training process #################
-
-(multi-modal) training process with Gradient Blending:   0%|          | 0/128 [00:00<?, ?it/s](multi-modal) training process with Gradient Blending:   0%|          | 0/128 [00:08<?, ?it/s]
-Traceback (most recent call last):
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/train_multimodal.py", line 375, in <module>
-    train_loss, train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train_GB_dynamic(
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/src/GradientBlending.py", line 361, in train_GB_dynamic
-    train_loss, train_acc, train_f1 = train_per_epoch(
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/src/train.py", line 58, in train_per_epoch
-    output, output_vis, output_ts = model(data_video, data_0D)
-  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
-    return forward_call(*input, **kwargs)
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/src/models/MultiModal.py", line 128, in forward
-    return self.forward_stream(x_vis, x_ts)
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/src/models/MultiModal.py", line 140, in forward_stream
-    out_vis = self.vis_model(x_vis)
-  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
-    return forward_call(*input, **kwargs)
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/src/models/ViViT.py", line 187, in forward
-    x = self.space_transformer(x)
-  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
-    return forward_call(*input, **kwargs)
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/src/models/ViViT.py", line 107, in forward
-    x = attn(x) + x
-  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
-    return forward_call(*input, **kwargs)
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/src/models/ViViT.py", line 29, in forward
-    return self.fn(self.norm(x), **kwargs)
-  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
-    return forward_call(*input, **kwargs)
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/src/models/ViViT.py", line 74, in forward
-    qkv = self.to_qkv(x)
-  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
-    return forward_call(*input, **kwargs)
-  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torch/nn/modules/linear.py", line 114, in forward
-    return F.linear(input, self.weight, self.bias)
-torch.cuda.OutOfMemoryError: CUDA out of memory. Tried to allocate 512.00 MiB (GPU 0; 11.78 GiB total capacity; 3.40 GiB already allocated; 65.19 MiB free; 3.83 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF
-/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torchvision/io/image.py:11: UserWarning: Failed to load image Python extension: /home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torchvision/image.so: undefined symbol: _ZNK3c1010TensorImpl36is_contiguous_nondefault_policy_implENS_12MemoryFormatE
-  warn(f"Failed to load image Python extension: {e}")
-############### device setup ###################
-torch device avaliable :  True
-torch current device :  0
-torch device num :  4
-Multimodal learning with Gradient Blending, DRW option is off
-extract the null data:   0%|          | 0/227 [00:00<?, ?it/s]extract the null data:  19%|█▉        | 44/227 [00:00<00:00, 435.39it/s]extract the null data:  42%|████▏     | 95/227 [00:00<00:00, 475.31it/s]extract the null data:  64%|██████▍   | 145/227 [00:00<00:00, 480.40it/s]extract the null data:  85%|████████▌ | 194/227 [00:00<00:00, 473.29it/s]extract the null data: 100%|██████████| 227/227 [00:00<00:00, 471.67it/s]
-# check | video data : 36013, 0D data : 36013
-extract the null data:   0%|          | 0/57 [00:00<?, ?it/s]extract the null data:  91%|█████████ | 52/57 [00:00<00:00, 518.71it/s]extract the null data: 100%|██████████| 57/57 [00:00<00:00, 521.97it/s]
-# check | video data : 9002, 0D data : 9002
-extract the null data:   0%|          | 0/71 [00:00<?, ?it/s]extract the null data:  79%|███████▉  | 56/71 [00:00<00:00, 555.44it/s]extract the null data: 100%|██████████| 71/71 [00:00<00:00, 555.19it/s]
-# check | video data : 10968, 0D data : 10968
-train data : 36013, disrupt : 860, non-disrupt : 35153
-valid data : 9002, disrupt : 216, non-disrupt : 8786
-test data : 10968, disrupt : 276, non-disrupt : 10692
-
-################# model summary #################
-
-----------------------------------------------------------------------------
-      Layer (type)              Input Shape         Param #     Tr. Param #
-============================================================================
-           ViViT-1     [8, 3, 21, 128, 128]       3,438,402       3,438,402
-   TStransformer-2              [8, 21, 12]         811,778         811,778
-          Linear-3                 [8, 256]          32,896          32,896
-     BatchNorm1d-4                 [8, 128]             256             256
-            ReLU-5                 [8, 128]               0               0
-          Linear-6                 [8, 128]             258             258
-============================================================================
-Total params: 4,283,590
-Trainable params: 4,283,590
-Non-trainable params: 0
-----------------------------------------------------------------------------
-
-################# training process #################
-
-(multi-modal) training process with Gradient Blending:   0%|          | 0/128 [00:00<?, ?it/s](multi-modal) training process with Gradient Blending:   0%|          | 0/128 [00:08<?, ?it/s]
-Traceback (most recent call last):
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/train_multimodal.py", line 375, in <module>
-    train_loss, train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train_GB_dynamic(
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/src/GradientBlending.py", line 361, in train_GB_dynamic
-    train_loss, train_acc, train_f1 = train_per_epoch(
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/src/train.py", line 58, in train_per_epoch
-    output, output_vis, output_ts = model(data_video, data_0D)
-  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
-    return forward_call(*input, **kwargs)
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/src/models/MultiModal.py", line 128, in forward
-    return self.forward_stream(x_vis, x_ts)
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/src/models/MultiModal.py", line 140, in forward_stream
-    out_vis = self.vis_model(x_vis)
-  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
-    return forward_call(*input, **kwargs)
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/src/models/ViViT.py", line 187, in forward
-    x = self.space_transformer(x)
-  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
-    return forward_call(*input, **kwargs)
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/src/models/ViViT.py", line 107, in forward
-    x = attn(x) + x
-  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
-    return forward_call(*input, **kwargs)
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/src/models/ViViT.py", line 29, in forward
-    return self.fn(self.norm(x), **kwargs)
-  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
-    return forward_call(*input, **kwargs)
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/src/models/ViViT.py", line 74, in forward
-    qkv = self.to_qkv(x)
-  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
-    return forward_call(*input, **kwargs)
-  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torch/nn/modules/linear.py", line 114, in forward
-    return F.linear(input, self.weight, self.bias)
-torch.cuda.OutOfMemoryError: CUDA out of memory. Tried to allocate 512.00 MiB (GPU 0; 11.78 GiB total capacity; 3.40 GiB already allocated; 65.19 MiB free; 3.83 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF
-/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torchvision/io/image.py:11: UserWarning: Failed to load image Python extension: /home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torchvision/image.so: undefined symbol: _ZNK3c1010TensorImpl36is_contiguous_nondefault_policy_implENS_12MemoryFormatE
-  warn(f"Failed to load image Python extension: {e}")
-############### device setup ###################
-torch device avaliable :  True
-torch current device :  0
-torch device num :  4
-Multimodal learning with Gradient Blending, DRW option is off
-extract the null data:   0%|          | 0/227 [00:00<?, ?it/s]extract the null data:  19%|█▉        | 44/227 [00:00<00:00, 437.23it/s]extract the null data:  42%|████▏     | 95/227 [00:00<00:00, 475.73it/s]extract the null data:  65%|██████▍   | 147/227 [00:00<00:00, 492.56it/s]extract the null data:  87%|████████▋ | 198/227 [00:00<00:00, 496.95it/s]extract the null data: 100%|██████████| 227/227 [00:00<00:00, 491.78it/s]
-# check | video data : 35894, 0D data : 35894
-extract the null data:   0%|          | 0/57 [00:00<?, ?it/s]extract the null data:  95%|█████████▍| 54/57 [00:00<00:00, 533.72it/s]extract the null data: 100%|██████████| 57/57 [00:00<00:00, 534.08it/s]
-# check | video data : 8975, 0D data : 8975
-extract the null data:   0%|          | 0/71 [00:00<?, ?it/s]extract the null data:  80%|████████  | 57/71 [00:00<00:00, 562.73it/s]extract the null data: 100%|██████████| 71/71 [00:00<00:00, 565.12it/s]
-# check | video data : 10932, 0D data : 10932
-train data : 35894, disrupt : 860, non-disrupt : 35034
-valid data : 8975, disrupt : 216, non-disrupt : 8759
-test data : 10932, disrupt : 276, non-disrupt : 10656
-
-################# model summary #################
-
-----------------------------------------------------------------------------
-      Layer (type)              Input Shape         Param #     Tr. Param #
-============================================================================
-           ViViT-1     [8, 3, 21, 128, 128]       3,438,402       3,438,402
-   TStransformer-2              [8, 21, 12]         811,778         811,778
-          Linear-3                 [8, 256]          32,896          32,896
-     BatchNorm1d-4                 [8, 128]             256             256
-            ReLU-5                 [8, 128]               0               0
-          Linear-6                 [8, 128]             258             258
-============================================================================
-Total params: 4,283,590
-Trainable params: 4,283,590
-Non-trainable params: 0
-----------------------------------------------------------------------------
-
-################# training process #################
-
-(multi-modal) training process with Gradient Blending:   0%|          | 0/128 [00:00<?, ?it/s](multi-modal) training process with Gradient Blending:   0%|          | 0/128 [00:08<?, ?it/s]
-Traceback (most recent call last):
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/train_multimodal.py", line 375, in <module>
-    train_loss, train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train_GB_dynamic(
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/src/GradientBlending.py", line 361, in train_GB_dynamic
-    train_loss, train_acc, train_f1 = train_per_epoch(
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/src/train.py", line 58, in train_per_epoch
-    output, output_vis, output_ts = model(data_video, data_0D)
-  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
-    return forward_call(*input, **kwargs)
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/src/models/MultiModal.py", line 128, in forward
-    return self.forward_stream(x_vis, x_ts)
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/src/models/MultiModal.py", line 140, in forward_stream
-    out_vis = self.vis_model(x_vis)
-  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
-    return forward_call(*input, **kwargs)
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/src/models/ViViT.py", line 187, in forward
-    x = self.space_transformer(x)
-  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
-    return forward_call(*input, **kwargs)
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/src/models/ViViT.py", line 107, in forward
-    x = attn(x) + x
-  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
-    return forward_call(*input, **kwargs)
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/src/models/ViViT.py", line 29, in forward
-    return self.fn(self.norm(x), **kwargs)
-  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
-    return forward_call(*input, **kwargs)
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/src/models/ViViT.py", line 74, in forward
-    qkv = self.to_qkv(x)
-  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
-    return forward_call(*input, **kwargs)
-  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torch/nn/modules/linear.py", line 114, in forward
-    return F.linear(input, self.weight, self.bias)
-torch.cuda.OutOfMemoryError: CUDA out of memory. Tried to allocate 512.00 MiB (GPU 0; 11.78 GiB total capacity; 3.40 GiB already allocated; 65.19 MiB free; 3.83 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF
-/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torchvision/io/image.py:11: UserWarning: Failed to load image Python extension: /home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torchvision/image.so: undefined symbol: _ZNK3c1010TensorImpl36is_contiguous_nondefault_policy_implENS_12MemoryFormatE
-  warn(f"Failed to load image Python extension: {e}")
-############### device setup ###################
-torch device avaliable :  True
-torch current device :  0
-torch device num :  4
-Multimodal learning with Gradient Blending, DRW option is off
-extract the null data:   0%|          | 0/227 [00:00<?, ?it/s]extract the null data:  21%|██        | 47/227 [00:00<00:00, 467.51it/s]extract the null data:  44%|████▍     | 101/227 [00:00<00:00, 504.19it/s]extract the null data:  69%|██████▊   | 156/227 [00:00<00:00, 520.29it/s]extract the null data:  92%|█████████▏| 209/227 [00:00<00:00, 521.62it/s]extract the null data: 100%|██████████| 227/227 [00:00<00:00, 516.01it/s]
-# check | video data : 35760, 0D data : 35760
-extract the null data:   0%|          | 0/57 [00:00<?, ?it/s]extract the null data:  96%|█████████▋| 55/57 [00:00<00:00, 545.06it/s]extract the null data: 100%|██████████| 57/57 [00:00<00:00, 544.78it/s]
-# check | video data : 8936, 0D data : 8936
-extract the null data:   0%|          | 0/71 [00:00<?, ?it/s]extract the null data:  77%|███████▋  | 55/71 [00:00<00:00, 547.16it/s]extract the null data: 100%|██████████| 71/71 [00:00<00:00, 550.06it/s]
-# check | video data : 10894, 0D data : 10894
-train data : 35760, disrupt : 860, non-disrupt : 34900
-valid data : 8936, disrupt : 216, non-disrupt : 8720
-test data : 10894, disrupt : 276, non-disrupt : 10618
-
-################# model summary #################
-
-----------------------------------------------------------------------------
-      Layer (type)              Input Shape         Param #     Tr. Param #
-============================================================================
-           ViViT-1     [8, 3, 21, 128, 128]       3,438,402       3,438,402
-   TStransformer-2              [8, 21, 12]         811,778         811,778
-          Linear-3                 [8, 256]          32,896          32,896
-     BatchNorm1d-4                 [8, 128]             256             256
-            ReLU-5                 [8, 128]               0               0
-          Linear-6                 [8, 128]             258             258
-============================================================================
-Total params: 4,283,590
-Trainable params: 4,283,590
-Non-trainable params: 0
-----------------------------------------------------------------------------
-
-################# training process #################
-
-(multi-modal) training process with Gradient Blending:   0%|          | 0/128 [00:00<?, ?it/s](multi-modal) training process with Gradient Blending:   0%|          | 0/128 [00:08<?, ?it/s]
-Traceback (most recent call last):
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/train_multimodal.py", line 375, in <module>
-    train_loss, train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train_GB_dynamic(
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/src/GradientBlending.py", line 361, in train_GB_dynamic
-    train_loss, train_acc, train_f1 = train_per_epoch(
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/src/train.py", line 58, in train_per_epoch
-    output, output_vis, output_ts = model(data_video, data_0D)
-  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
-    return forward_call(*input, **kwargs)
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/src/models/MultiModal.py", line 128, in forward
-    return self.forward_stream(x_vis, x_ts)
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/src/models/MultiModal.py", line 140, in forward_stream
-    out_vis = self.vis_model(x_vis)
-  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
-    return forward_call(*input, **kwargs)
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/src/models/ViViT.py", line 187, in forward
-    x = self.space_transformer(x)
-  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
-    return forward_call(*input, **kwargs)
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/src/models/ViViT.py", line 107, in forward
-    x = attn(x) + x
-  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
-    return forward_call(*input, **kwargs)
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/src/models/ViViT.py", line 29, in forward
-    return self.fn(self.norm(x), **kwargs)
-  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
-    return forward_call(*input, **kwargs)
-  File "/home/jinsukim/codes_for_study/research-predict-disruption/src/models/ViViT.py", line 74, in forward
-    qkv = self.to_qkv(x)
-  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
-    return forward_call(*input, **kwargs)
-  File "/home/jinsukim/miniconda3/envs/research-env/lib/python3.9/site-packages/torch/nn/modules/linear.py", line 114, in forward
-    return F.linear(input, self.weight, self.bias)
-torch.cuda.OutOfMemoryError: CUDA out of memory. Tried to allocate 512.00 MiB (GPU 0; 11.78 GiB total capacity; 3.40 GiB already allocated; 65.19 MiB free; 3.83 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF

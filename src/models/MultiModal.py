@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
-from src.models.CnnLSTM import ConvLSTM, ConvLSTMEncoder
 from src.models.ViViT import ViViTEncoder, ViViT
 from src.models.ts_transformer import TStransformerEncoder, TStransformer
 from typing import Dict, Literal
@@ -16,9 +15,6 @@ class MultiModalModel(nn.Module):
         self.args_video = args_video
         self.args_0D = args_0D
         self.encoder_video = ViViTEncoder(**args_video)
-        
-        # self.encoder_0D = ConvLSTMEncoder(**args_0D)
-        # linear_input_dims = self.encoder_0D.lstm_dim * 2 + self.encoder_video.dim
         
         self.encoder_0D = TStransformerEncoder(**args_0D)
         linear_input_dims = self.encoder_0D.feature_dims + self.encoder_video.dim
@@ -60,9 +56,6 @@ class MultiModalModel_GB(nn.Module):
         self.args_video = args_video
         self.args_0D = args_0D
         self.vis_model = ViViT(**args_video)
-        
-        # self.ts_model = ConvLSTM(**args_0D)     
-        # linear_input_dims = self.ts_model.lstm_dim * 2 + self.vis_model.dim
         
         self.ts_model = TStransformer(**args_0D)   
         linear_input_dims = self.ts_model.feature_dims + self.vis_model.dim
@@ -169,7 +162,7 @@ class MultiModalModel_GB(nn.Module):
 # reference paper : https://arxiv.org/pdf/1707.07250.pdf
 # reference code: https://github.com/Justin1904/TensorFusionNetworks/blob/master/model.py
 class TFN(nn.Module):
-    def __init__(self, n_classes : int, hidden_dim : int, args_video : Dict, args_0D : Dict):
+    def __init__(self, n_classes : int, args_video : Dict, args_0D : Dict):
         super(TFN, self).__init__()
         self.n_classes = n_classes
         self.args_video = args_video
@@ -177,9 +170,9 @@ class TFN(nn.Module):
         
         # Modality Embedding SubNetwork
         self.network_video = ViViTEncoder(**args_video)
-        self.network_0D = ConvLSTMEncoder(**args_0D)
+        self.network_0D = TStransformer(**args_0D)
         
-        self.network_0D_dims = self.network_0D.lstm_dim * 2
+        self.network_0D_dims = self.feature_dims
         self.network_video_dims = self.network_video.dim
         
         assert self.network_0D_dims == self.network_video_dims, "two encoder should be the same latent dims"
@@ -189,13 +182,10 @@ class TFN(nn.Module):
         self.fusion_input_dims = (self.network_0D_dims + 1) * (self.network_video_dims + 1)
 
         self.classifier = nn.Sequential(
-            nn.Linear(self.fusion_input_dims, hidden_dim),
-            nn.BatchNorm1d(hidden_dim),
+            nn.Linear(self.fusion_input_dims, self.fusion_input_dims //2),
+            nn.BatchNorm1d(self.fusion_input_dims //2),
             nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim // 2),
-            nn.BatchNorm1d(hidden_dim // 2),
-            nn.ReLU(),
-            nn.Linear(hidden_dim // 2, n_classes)
+            nn.Linear(self.fusion_input_dims //2 // 2, n_classes)
         )
 
     def forward(self, x_vis : torch.Tensor, x_0D : torch.Tensor):
@@ -234,10 +224,9 @@ class TFN(nn.Module):
         sample_0D = torch.zeros((8, self.args_0D["seq_len"], self.args_0D["col_dim"]), device = device)
         return summary(self, sample_video, sample_0D, show_input = show_input, show_hierarchical=show_hierarchical, print_summary = print_summary, show_parent_layers=show_parent_layers)
 
-
 # In this code, we also use Gradient Blending Method 
 class TFN_GB(nn.Module):
-    def __init__(self, n_classes : int, hidden_dim : int, args_video : Dict, args_0D : Dict):
+    def __init__(self, n_classes : int, args_video : Dict, args_0D : Dict):
         super(TFN_GB, self).__init__()
         self.n_classes = n_classes
         self.args_video = args_video
@@ -246,10 +235,10 @@ class TFN_GB(nn.Module):
         # Modality Embedding SubNetwork
         self.embedd_subnet = nn.ModuleDict({
             "network_video" : ViViT(**args_video),
-            "network_0D" : ConvLSTM(**args_0D)
+            "network_0D" : TStransformer(**args_0D)
             })
         
-        self.network_0D_dims = self.embedd_subnet['network_0D'].lstm_dim * 2
+        self.network_0D_dims = self.embedd_subnet['network_0D'].feature_dims
         self.network_video_dims = self.embedd_subnet['network_video'].dim
         
         assert self.network_0D_dims == self.network_video_dims, "two encoder should be the same latent dims"
@@ -259,13 +248,10 @@ class TFN_GB(nn.Module):
         # Tensor Fusion Layer as classifier
         self.dropout = nn.Dropout(0)
         self.classifier = nn.Sequential(
-            nn.Linear(self.fusion_input_dims, hidden_dim),
-            nn.BatchNorm1d(hidden_dim),
+            nn.Linear(self.fusion_input_dims,self.fusion_input_dims//2),
+            nn.BatchNorm1d(self.fusion_input_dims//2),
             nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim // 2),
-            nn.BatchNorm1d(hidden_dim // 2),
-            nn.ReLU(),
-            nn.Linear(hidden_dim // 2, n_classes)
+            nn.Linear(self.fusion_input_dims//2, n_classes)
         )
         
         self.h_vis = None

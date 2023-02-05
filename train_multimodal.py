@@ -9,11 +9,11 @@ from src.utils.sampler import ImbalancedDatasetSampler
 from src.utils.utility import preparing_multi_data, plot_learning_curve
 from src.train import train, train_DRW
 from src.evaluate import evaluate, evaluate_detail
-from src.loss import LDAMLoss, FocalLoss
+from src.loss import LDAMLoss, FocalLoss, CELoss
 from src.visualization.visualize_latent_space import visualize_3D_latent_space_multi
 from src.GradientBlending import GradientBlending, train_GB_dynamic, train_GB
 from src.CCA import DeepCCA, train_cca, CCALoss, evaluate_cca_loss
-from src.models.MultiModal import MultiModalModel, MultiModalModel_GB
+from src.models.MultiModal import MultiModalModel, MultiModalModel_GB, TFN, TFN_GB
 
 # argument parser
 def parsing():
@@ -21,6 +21,7 @@ def parsing():
     
     # tag and result directory
     parser.add_argument("--tag", type = str, default = "Multi-Modal")
+    parser.add_argument("--model", type = str, default = 'CONCAT', choices=['CONCAT', 'TFN'])
     parser.add_argument("--save_dir", type = str, default = "./results")
     
     # test shot for disruption probability curve
@@ -71,6 +72,12 @@ def parsing():
     parser.add_argument("--step_size", type = int, default = 4)
     parser.add_argument("--gamma", type = float, default = 0.95)
     
+    # early stopping
+    parser.add_argument('--early_stopping', type = bool, default = True)
+    parser.add_argument("--early_stopping_patience", type = int, default = 12)
+    parser.add_argument("--early_stopping_verbose", type = bool, default = True)
+    parser.add_argument("--early_stopping_delta", type = float, default = 1e-3)
+    
     # imbalanced dataset processing
     # Re-sampling
     parser.add_argument("--use_sampling", type = bool, default = True)
@@ -105,13 +112,13 @@ def parsing():
     
     # model setup
     # Vision model
-    parser.add_argument("--dropout", type = float, default = 0.25)
-    parser.add_argument("--embedd_dropout", type = float, default = 0.25)
+    parser.add_argument("--dropout", type = float, default = 0.1)
+    parser.add_argument("--embedd_dropout", type = float, default = 0.1)
     parser.add_argument("--dim", type = int, default = 128)
-    parser.add_argument("--n_heads", type = int, default = 8)
+    parser.add_argument("--n_heads", type = int, default = 4)
     parser.add_argument("--d_head", type = int, default = 64)
-    parser.add_argument("--scale_dim", type = int, default = 4)
-    parser.add_argument("--depth", type = int, default = 4)
+    parser.add_argument("--scale_dim", type = int, default = 8)
+    parser.add_argument("--depth", type = int, default = 2)
     
     # 0D model
     parser.add_argument("--dropout_0D", type = float, default = 0.25)
@@ -243,9 +250,9 @@ if __name__ == "__main__":
     (shot_train, ts_train), (shot_valid, ts_valid), (shot_test, ts_test), scaler = preparing_multi_data(root_dir, ts_filepath, ts_cols, scaler = 'Robust')
     kstar_shot_list = pd.read_csv('./dataset/KSTAR_Disruption_Shot_List_extend.csv', encoding = "euc-kr")
 
-    train_data = MultiModalDataset2(shot_train, kstar_shot_list, ts_train, ts_cols, augmentation=True, augmentation_args=augment_args, crop_size=args['image_size'], seq_len = args['seq_len'], dist = args['dist'], dt = 1 / 210, scaler = scaler)
-    valid_data = MultiModalDataset2(shot_valid, kstar_shot_list, ts_valid, ts_cols, augmentation=False, augmentation_args=None, crop_size=args['image_size'], seq_len = args['seq_len'], dist = args['dist'], dt = 1 / 210, scaler = scaler)
-    test_data = MultiModalDataset2(shot_test, kstar_shot_list, ts_test, ts_cols, augmentation=False, augmentation_args=None, crop_size=args['image_size'], seq_len = args['seq_len'], dist = args['dist'], dt = 1 / 210, scaler = scaler)
+    train_data = MultiModalDataset2(shot_train, kstar_shot_list, ts_train, ts_cols, augmentation=True, augmentation_args=augment_args, crop_size=args['image_size'], seq_len = args['seq_len'], dist = args['dist'], dt = 1 / 210, scaler = scaler, tau = 4)
+    valid_data = MultiModalDataset2(shot_valid, kstar_shot_list, ts_valid, ts_cols, augmentation=False, augmentation_args=None, crop_size=args['image_size'], seq_len = args['seq_len'], dist = args['dist'], dt = 1 / 210, scaler = scaler, tau = 4)
+    test_data = MultiModalDataset2(shot_test, kstar_shot_list, ts_test, ts_cols, augmentation=False, augmentation_args=None, crop_size=args['image_size'], seq_len = args['seq_len'], dist = args['dist'], dt = 1 / 210, scaler = scaler, tau = 4)
 
     print("train data : {}, disrupt : {}, non-disrupt : {}".format(train_data.__len__(), train_data.n_disrupt, train_data.n_normal))
     print("valid data : {}, disrupt : {}, non-disrupt : {}".format(valid_data.__len__(), valid_data.n_disrupt, valid_data.n_normal))
@@ -256,19 +263,32 @@ if __name__ == "__main__":
     cls_num_list = train_data.get_cls_num_list()
 
     if args['use_GB']:
-        model = MultiModalModel_GB(
-             2,
-            args_video,
-            args_0D
-        )
-        
+        if args['model'] == 'TFN':
+            model = TFN_GB(
+                2,
+                args_video,
+                args_0D
+            )
+        elif args['moel'] == 'CONCAT':
+            model = MultiModalModel_GB(
+                2,
+                args_video,
+                args_0D
+            )
     else:
-        model = MultiModalModel(
-            2,
-            args['seq_len'],
-            args_video,
-            args_0D
-        )
+        if args['model'] == 'TFN':
+            model = TFN(
+                2,
+                args_video,
+                args_0D
+            )
+        elif args['moel'] == 'CONCAT':
+            model = MultiModalModel(
+                2,
+                args['seq_len'],
+                args_video,
+                args_0D
+            )
     
     print("\n################# model summary #################\n")
     model.summary()
@@ -322,19 +342,21 @@ if __name__ == "__main__":
         
     # loss
     if args['loss_type'] == "CE":
-        loss_fn = torch.nn.CrossEntropyLoss(reduction = "mean", weight = per_cls_weights,)
+        betas = [0, args['beta'], args['beta'] * 2, args['beta']*3]
+        loss_fn = CELoss(weight = per_cls_weights)
     elif args['loss_type'] == 'LDAM':
         max_m = args['max_m']
         s = args['s']
         betas = [0, args['beta'], args['beta'] * 2, args['beta']*3]
         loss_fn = LDAMLoss(cls_num_list, max_m = max_m, s = s, weight = per_cls_weights)
-        
     elif args['loss_type'] == 'Focal':
+        betas = [0, args['beta'], args['beta'] * 2, args['beta']*3]
         focal_gamma = args['focal_gamma']
         loss_fn = FocalLoss(weight = per_cls_weights, gamma = focal_gamma)
-        
     else:
-        loss_fn = torch.nn.CrossEntropyLoss(reduction = "mean", weight = per_cls_weights)
+        betas = [0, args['beta'], args['beta'] * 2, args['beta']*3]
+        loss_fn = CELoss(weight = per_cls_weights)
+
         
     # Gradient Blending
     if args['use_GB']:
@@ -407,10 +429,13 @@ if __name__ == "__main__":
             save_last_dir = save_last_dir,
             exp_dir = exp_dir,
             max_norm_grad = 1.0,
-            criteria = "f1_score",
             betas = betas,
             model_type = "multi",
-            test_for_check_per_epoch=test_loader
+            test_for_check_per_epoch=test_loader,
+            is_early_stopping = args['early_stopping'],
+            early_stopping_verbose = args['early_stopping_verbose'],
+            early_stopping_patience = args['early_stopping_patience'],
+            early_stopping_delta = args['early_stopping_delta']
         )
     else:
         train_loss,  train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train(
@@ -427,11 +452,13 @@ if __name__ == "__main__":
             save_last_dir = save_last_dir,
             exp_dir = exp_dir,
             max_norm_grad = 1.0,
-            criteria = "f1_score",
             model_type = "multi",
-            test_for_check_per_epoch=test_loader
+            test_for_check_per_epoch=test_loader,
+            is_early_stopping = args['early_stopping'],
+            early_stopping_verbose = args['early_stopping_verbose'],
+            early_stopping_patience = args['early_stopping_patience'],
+            early_stopping_delta = args['early_stopping_delta']
         )
-    
     
     # plot the learning curve
     save_learning_curve = os.path.join(save_dir, "{}_lr_curve.png".format(tag))

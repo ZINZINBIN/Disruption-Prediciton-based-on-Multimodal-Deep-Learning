@@ -179,6 +179,7 @@
 - 0D data encoder
     - Transformer : paper(https://proceedings.neurips.cc/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf), application code(https://www.kaggle.com/general/200913)
     - Conv1D-LSTM using self-attention : https://pseudo-lab.github.io/Tutorial-Book/chapters/time-series/Ch5-CNN-LSTM.html
+    - MLSTM_FCN : paper(https://arxiv.org/abs/1801.04503), application code(https://github.com/titu1994/MLSTM-FCN)
 
 - Multimodal Model
     - Multimodal fusion model: video encoder + 0D data encoder
@@ -197,8 +198,8 @@
 
 - Analysis on physical characteristics of disruptive video data
     - CAM : proceeding
-    - Grad CAM : proceeding
-    - attention rollout : done
+    - Grad CAM : paper(https://arxiv.org/abs/1610.02391), target model(R2Plus1D, SlowFast)
+    - attention rollout : paper(https://arxiv.org/abs/2005.00928), target model(ViViT)
 
 - Data augmentation
     - Video Mixup Algorithm for Data augmentation(done, not effective)
