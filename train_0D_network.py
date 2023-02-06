@@ -4,9 +4,9 @@ import numpy as np
 import pandas as pd
 import argparse
 from src.dataset import DatasetFor0D
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, RandomSampler
 from src.utils.sampler import ImbalancedDatasetSampler
-from src.utils.utility import preparing_0D_dataset, plot_learning_curve, generate_prob_curve_from_0D
+from src.utils.utility import preparing_0D_dataset, plot_learning_curve, generate_prob_curve_from_0D, seed_everything
 from src.visualization.visualize_latent_space import visualize_2D_latent_space, visualize_3D_latent_space
 from src.visualization.visualize_application import generate_real_time_experiment_0D
 from src.train import train, train_DRW
@@ -155,9 +155,13 @@ print("torch device num : ", torch.cuda.device_count())
 torch.cuda.init()
 torch.cuda.empty_cache()
 
+
 if __name__ == "__main__":
 
     args = parsing()
+    
+    # seed initialize
+    seed_everything(args['random_seed'], False)
     
     # save directory
     save_dir = args['save_dir']
@@ -290,13 +294,13 @@ if __name__ == "__main__":
     # Re-sampling
     if args["use_sampling"]:
         train_sampler = ImbalancedDatasetSampler(train_data)
-        valid_sampler = None
-        test_sampler = None
+        valid_sampler = RandomSampler(valid_data)
+        test_sampler = RandomSampler(test_data)
 
     else:
-        train_sampler = None
-        valid_sampler = None
-        test_sampler = None
+        train_sampler = RandomSampler(train_data)
+        valid_sampler = RandomSampler(valid_data)
+        test_sampler = RandomSampler(test_data)
     
     train_loader = DataLoader(train_data, batch_size = args['batch_size'], sampler=train_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"])
     valid_loader = DataLoader(valid_data, batch_size = args['batch_size'], sampler=valid_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"])

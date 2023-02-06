@@ -227,6 +227,8 @@ if __name__ == "__main__":
         device = "cuda:" + str(args["gpu_num"])
     else:
         device = 'cpu'
+    
+    print("running : {}".format(tag))
         
     # augmentation argument
     augment_args = {

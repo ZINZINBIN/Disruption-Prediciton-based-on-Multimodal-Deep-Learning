@@ -4,9 +4,9 @@ import numpy as np
 import pandas as pd
 import argparse
 from src.dataset import DatasetForVideo2
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, RandomSampler
 from src.utils.sampler import ImbalancedDatasetSampler
-from src.utils.utility import preparing_video_dataset, plot_learning_curve, generate_prob_curve
+from src.utils.utility import preparing_video_dataset, plot_learning_curve, generate_prob_curve, seed_everything
 from src.visualization.visualize_latent_space import visualize_2D_latent_space, visualize_3D_latent_space
 from src.train import train, train_DRW
 from src.evaluate import evaluate
@@ -19,6 +19,9 @@ from src.models.slowfast import SlowFast
 # argument parser
 def parsing():
     parser = argparse.ArgumentParser(description="training disruption prediction model with video data")
+    
+    # random seed
+    parser.add_argument("--random_seed", type = int, default = 42)
     
     # tag and result directory
     parser.add_argument("--model", type = str, default = 'ViViT', choices=['ViViT', 'SlowFast', 'R2Plus1D'])
@@ -138,6 +141,9 @@ torch.cuda.empty_cache()
 if __name__ == "__main__":
 
     args = parsing()
+    
+    # seed initialize
+    seed_everything(args['random_seed'], False)
     
     # save directory
     save_dir = args['save_dir']
@@ -286,13 +292,13 @@ if __name__ == "__main__":
     # Re-sampling
     if args["use_sampling"]:
         train_sampler = ImbalancedDatasetSampler(train_data)
-        valid_sampler = None
-        test_sampler = None
+        valid_sampler = RandomSampler(valid_data)
+        test_sampler = RandomSampler(test_data)
 
     else:
-        train_sampler = None
-        valid_sampler = None
-        test_sampler = None
+        train_sampler = RandomSampler(train_data)
+        valid_sampler = RandomSampler(valid_data)
+        test_sampler = RandomSampler(test_data)
     
     train_loader = DataLoader(train_data, batch_size = args['batch_size'], sampler=train_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"])
     valid_loader = DataLoader(valid_data, batch_size = args['batch_size'], sampler=valid_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"])

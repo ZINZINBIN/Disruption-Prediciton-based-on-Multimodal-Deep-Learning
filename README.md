@@ -1,7 +1,7 @@
 # Disruptive prediction model using KSTAR video and numerical data via Deep Learning
 ## Introduction
 - This is git repository for research about predicting tokamak disruption prediction from video and 0D data using Deep Learning
-- We used KSTAR IVIS dataset and 0D parameters from iKSTAR and finally we implemented the multi-modal model for (semi) real-time prediction
+- We used KSTAR IVIS dataset and 0D parameters from iKSTAR and finally we implemented the multi-modal model for (semi) continuous prediction
 - Since video data have spatial-temporal information directly from the IVIS, the real-time prediction during the plasma operation can be possible without any specific data preprocessing.
 - We labeled the video data as a sequence of image data with different duration and distance (prediciton time) 
 

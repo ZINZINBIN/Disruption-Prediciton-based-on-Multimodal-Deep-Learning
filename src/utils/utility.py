@@ -1,6 +1,7 @@
 import torch
+import torch.backends.cudnn as cudnn
 from torch.utils.data import Dataset
-import cv2, os, glob2
+import cv2, os, glob2, random
 import pandas as pd
 import numpy as np
 from typing import Optional, List, Literal, Union, Tuple
@@ -10,17 +11,38 @@ import torchvision.transforms as T
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import RobustScaler, MinMaxScaler, StandardScaler
 from sklearn.base import BaseEstimator
+from src.config import Config
+
+config = Config()
+STATE_FIXED = config.STATE_FIXED
+
+# For reproduction
+def seed_everything(seed : int = 42, deterministic : bool = False):
+    
+    random.seed(seed)
+    np.random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    
+    torch.manual_seed(seed)
+    
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+
+    if deterministic:
+        cudnn.deterministic = True
+        cudnn.benchmark = False
 
 # train-test split for video data model
-def preparing_video_dataset(root_dir : str):
+def preparing_video_dataset(root_dir : str, random_state : int = STATE_FIXED):
     shot_list = glob2.glob(os.path.join(root_dir, "*"))
-    shot_train, shot_test = train_test_split(shot_list, test_size = 0.2, random_state = 42)
-    shot_train, shot_valid = train_test_split(shot_train, test_size = 0.2, random_state = 42) 
+    shot_train, shot_test = train_test_split(shot_list, test_size = 0.2, random_state = random_state)
+    shot_train, shot_valid = train_test_split(shot_train, test_size = 0.2, random_state = random_state) 
     
     return shot_train, shot_valid, shot_test
 
-# train-test split for 0D data model
-def preparing_0D_dataset(filepath : str = "./dataset/KSTAR_Disruption_ts_data_extend.csv", ts_cols : Optional[List] = None, scaler : Literal['Robust', 'Standard', 'MinMax'] = 'Robust'):
+# train-test split for 0D data models
+def preparing_0D_dataset(filepath : str = "./dataset/KSTAR_Disruption_ts_data_extend.csv", random_state : int = STATE_FIXED, ts_cols : Optional[List] = None, scaler : Literal['Robust', 'Standard', 'MinMax'] = 'Robust'):
     
     # preparing 0D data for use
     df = pd.read_csv(filepath).reset_index()
@@ -39,8 +61,8 @@ def preparing_0D_dataset(filepath : str = "./dataset/KSTAR_Disruption_ts_data_ex
     # train / valid / test data split
     shot_list = np.unique(df.shot.values)
 
-    shot_train, shot_test = train_test_split(shot_list, test_size = 0.2, random_state = 42)
-    shot_train, shot_valid = train_test_split(shot_train, test_size = 0.2, random_state = 42)
+    shot_train, shot_test = train_test_split(shot_list, test_size = 0.2, random_state = random_state)
+    shot_train, shot_valid = train_test_split(shot_train, test_size = 0.2, random_state = random_state)
 
     df_train = pd.DataFrame()
     df_valid = pd.DataFrame()
@@ -61,10 +83,6 @@ def preparing_0D_dataset(filepath : str = "./dataset/KSTAR_Disruption_ts_data_ex
         scaler = StandardScaler()
     else:
         scaler = MinMaxScaler()
-    
-    # df_train[ts_cols] = scaler.fit_transform(df_train[ts_cols].values)
-    # df_valid[ts_cols] = scaler.transform(df_valid[ts_cols].values)
-    # df_test[ts_cols] = scaler.transform(df_test[ts_cols].values)
     
     scaler.fit(df_train[ts_cols].values)
 
@@ -1311,3 +1329,5 @@ def measure_computation_time(model : torch.nn.Module, input_shape : Tuple, n_sam
     dt_std = np.std(t_measures)
     
     return dt_means, dt_std, t_measures    
+
+
