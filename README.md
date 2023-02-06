@@ -142,31 +142,45 @@
 - Experiment for each network(vision, 0D, multimodal) with different prediction time
     ```
     # R1Plus1D
-    bashrc ./exp_r1plus1d.sh
+    sh exp/exp_r1plus1d.sh
 
     # Slowfast
-    bashrc ./exp_slowfast.sh
+    sh exp/exp_slowfast.sh
 
     # ViViT
-    bashrc ./exp_vivit.sh
+    sh exp/exp_vivit.sh
 
     # Transformer
-    bashrc ./exp_0D.sh
+    sh exp/exp_0D_transformer.sh
+
+    # CnnLSTM
+    sh exp/exp_0D_cnnlstm.sh
+
+    # MLSTM-FCN
+    sh exp/exp_0D_mlstm.sh
 
     # Multimodal model
-    bashrc ./exp_multi.sh
+    sh exp/exp_multi.sh
 
     # Multimodal model with Gradient Blending
-    bashrc ./exp_multi_gb.sh
+    sh exp/exp_multi_gb.sh
     ```
 
 - Experiment with different learning algorithms and models
     ```
-    # use python file
-    python3 experiment.py --gpu_num {gpu_num} --loss_type {'CE', 'FOCAL', 'LDAM'}
+    # case : R2Plus1D
+    sh exp/exp_la_r2plus1d.sh
 
-    # use bash file
-    bashrc ./exp_learning_algorithm.sh
+    # case : SlowFast
+    sh exp/exp_la_slowfast.sh
+
+    # case : ViViT
+    sh exp/exp_la_vivit.sh
+    ```
+
+- Model performance visualization for continuous disruption prediction using gif
+    ```
+    python3 make_continuous_prediction.py
     ```
 
 ## Detail
