@@ -32,12 +32,38 @@ def seed_everything(seed : int = 42, deterministic : bool = False):
     if deterministic:
         cudnn.deterministic = True
         cudnn.benchmark = False
+        
+# function for deterministic train_test_split function
+def deterministic_split(shot_list : List, test_size : float = 0.2):
+    n_length = len(shot_list)
+    n_test = int(test_size * n_length)
+    divided = n_length // n_test
+
+    total_indices = [idx for idx in range(n_length)]
+    test_indices = [idx for idx in range(n_length) if idx % divided == 0]
+    
+    train_list = []
+    test_list = []
+    
+    for idx in total_indices:
+        if idx in test_indices:
+            test_list.append(shot_list[idx])
+        else:
+            train_list.append(shot_list[idx])
+    
+    return train_list, test_list
 
 # train-test split for video data model
 def preparing_video_dataset(root_dir : str, random_state : int = STATE_FIXED):
     shot_list = glob2.glob(os.path.join(root_dir, "*"))
-    shot_train, shot_test = train_test_split(shot_list, test_size = 0.2, random_state = random_state)
-    shot_train, shot_valid = train_test_split(shot_train, test_size = 0.2, random_state = random_state) 
+    
+    # stochastic train_test_split
+    # shot_train, shot_test = train_test_split(shot_list, test_size = 0.2, random_state = random_state)
+    # shot_train, shot_valid = train_test_split(shot_train, test_size = 0.2, random_state = random_state) 
+    
+    # deterministic train_test_split
+    shot_train, shot_test = deterministic_split(shot_list, test_size = 0.2)
+    shot_train, shot_valid = deterministic_split(shot_train, test_size = 0.2)
     
     return shot_train, shot_valid, shot_test
 
@@ -61,9 +87,14 @@ def preparing_0D_dataset(filepath : str = "./dataset/KSTAR_Disruption_ts_data_ex
     # train / valid / test data split
     shot_list = np.unique(df.shot.values)
 
-    shot_train, shot_test = train_test_split(shot_list, test_size = 0.2, random_state = random_state)
-    shot_train, shot_valid = train_test_split(shot_train, test_size = 0.2, random_state = random_state)
-
+    # stochastic train_test_split
+    # shot_train, shot_test = train_test_split(shot_list, test_size = 0.2, random_state = random_state)
+    # shot_train, shot_valid = train_test_split(shot_train, test_size = 0.2, random_state = random_state)
+    
+    # deterministic train_test_split
+    shot_train, shot_test = deterministic_split(shot_list, test_size = 0.2)
+    shot_train, shot_valid = deterministic_split(shot_train, test_size = 0.2)
+    
     df_train = pd.DataFrame()
     df_valid = pd.DataFrame()
     df_test = pd.DataFrame()

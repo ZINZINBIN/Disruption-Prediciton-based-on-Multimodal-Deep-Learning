@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader
 from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
 
 def visualize_2D_latent_space(model : nn.Module, dataloader : DataLoader, device : str = 'cpu', save_dir : str = './results/latent_2d_space.png'):
     model.to(device)
@@ -27,8 +28,13 @@ def visualize_2D_latent_space(model : nn.Module, dataloader : DataLoader, device
     color = np.array(['#1f77b4', '#ff7f0e'])
     label  = np.array(['disruption','normal'])
     
-    pca = PCA(n_components=2, random_state=42)
-    total_latent = pca.fit_transform(total_latent)
+    # using PCA
+    # pca = PCA(n_components=2, random_state=42)
+    # total_latent = pca.fit_transform(total_latent)
+    
+    # using t-SNE
+    tSNE = TSNE(n_components=2)
+    total_latent = tSNE.fit_transform(total_latent)
     
     dis_idx = np.where(total_label == 0)
     normal_idx = np.where(total_label == 1)
@@ -63,8 +69,13 @@ def visualize_3D_latent_space(model : nn.Module, dataloader : DataLoader, device
     color = np.array(['#1f77b4', '#ff7f0e'])
     label  = np.array(['disruption','normal'])
     
-    pca = PCA(n_components=3, random_state=42)
-    total_latent = pca.fit_transform(total_latent)
+    # using PCA
+    # pca = PCA(n_components=3, random_state=42)
+    # total_latent = pca.fit_transform(total_latent)
+    
+    # using t-SNE
+    tSNE = TSNE(n_components=3)
+    total_latent = tSNE.fit_transform(total_latent)
     
     dis_idx = np.where(total_label == 0)
     normal_idx = np.where(total_label == 1)
@@ -115,13 +126,22 @@ def visualize_3D_latent_space_multi(model : nn.Module, dataloader : DataLoader, 
     dis_idx = np.where(total_label == 0)
     normal_idx = np.where(total_label == 1)
     
-    pca_fusion = PCA(n_components=3, random_state=42)
-    pca_vis = PCA(n_components=3, random_state=42)
-    pca_0D = PCA(n_components=3, random_state=42)
+    # pca_fusion = PCA(n_components=3, random_state=42)
+    # pca_vis = PCA(n_components=3, random_state=42)
+    # pca_0D = PCA(n_components=3, random_state=42)
     
-    total_latent_fusion = pca_fusion.fit_transform(total_latent_fusion)
-    total_latent_vis = pca_vis.fit_transform(total_latent_vis)
-    total_latent_0D = pca_0D.fit_transform(total_latent_0D)
+    # total_latent_fusion = pca_fusion.fit_transform(total_latent_fusion)
+    # total_latent_vis = pca_vis.fit_transform(total_latent_vis)
+    # total_latent_0D = pca_0D.fit_transform(total_latent_0D)
+    
+    # using t-SNE
+    tSNE_fusion = TSNE(n_components=3)
+    tSNE_vis = TSNE(n_components=3)
+    tSNE_0D = TSNE(n_components=3)
+    
+    total_latent_fusion = tSNE_fusion.fit_transform(total_latent_fusion)
+    total_latent_vis = tSNE_vis.fit_transform(total_latent_vis)
+    total_latent_0D = tSNE_0D.fit_transform(total_latent_0D)
     
     fig = plt.figure(figsize = (18,6))
     

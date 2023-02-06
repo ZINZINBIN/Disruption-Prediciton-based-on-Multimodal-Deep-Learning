@@ -6,7 +6,7 @@ import copy, os
 from torch.utils.data import DataLoader
 from src.dataset import DEFAULT_TS_COLS, MultiModalDataset2
 from src.utils.sampler import ImbalancedDatasetSampler
-from src.utils.utility import preparing_multi_data, plot_learning_curve
+from src.utils.utility import preparing_multi_data, plot_learning_curve, seed_everything
 from src.train import train, train_DRW
 from src.evaluate import evaluate, evaluate_detail
 from src.loss import LDAMLoss, FocalLoss, CELoss
@@ -18,6 +18,9 @@ from src.models.MultiModal import MultiModalModel, MultiModalModel_GB, TFN, TFN_
 # argument parser
 def parsing():
     parser = argparse.ArgumentParser(description="training disruption prediction model with multi-modal data")
+    
+    # random seed
+    parser.add_argument("--random_seed", type = int, default = 42)
     
     # tag and result directory
     parser.add_argument("--tag", type = str, default = "Multi-Modal")
@@ -145,6 +148,9 @@ if __name__ == "__main__":
     
     args = parsing()
     
+    # seed initialize
+    seed_everything(args['random_seed'], False)
+    
     # 0D data columns
     ts_cols = [
         '\\q95', '\\ipmhd', '\\kappa', 
@@ -214,9 +220,9 @@ if __name__ == "__main__":
         boost_type = "Normal"
     
     if args['use_GB']:
-        tag = "{}_clip_{}_dist_{}_{}_{}_GB".format(args["tag"], args["seq_len"], args["dist"], loss_type, boost_type)
+        tag = "{}_clip_{}_dist_{}_{}_{}_GB_seed_{}".format(args["tag"], args["seq_len"], args["dist"], loss_type, boost_type, args['random_seed'])
     else:
-        tag = "{}_clip_{}_dist_{}_{}_{}".format(args["tag"], args["seq_len"], args["dist"], loss_type, boost_type)
+        tag = "{}_clip_{}_dist_{}_{}_{}_seed_{}".format(args["tag"], args["seq_len"], args["dist"], loss_type, boost_type, args['random_seed'])
     
     save_best_dir = "./weights/{}_best.pt".format(tag)
     save_last_dir = "./weights/{}_last.pt".format(tag)
@@ -490,15 +496,20 @@ if __name__ == "__main__":
     )
     
     # Additional analyzation
-    print("\n################# Visualization process #################\n")
-    save_3D_latent_dir = os.path.join(save_dir, "{}_3D_latent.png".format(tag))
-    
+    print("\n################# Visualization process #################\n")  
     try:
         visualize_3D_latent_space_multi(
             model, 
             train_loader,
             device,
-            save_3D_latent_dir
+            os.path.join(save_dir, "{}_3D_latent_train.png".format(tag))
+        )
+        
+        visualize_3D_latent_space_multi(
+            model, 
+            test_loader,
+            device,
+            os.path.join(save_dir, "{}_3D_latent_test.png".format(tag))
         )
         
     except:

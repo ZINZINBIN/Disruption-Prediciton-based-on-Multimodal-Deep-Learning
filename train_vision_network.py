@@ -175,7 +175,7 @@ if __name__ == "__main__":
     elif not args['use_sampling'] and not args['use_weighting'] and not args['use_DRW']:
         boost_type = "Normal"
     
-    tag = "{}_clip_{}_dist_{}_{}_{}".format(args["tag"], args["seq_len"], args["dist"], loss_type, boost_type)
+    tag = "{}_clip_{}_dist_{}_{}_{}_seed_{}".format(args["tag"], args["seq_len"], args["dist"], loss_type, boost_type, args['random_seed'])
     
     print("running : {}".format(tag))
 
@@ -402,15 +402,20 @@ if __name__ == "__main__":
     )
     
     # Additional analyzation
-    save_2D_latent_dir = os.path.join(save_dir, "{}_2D_latent.png".format(tag))
-    save_3D_latent_dir = os.path.join(save_dir, "{}_3D_latent.png".format(tag))
     print("\n################# Visualization process #################\n")
     try:
         visualize_2D_latent_space(
             model, 
             train_loader,
             device,
-            save_2D_latent_dir
+            os.path.join(save_dir, "{}_2D_latent_train.png".format(tag))
+        )
+        
+        visualize_2D_latent_space(
+            model, 
+            test_loader,
+            device,
+            os.path.join(save_dir, "{}_2D_latent_test.png".format(tag))
         )
         
     except:
@@ -421,14 +426,23 @@ if __name__ == "__main__":
             model, 
             train_loader,
             device,
-            save_3D_latent_dir
+            os.path.join(save_dir, "{}_3D_latent_train.png".format(tag))
         )
+        
+        visualize_3D_latent_space(
+            model, 
+            test_loader,
+            device,
+            os.path.join(save_dir, "{}_3D_latent_test.png".format(tag))
+        )
+        
     except:
         print("{} : visualize 3D latent space doesn't work due to stability error".format(tag))
         
     # plot the disruption probability curve
     test_shot_num = args['test_shot_num']
     print("\n################# Probability curve generation process #################\n")
+    
     time_x, prob_list = generate_prob_curve(
         file_path = "./dataset/temp/{}".format(test_shot_num),
         model = model, 
