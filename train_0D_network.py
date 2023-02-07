@@ -77,14 +77,9 @@ def parsing():
     parser.add_argument("--dist", type = int, default = 3)
     parser.add_argument("--num_workers", type = int, default = 4)
     parser.add_argument("--pin_memory", type = bool, default = True)
-
-    # model weight / save process
-    # wandb setting
-    parser.add_argument("--use_wandb", type = bool, default = False)
-    parser.add_argument("--wandb_save_name", type = str, default = "SBERT-exp001")
     
     # optimizer : SGD, RMSProps, Adam, AdamW
-    parser.add_argument("--optimizer", type = str, default = "AdamW")
+    parser.add_argument("--optimizer", type = str, default = "AdamW", choices=["SGD","RMSProps","Adam","AdamW"])
     
     # learning rate, step size and decay constant
     parser.add_argument("--lr", type = float, default = 2e-4)

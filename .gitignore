@@ -6,6 +6,9 @@
 # tensorboard data log
 runs/*
 
+# hpo checkpoint
+hpo_checkpoint/*
+
 # result file
 results/*.csv
 results/*.png

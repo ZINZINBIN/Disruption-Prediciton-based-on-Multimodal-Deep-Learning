@@ -166,7 +166,9 @@ def evaluate(
     clf_report = classification_report(total_label, total_pred, labels = [0,1], target_names = ["Disrupt", "Normal"], output_dict = True)
     s2 = sns.heatmap(pd.DataFrame(clf_report).iloc[:-1, :].T, annot = True, ax = axes[1,1])
     fig.tight_layout()
-    plt.savefig(save_conf)
+    
+    if save_conf:
+        plt.savefig(save_conf)
 
     print("############### Classification Report ####################")
     print(classification_report(total_label, total_pred, labels = [0,1]))
