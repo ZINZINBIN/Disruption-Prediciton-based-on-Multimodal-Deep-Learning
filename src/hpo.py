@@ -97,6 +97,8 @@ def train_per_epoch(
     else:
         train_loss = 0
         train_f1 = 0
+    
+    model.cpu()
 
     return train_loss, train_f1
 
@@ -149,6 +151,8 @@ def valid_per_epoch(
 
     valid_loss /= total_size
     valid_f1 = f1_score(total_label, total_pred, average = "macro")
+    
+    model.cpu()
 
     return valid_loss, valid_f1
 
@@ -366,5 +370,7 @@ def evaluate(
     
     # auc score
     test_auc = roc_auc_score(total_label, total_pred, average='macro')
+    
+    model.cpu()
     
     return test_loss, test_f1, test_auc

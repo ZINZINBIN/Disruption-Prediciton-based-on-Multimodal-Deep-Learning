@@ -3,8 +3,10 @@ import os
 import numpy as np
 import pandas as pd
 import argparse
+import logging
 from typing import Dict, Optional, Literal
 from functools import partial
+from copy import deepcopy
 
 # Dataset and Dataloader
 from torch.utils.data import DataLoader, RandomSampler
@@ -30,9 +32,16 @@ from src.models.CnnLSTM import CnnLSTM
 from src.models.MLSTM_FCN import MLSTM_FCN
 
 # hyperparameter tuning library
+import ray
 from ray import tune
 from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
+
+import warnings
+
+# remove warning
+warnings.filterwarnings("ignore")
+
 
 # argument parser
 def parsing():
@@ -51,6 +60,9 @@ def parsing():
 
     # data input shape 
     parser.add_argument("--image_size", type = int, default = 128)
+    
+    # num samples
+    parser.add_argument("--num_samples", type = int, default = 8)
 
     # common argument
     # batch size / sequence length / epochs / distance / num workers / pin memory use
@@ -118,6 +130,9 @@ if __name__ == "__main__":
     
     # argument parsing
     args = parsing()
+    
+    ray.shutdown()  # Restart Ray defensively in case the ray connection is lost. 
+    ray.init(log_to_driver=False, ignore_reinit_error=True, logging_level=logging.DEBUG)
     
     # torch cuda initialize and clear cache
     torch.cuda.init()
@@ -227,10 +242,8 @@ if __name__ == "__main__":
         valid_sampler = RandomSampler(valid_data)
         test_sampler = RandomSampler(test_data)
     
-    train_loader = DataLoader(train_data, batch_size = args['batch_size'], sampler=train_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"])
-    valid_loader = DataLoader(valid_data, batch_size = args['batch_size'], sampler=valid_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"])
-    test_loader = DataLoader(test_data, batch_size = args['batch_size'], sampler=test_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"])
-
+    
+    
     # Re-weighting
     if args['use_weighting']:
         per_cls_weights = 1.0 / np.array(cls_num_list)
@@ -349,8 +362,14 @@ if __name__ == "__main__":
         # define model
         model = load_model(config)
         
-        if torch.cuda.device_count() > 1:
-            model = torch.nn.DataParallel(model)
+        train_loader = DataLoader(deepcopy(train_data), batch_size = args['batch_size'], sampler=train_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"])
+        valid_loader = DataLoader(deepcopy(valid_data), batch_size = args['batch_size'], sampler=valid_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"])
+        
+        device = "cpu"
+        if torch.cuda.is_available():
+            device = "cuda:0"
+            if torch.cuda.device_count() > 1 and args['use_multi_gpu']:
+                model = torch.nn.DataParallel(model)
             
         model.to(device)
 
@@ -416,7 +435,7 @@ if __name__ == "__main__":
             model_argument = {
                 'patch_size':tune.choice([8, 16, 32]),
                 'dim':tune.sample_from(lambda _: 2**np.random.randint(5,10)),
-                'depth':tune.choice([1,2,4,8]),
+                'depth':tune.choice([2,4,6,8]),
                 'n_heads':tune.choice([2,4,6,8]),
                 'd_head':tune.sample_from(lambda _: 2**np.random.randint(4,8)),
                 'scale_dim':tune.sample_from(lambda _: 2**np.random.randint(1,4)),
@@ -427,48 +446,48 @@ if __name__ == "__main__":
             
         elif args['model'] == 'SlowFast':
             model_argument = {
-                'n_layer':[],
-                'tau_alpha':[],
-                'tau_fast':[],
-                'alpha':[]
+                'n_layer':tune.choice([1,2,3,4]),
+                'tau_alpha':4,
+                'tau_fast':tune.choice([1,2]),
+                'alpha':tune.loguniform(1e-1, 1)
             }  
         elif args['model'] == 'R2Plus1D':
             model_argument = {
-                'n_layer':[],
-                'alpha':[]
+                'n_layer':tune.choice([1,2,3,4]),
+                'alpha':tune.loguniform(1e-1, 1)
             }
         elif args['model'] == 'Transformer':
             model_argument = {
-                'feature_dims':[],
-                'n_layers':[],
-                'n_heads':[],
-                'dim_feedforward':[],
-                'dropout':[],
-                'cls_dims':[]
+                'feature_dims':tune.sample_from(lambda _: 2**np.random.randint(6,9)),
+                'n_layers':tune.choice([2,4,6]),
+                'n_heads':tune.choice([2,4,8]),
+                'dim_feedforward':tune.sample_from(lambda _: 2**np.random.randint(7,10)),
+                'dropout':tune.loguniform(1e-2, 5e-1),
+                'cls_dims':tune.sample_from(lambda _: 2**np.random.randint(6,8)),
             }
             
         elif args['model'] == 'CnnLSTM':
             model_argument = {
-                'conv_dim':[],
-                'conv_kernel':[],
-                'conv_stride':[],
-                'conv_padding':[],
-                'lstm_dim':[],
-                'lstm_layers':[],
-                'bidirectional':[]
+                'conv_dim':tune.sample_from(lambda _: 2**np.random.randint(5,7)),
+                'conv_kernel':tune.choice([3,5,7]),
+                'conv_stride':tune.choice([1,2]),
+                'conv_padding':1,
+                'lstm_dim':tune.sample_from(lambda _: 2**np.random.randint(5,7)),
+                'lstm_layers':tune.choice([1,2,3,4]),
+                'bidirectional':True
             }
         
         elif args['model'] == 'MLSTM_FCN':
             model_argument = {
-                'fcn_dim':[],
-                'conv_kernel':[],
-                'conv_stride':[],
-                'lstm_dim':[],
-                'lstm_dropout':[],
-                'lstm_layers':[],
-                'bidirectional':[],
-                'reduction':[],
-                'alpha':[]
+                'fcn_dim':tune.sample_from(lambda _: 2**np.random.randint(5,7)),
+                'conv_kernel':tune.choice([3,5,7]),
+                'conv_stride':tune.choice([1,2]),
+                'lstm_dim':tune.sample_from(lambda _: 2**np.random.randint(5,7)),
+                'lstm_dropout':tune.loguniform(1e-2, 5e-1),
+                'lstm_layers':tune.choice([1,2,3,4]),
+                'bidirectional':True,
+                'reduction':tune.choice([4,8,16]),
+                'alpha':tune.loguniform(1e-1, 1)
             }
         
         tune_scheduler = ASHAScheduler(
@@ -490,7 +509,7 @@ if __name__ == "__main__":
             num_samples=num_samples,
             scheduler=tune_scheduler,
             progress_reporter=tune_reporter,
-            checkpoint_at_end=True
+            checkpoint_at_end=False
         )
             
         best_trial = tune_result.get_best_trial("f1_score", "max", "last")
@@ -503,6 +522,8 @@ if __name__ == "__main__":
         best_checkpoint_dir = best_trial.checkpoint.value
         model_state, optimizer_state = torch.load(os.path.join(best_checkpoint_dir, "checkpoint"))
         best_model.load_state_dict(model_state)
+        
+        test_loader = DataLoader(deepcopy(test_data), batch_size = args['batch_size'], sampler=test_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"])
 
         test_loss, test_f1, test_auc = evaluate(
             test_loader,
@@ -516,4 +537,4 @@ if __name__ == "__main__":
         print("Best trial test f1-score:{:.3f}, test AUC:{:.3f}".format(test_f1, test_auc))
         
         
-    tuning_process(checkpoint_dir, args['num_samples'], cpus_per_trial = 4, gpus_per_trial = 0)
+    tuning_process(checkpoint_dir, args['num_samples'], cpus_per_trial = args['num_workers'], gpus_per_trial = 1)

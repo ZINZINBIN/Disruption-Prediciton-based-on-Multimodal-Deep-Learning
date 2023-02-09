@@ -188,6 +188,7 @@ if __name__ == "__main__":
         boost_type = "Normal"
     
     tag = "{}_clip_{}_dist_{}_{}_{}_seed_{}".format(args["tag"], args["seq_len"], args["dist"], loss_type, boost_type, args['random_seed'])
+    # tag = "{}_clip_{}_dist_{}_{}_{}".format(args["tag"], args["seq_len"], args["dist"], loss_type, boost_type)
     
     print("running : {}".format(tag))
     
@@ -412,7 +413,6 @@ if __name__ == "__main__":
         os.path.join(save_dir, "{}_feature_importance.png".format(tag))
     )
     
-    # Additional analyzation
     # Additional analyzation
     print("\n################# Visualization process #################\n")
     try:
