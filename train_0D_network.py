@@ -82,7 +82,7 @@ def parsing():
     parser.add_argument("--optimizer", type = str, default = "AdamW", choices=["SGD","RMSProps","Adam","AdamW"])
     
     # learning rate, step size and decay constant
-    parser.add_argument("--lr", type = float, default = 2e-4)
+    parser.add_argument("--lr", type = float, default = 2e-5)
     parser.add_argument("--use_scheduler", type = bool, default = True)
     parser.add_argument("--step_size", type = int, default = 4)
     parser.add_argument("--gamma", type = float, default = 0.95)
@@ -348,6 +348,7 @@ if __name__ == "__main__":
             exp_dir = exp_dir,
             max_norm_grad = 1.0,
             betas = betas,
+            cls_num_list = cls_num_list,
             model_type = "single",
             test_for_check_per_epoch=test_loader,
             is_early_stopping = args['early_stopping'],

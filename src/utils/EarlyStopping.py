@@ -1,8 +1,9 @@
 import torch
 import torch.nn as nn
+from typing import Optional
 
 class EarlyStopping:
-    def __init__(self, path : str, patience : int = 8, verbose : bool = False, delta : float = 0):
+    def __init__(self, path : Optional[str], patience : int = 8, verbose : bool = False, delta : float = 0):
         self.path = path
         self.patience = patience
         self.verbose = verbose
@@ -31,6 +32,8 @@ class EarlyStopping:
     def save_checkpoint(self, val_score, model:nn.Module):
         if self.verbose:
             print("Best score increase :{:.3f} -> {:.3f}".format(self.best_score, val_score))
+        
+        if self.path:
+            torch.save(model.state_dict(), self.path)
             
-        torch.save(model.state_dict(), self.path)
         self.best_score = val_score

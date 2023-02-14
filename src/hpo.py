@@ -8,8 +8,15 @@ from torch.utils.data import DataLoader
 from sklearn.metrics import f1_score
 from src.utils.EarlyStopping import EarlyStopping
 from ray import tune
+from ray.air import session
 from sklearn.metrics import confusion_matrix, classification_report, f1_score
 from sklearn.metrics import roc_auc_score, roc_curve, precision_recall_curve
+from src.utils.EarlyStopping import EarlyStopping
+
+import warnings
+
+# remove warning
+warnings.filterwarnings("ignore")
 
 def train_per_epoch(
     train_loader : DataLoader, 
@@ -34,12 +41,14 @@ def train_per_epoch(
     for batch_idx, (data, target) in enumerate(train_loader):
         # check that the batch_size = 1, if batch_size = 1, skip the process        
         if model_type == "single":
-            if data.size()[0] <=1:
-                continue
+            if data.size()[0] <=1 or not torch.isfinite(data).any():
+                print("train_per_epoch | warning : data nan occurs at batch_idx : {}".format(batch_idx))
+                break
         else:
             data_video = data['video']
-            if data_video.size()[0] <=1:
-                continue
+            if data_video.size()[0] <=1 or not torch.isfinite(data_video).any():
+                print("train_per_epoch | Warning : data nan occurs at batch_idx : {}".format(batch_idx))
+                break
         
         # optimizer.zero_grad()
         # Efficient zero-out gradients
@@ -69,7 +78,7 @@ def train_per_epoch(
         # then, nan does not affect the weight of the parameters
         if not torch.isfinite(loss):
             print("train_per_epoch | Warning : loss nan occurs at batch_idx : {}".format(batch_idx))
-            continue
+            break
         else:
             loss.backward()
 
@@ -167,7 +176,11 @@ def train(
     num_epoch : int = 64,
     max_norm_grad : Optional[float] = None,
     model_type : Literal["single","multi"] = "single",
-    checkpoint_dir : Optional[str] = None
+    checkpoint_dir : Optional[str] = None,
+    is_early_stopping : bool = True,
+    early_stopping_verbose : bool = True,
+    early_stopping_patience : int = 12,
+    early_stopping_delta : float = 1e-3
     ):
 
     train_loss_list = []
@@ -175,11 +188,11 @@ def train(
     
     train_f1_list = []
     valid_f1_list = []
-
-    if checkpoint_dir:
-        model_state, optimizer_state = torch.load(os.path.join(checkpoint_dir, "checkpoint"))
-        model.load_state_dict(model_state)
-        optimizer.load_state_dict(optimizer_state)
+        
+    if is_early_stopping:
+        early_stopping = EarlyStopping(None, early_stopping_patience, early_stopping_verbose, early_stopping_delta)
+    else:
+        early_stopping = None
 
     for epoch in tqdm(range(num_epoch), desc = "training process for hyperparameter optimization"):
 
@@ -209,13 +222,22 @@ def train(
         train_f1_list.append(train_f1)
         valid_f1_list.append(valid_f1)
                
+        # version 01
         # tune checkpoint and save
         with tune.checkpoint_dir(epoch) as checkpoint_dir:
             path = os.path.join(checkpoint_dir, "checkpoint")
             torch.save((model.state_dict(), optimizer.state_dict()), path)
 
         # tune report
-        tune.report(loss=valid_loss, f1_score=valid_f1)
+        tune.report(loss=valid_loss, f1_score=valid_f1, training_iteration = epoch + 1)
+        
+        # version 02
+        # session.report({"loss": valid_loss, "f1_score":valid_f1}, checkpoint=checkpoint_dir)
+        
+        if early_stopping:
+            early_stopping(valid_f1, model)
+            if early_stopping.early_stop:
+                break
         
     return  train_loss_list, train_f1_list,  valid_loss_list, valid_f1_list
 
@@ -232,7 +254,11 @@ def train_DRW(
     cls_num_list : Optional[List] = None,
     betas : List = [0, 0.25, 0.75, 0.9],
     model_type : Literal['single','multi'] = 'single',
-    checkpoint_dir : Optional[str] = None
+    checkpoint_dir : Optional[str] = None,
+    is_early_stopping : bool = True,
+    early_stopping_verbose : bool = True,
+    early_stopping_patience : int = 12,
+    early_stopping_delta : float = 1e-3
     ):
 
     train_loss_list = []
@@ -240,7 +266,6 @@ def train_DRW(
 
     train_f1_list = []
     valid_f1_list = []
-
 
     # class per weight update
     def _update_per_cls_weights(epoch : int, betas : List, cls_num_list : List):
@@ -256,10 +281,10 @@ def train_DRW(
         per_cls_weights = torch.FloatTensor(per_cls_weights).to(device)
         return per_cls_weights    
         
-    if checkpoint_dir:
-        model_state, optimizer_state = torch.load(os.path.join(checkpoint_dir, "checkpoint"))
-        model.load_state_dict(model_state)
-        optimizer.load_state_dict(optimizer_state)
+    if is_early_stopping:
+        early_stopping = EarlyStopping(None, early_stopping_patience, early_stopping_verbose, early_stopping_delta)
+    else:
+        early_stopping = None
     
     for epoch in tqdm(range(num_epoch), desc = "training process(DRW) for hyperparameter optimization"):
 
@@ -300,7 +325,13 @@ def train_DRW(
             torch.save((model.state_dict(), optimizer.state_dict()), path)
 
         # tune report
-        tune.report(loss=valid_loss, f1_score=valid_f1)
+        tune.report(loss=valid_loss, f1_score=valid_f1, training_iteration = epoch + 1)
+        # session.report({"loss": valid_loss, "f1_score":valid_f1}, checkpoint=checkpoint_dir)
+        
+        if early_stopping:
+            early_stopping(valid_f1, model)
+            if early_stopping.early_stop:
+                break
 
     return  train_loss_list, train_f1_list,  valid_loss_list, valid_f1_list
 

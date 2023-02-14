@@ -6,7 +6,7 @@ import copy, os
 from torch.utils.data import DataLoader
 from src.dataset import DEFAULT_TS_COLS, MultiModalDataset2
 from src.utils.sampler import ImbalancedDatasetSampler
-from src.utils.utility import preparing_multi_data, plot_learning_curve, seed_everything
+from src.utils.utility import preparing_multi_data, plot_learning_curve, seed_everything, generate_prob_curve_from_multi
 from src.train import train, train_DRW
 from src.evaluate import evaluate, evaluate_detail
 from src.loss import LDAMLoss, FocalLoss, CELoss
@@ -90,7 +90,7 @@ def parsing():
     # Gradient Blending for Multi-modal learning
     parser.add_argument("--use_GB", type = bool, default = False)
     parser.add_argument("--epoch_per_GB_estimate", type = int, default = 16)
-    parser.add_argument("--num_epoch_GB_estimate", type = int, default = 4)
+    parser.add_argument("--num_epoch_GB_estimate", type = int, default = 3)
     parser.add_argument("--w_fusion", type = float, default = 0.5)
     parser.add_argument("--w_vis", type = float, default = 0.2)
     parser.add_argument("--w_0D", type = float, default = 0.3)
@@ -272,7 +272,7 @@ if __name__ == "__main__":
                 args_video,
                 args_0D
             )
-        elif args['moel'] == 'CONCAT':
+        elif args['model'] == 'CONCAT':
             model = MultiModalModel_GB(
                 2,
                 args_video,
@@ -285,7 +285,7 @@ if __name__ == "__main__":
                 args_video,
                 args_0D
             )
-        elif args['moel'] == 'CONCAT':
+        elif args['model'] == 'CONCAT':
             model = MultiModalModel(
                 2,
                 args['seq_len'],
@@ -378,25 +378,6 @@ if __name__ == "__main__":
     # training process
     print("\n################# training process #################\n")
     if args['use_GB']:
-        
-        # train_loss, train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train_GB(
-        #     train_loader,
-        #     valid_loader,
-        #     model,
-        #     optimizer,
-        #     scheduler,
-        #     loss_fn_gb,
-        #     device,
-        #     args['num_epoch'],
-        #     args['verbose'],
-        #     save_best_dir,
-        #     save_last_dir,
-        #     exp_dir,
-        #     1.0,
-        #     "f1_score",
-        #     test_for_check_per_epoch=test_loader
-        # )
-        
         train_loss, train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train_GB_dynamic(
             train_loader,
             valid_loader,
@@ -433,6 +414,7 @@ if __name__ == "__main__":
             exp_dir = exp_dir,
             max_norm_grad = 1.0,
             betas = betas,
+            cls_num_list = cls_num_list,
             model_type = "multi",
             test_for_check_per_epoch=test_loader,
             is_early_stopping = args['early_stopping'],
@@ -513,14 +495,18 @@ if __name__ == "__main__":
     # plot the disruption probability curve
     test_shot_num = args['test_shot_num']
 
-    # time_x, prob_list = generate_prob_curve_multi(
-    #     file_path = "./dataset/temp/{}".format(test_shot_num),
-    #     model = model, 
-    #     device = device, 
-    #     save_dir = os.path.join(save_dir, "{}_probs_curve_{}.png".format(tag, test_shot_num)),
-    #     shot_list_dir = "./dataset/KSTAR_Disruption_Shot_List_extend.csv",
-    #     ts_data_dir = "./dataset/KSTAR_Disruption_ts_data_extend.csv",
-    #     shot_num = test_shot_num,
-    #     clip_len = args['seq_len'],
-    #     dist_frame = args['dist'],
-    # )
+    time_x, prob_list = generate_prob_curve_from_multi(
+        file_path = "./dataset/temp/{}".format(test_shot_num),
+        model = model, 
+        device = device, 
+        save_dir = os.path.join(save_dir, "{}_probs_curve_{}.png".format(tag, test_shot_num)),
+        ts_data_dir = "./dataset/KSTAR_Disruption_ts_data_5ms.csv",
+        ts_cols = ts_cols,
+        shot_list_dir = './dataset/KSTAR_Disruption_Shot_List_extend.csv',
+        shot_num = test_shot_num,
+        vis_seq_len = args['seq_len'],
+        ts_seq_len = args['seq_len'],
+        dist = args['dist'],
+        dt = 1 / 210,
+        scaler = scaler
+    )
