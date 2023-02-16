@@ -458,19 +458,28 @@ if __name__ == "__main__":
     
     if args['use_GB']:
         model_type = "multi-GB"
+        test_loss, test_acc, test_f1 = evaluate(
+            test_loader,
+            model,
+            optimizer,
+            loss_fn_gb,
+            device,
+            save_conf = save_conf,
+            save_txt = save_txt,
+            model_type = model_type
+        )
     else:
         model_type = "multi"
-    
-    test_loss, test_acc, test_f1 = evaluate(
-        test_loader,
-        model,
-        optimizer,
-        loss_fn,
-        device,
-        save_conf = save_conf,
-        save_txt = save_txt,
-        model_type = model_type
-    )
+        test_loss, test_acc, test_f1 = evaluate(
+            test_loader,
+            model,
+            optimizer,
+            loss_fn,
+            device,
+            save_conf = save_conf,
+            save_txt = save_txt,
+            model_type = model_type
+        )
     
     # Additional analyzation
     print("\n################# Visualization process #################\n")  

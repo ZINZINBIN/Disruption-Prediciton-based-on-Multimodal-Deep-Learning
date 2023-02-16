@@ -228,6 +228,7 @@ if args["model"] in ["R2Plus1D", "SlowFast", "ViViT"]:
     train_data = DatasetForVideo2(shot_train, df_disrupt, augmentation = True, augmentation_args=augment_args, crop_size = args['image_size'], seq_len = args['seq_len'], dist = args['dist'])
     valid_data = DatasetForVideo2(shot_valid, df_disrupt, augmentation = False, augmentation_args=augment_args, crop_size = args['image_size'], seq_len = args['seq_len'], dist = args['dist'])
     test_data = DatasetForVideo2(shot_test, df_disrupt, augmentation = False, augmentation_args=augment_args, crop_size = args['image_size'], seq_len = args['seq_len'], dist = args['dist'])
+
     
 elif args["model"] in ["Transformer","CnnLSTM","MLSTM_FCN"]:
     ts_train, ts_valid, ts_test, ts_scaler = preparing_0D_dataset("./dataset/KSTAR_Disruption_ts_data_extend.csv", ts_cols = ts_cols, scaler = 'Robust')
@@ -380,8 +381,7 @@ def train_for_hpo(
         device = "cuda:{}".format(args['gpu_num'])
         if torch.cuda.device_count() > 1 and args['use_multi_gpu']:
             model = torch.nn.DataParallel(model)
-        
-    # device = "cpu"
+
     model.to(device)
 
     # optimizer
@@ -405,6 +405,11 @@ def train_for_hpo(
         
     else:
         scheduler = None
+    
+    for sample_data, sample_target in iter(train_loader):
+        print(torch.isfinite(sample_data).any())
+    
+    breakpoint()
     
     # training process
     if args['use_DRW']:
