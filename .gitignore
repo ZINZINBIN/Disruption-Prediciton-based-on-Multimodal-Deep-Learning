@@ -2,7 +2,6 @@
 *.pt
 *.zip
 *.csv
-*.out
 
 # tensorboard data log
 runs/*
