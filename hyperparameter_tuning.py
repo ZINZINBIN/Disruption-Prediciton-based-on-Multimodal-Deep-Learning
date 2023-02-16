@@ -58,8 +58,8 @@ def parsing():
     parser.add_argument("--random_seed", type = int, default = 42)
     
     # tag and result directory
-    parser.add_argument("--model", type = str, default = 'ViViT', choices=['ViViT', 'SlowFast', 'R2Plus1D', 'Transformer','CnnLSTM','MLSTM_FCN'])
-    parser.add_argument("--tag", type = str, default = "ViViT")
+    parser.add_argument("--model", type = str, default = 'Transformer', choices=['ViViT', 'SlowFast', 'R2Plus1D', 'Transformer','CnnLSTM','MLSTM_FCN'])
+    parser.add_argument("--tag", type = str, default = "Transformer")
 
     # gpu allocation
     parser.add_argument("--gpu_num", type = int, default = 0)
@@ -405,11 +405,6 @@ def train_for_hpo(
         
     else:
         scheduler = None
-    
-    for sample_data, sample_target in iter(train_loader):
-        print(torch.isfinite(sample_data).any())
-    
-    breakpoint()
     
     # training process
     if args['use_DRW']:
