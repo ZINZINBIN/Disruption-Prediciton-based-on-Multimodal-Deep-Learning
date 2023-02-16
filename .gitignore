@@ -2,12 +2,18 @@
 *.pt
 *.zip
 *.csv
+*.out
 
 # tensorboard data log
 runs/*
 
+# hpo checkpoint
+hpo_checkpoint/*
+
 # result file
-results/*
+results/*.csv
+results/*.png
+results/*txt
 results/disruption_phase/*
 
 # weights

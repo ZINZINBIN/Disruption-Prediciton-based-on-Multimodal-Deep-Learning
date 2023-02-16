@@ -161,8 +161,8 @@ class GradCAM_SlowFast:
             self.backward_feature_fn.append(output[0])
             
         # SlowNet case
-        self.model._modules['encoder']._modules['slownet']._modules['layer4']._modules['0'].get_submodule("conv3").register_forward_hook(_hook_feature_sn)
-        self.model._modules['encoder']._modules['slownet']._modules['layer4']._modules['0'].get_submodule("conv3").register_backward_hook(_backward_hook_sn)
+        self.model._modules['encoder']._modules['slownet']._modules['layer4']._modules['0']._modules['downsample'].get_submodule("0").register_forward_hook(_hook_feature_sn)
+        self.model._modules['encoder']._modules['slownet']._modules['layer4']._modules['0']._modules['downsample'].get_submodule("0").register_backward_hook(_backward_hook_sn)
 
         # FastNet case
         self.model._modules['encoder']._modules['fastnet'].get_submodule('l_layer3').register_forward_hook(_hook_feature_fn)
@@ -203,7 +203,7 @@ class GradCAM_SlowFast:
 
         grad_cam_map_interp = torch.empty((1,1,5,128,128))
 
-        for idx in range(3):
+        for idx in range(5):
             grad_cam_map_interp[:,:,idx,:,:] = F.interpolate(grad_cam_map[:,:,idx,:,:], size=(128, 128), mode='bilinear', align_corners=False)
 
         grad_cam_map_interp = grad_cam_map_interp.mean(2)
@@ -216,7 +216,7 @@ class GradCAM_SlowFast:
 
         grad_cam_map_interp = torch.empty((1,1,5,128,128))
 
-        for idx in range(3):
+        for idx in range(5):
             grad_cam_map_interp[:,:,idx,:,:] = F.interpolate(grad_cam_map[:,:,idx,:,:], size=(128, 128), mode='bilinear', align_corners=False)
 
         grad_cam_map_interp = grad_cam_map_interp.mean(2)
@@ -231,15 +231,15 @@ class GradCAM_SlowFast:
         img = video[:,:,-1,:,:].squeeze().permute(1,2,0).numpy()
 
         # add two image
-        grad_result_sn= grad_heatmap_sn + img
+        grad_result_sn= grad_heatmap_sn
         grad_result_sn= grad_result_sn / np.max(grad_result_sn)
         grad_result_sn= np.uint8(255 * grad_result_sn)
 
-        grad_result_fn= grad_heatmap_fn + img
+        grad_result_fn= grad_heatmap_fn 
         grad_result_fn= grad_result_fn / np.max(grad_result_fn)
         grad_result_fn= np.uint8(255 * grad_result_fn)
 
-        fig, (ax1, ax2, ax3) = plt.subplots(ncols=3, figsize=(12, 12))
+        fig, (ax1, ax2, ax3) = plt.subplots(ncols=3, figsize=(12, 12), sharex=True, sharey = True)
         ax1.set_title('Original - {}'.format(title))
         ax2.set_title('GradCAM : SlowNet - {}'.format(title))
         ax3.set_title('GradCAM : FastNet - {}'.format(title))
@@ -253,9 +253,26 @@ class GradCAM_SlowFast:
             ax2.set_title('GradCAM : SlowNet')
             ax3.set_title('GradCAM : FastNet')
             
-        _ = ax1.imshow(img)
-        _ = ax2.imshow(grad_heatmap_sn)
-        _ = ax3.imshow(grad_heatmap_fn)
+        im1 = ax1.imshow(img, cmap = plt.cm.get_cmap('jet'))
+        im2 = ax2.imshow(grad_heatmap_sn, cmap = plt.cm.get_cmap('jet'))
+        im3 = ax3.imshow(grad_heatmap_fn, cmap = plt.cm.get_cmap('jet'))
+        
+        def add_colorbar(mappable):
+            from mpl_toolkits.axes_grid1 import make_axes_locatable
+            import matplotlib.pyplot as plt
+            last_axes = plt.gca()
+            ax = mappable.axes
+            fig = ax.figure
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes("right", size="2.5%", pad=0.05)
+            cbar = fig.colorbar(mappable, cax=cax)
+            plt.sca(last_axes)
+            return cbar
+
+        add_colorbar(im1)
+        add_colorbar(im2)
+        add_colorbar(im3)
+        
         fig.tight_layout()
         
         if save_dir:

@@ -77,17 +77,12 @@ def parsing():
     parser.add_argument("--dist", type = int, default = 3)
     parser.add_argument("--num_workers", type = int, default = 4)
     parser.add_argument("--pin_memory", type = bool, default = True)
-
-    # model weight / save process
-    # wandb setting
-    parser.add_argument("--use_wandb", type = bool, default = False)
-    parser.add_argument("--wandb_save_name", type = str, default = "SBERT-exp001")
     
     # optimizer : SGD, RMSProps, Adam, AdamW
-    parser.add_argument("--optimizer", type = str, default = "AdamW")
+    parser.add_argument("--optimizer", type = str, default = "AdamW", choices=["SGD","RMSProps","Adam","AdamW"])
     
     # learning rate, step size and decay constant
-    parser.add_argument("--lr", type = float, default = 2e-4)
+    parser.add_argument("--lr", type = float, default = 2e-5)
     parser.add_argument("--use_scheduler", type = bool, default = True)
     parser.add_argument("--step_size", type = int, default = 4)
     parser.add_argument("--gamma", type = float, default = 0.95)
@@ -193,6 +188,7 @@ if __name__ == "__main__":
         boost_type = "Normal"
     
     tag = "{}_clip_{}_dist_{}_{}_{}_seed_{}".format(args["tag"], args["seq_len"], args["dist"], loss_type, boost_type, args['random_seed'])
+    # tag = "{}_clip_{}_dist_{}_{}_{}".format(args["tag"], args["seq_len"], args["dist"], loss_type, boost_type)
     
     print("running : {}".format(tag))
     
@@ -352,6 +348,7 @@ if __name__ == "__main__":
             exp_dir = exp_dir,
             max_norm_grad = 1.0,
             betas = betas,
+            cls_num_list = cls_num_list,
             model_type = "single",
             test_for_check_per_epoch=test_loader,
             is_early_stopping = args['early_stopping'],
@@ -417,7 +414,6 @@ if __name__ == "__main__":
         os.path.join(save_dir, "{}_feature_importance.png".format(tag))
     )
     
-    # Additional analyzation
     # Additional analyzation
     print("\n################# Visualization process #################\n")
     try:
