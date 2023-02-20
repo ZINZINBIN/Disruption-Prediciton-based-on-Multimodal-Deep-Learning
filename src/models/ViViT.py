@@ -247,6 +247,8 @@ class ViViTEncoder(nn.Module):
         self.image_size = image_size
         self.n_frames = n_frames
         self.in_channels = in_channels
+        self.n_heads = n_heads
+        self.d_head = d_head
 
         n_patches = (image_size // patch_size) ** 2
         patch_dim = in_channels * patch_size ** 2

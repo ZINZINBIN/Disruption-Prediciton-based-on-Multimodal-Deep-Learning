@@ -122,6 +122,7 @@ def compute_permute_feature_importance(
     plt.yticks(np.arange(n_features), df.feature.values)
     plt.title('0D data - feature importance')
     plt.ylim((-1,n_features + 1))
+    plt.xlim([0, 5.0])
     plt.xlabel('Permutation feature importance')
     plt.ylabel('Feature', size = 14)
     plt.savefig(save_dir)
