@@ -12,6 +12,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import RobustScaler, MinMaxScaler, StandardScaler
 from sklearn.base import BaseEstimator
 from src.config import Config
+import time
+import gc
 
 config = Config()
 STATE_FIXED = config.STATE_FIXED
@@ -1329,9 +1331,6 @@ def plot_learning_curve(train_loss, valid_loss, train_f1, valid_f1, figsize : Tu
 
 def measure_computation_time(model : torch.nn.Module, input_shape : Tuple, n_samples : int = 1, device : str = "cpu"):
     
-    import time
-    import gc
-    
     model.to(device)
     model.eval()
     
@@ -1361,4 +1360,37 @@ def measure_computation_time(model : torch.nn.Module, input_shape : Tuple, n_sam
     
     return dt_means, dt_std, t_measures    
 
+def measure_computation_time_multi(model : torch.nn.Module, input_shape_vis : Tuple, input_shape_0D : Tuple, n_samples : int = 1, device : str = "cpu"):
 
+    model.to(device)
+    model.eval()
+    
+    t_measures = []
+    
+    for n_iter in range(n_samples):
+        
+        torch.cuda.empty_cache()
+        torch.cuda.init()
+        
+        sample_vis = torch.zeros(input_shape_vis)
+        sample_0D = torch.zeros(input_shape_0D)
+        
+        t_start = time.time()
+        sample_output = model(sample_vis.to(device), sample_0D.to(device))
+        t_end = time.time()
+        dt = t_end - t_start
+        t_measures.append(dt)
+        
+        sample_output.cpu()
+        sample_vis.cpu()
+        sample_0D.cpu()
+
+        del sample_output
+        del sample_vis
+        del sample_0D
+        
+    # statistical summary
+    dt_means = np.mean(t_measures)
+    dt_std = np.std(t_measures)
+    
+    return dt_means, dt_std, t_measures    
