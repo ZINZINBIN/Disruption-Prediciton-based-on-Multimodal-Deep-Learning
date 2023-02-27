@@ -43,7 +43,6 @@ Idea : core value or specific position (r = 1.8대비 r = 1.5 등), shot마다 �
 * lock mode : ikstar 참조, work/disruption/machinelearning/database/data, LM
 * lock mode에 대한 numbering도 포함
 * DB : 32, lock mode error
-
 '''
 
 ts_cols = [
@@ -89,7 +88,7 @@ def parsing():
     
     # early stopping
     parser.add_argument('--early_stopping', type = bool, default = True)
-    parser.add_argument("--early_stopping_patience", type = int, default = 12)
+    parser.add_argument("--early_stopping_patience", type = int, default = 64)
     parser.add_argument("--early_stopping_verbose", type = bool, default = True)
     parser.add_argument("--early_stopping_delta", type = float, default = 1e-3)
 

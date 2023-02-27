@@ -115,6 +115,24 @@ def compute_permute_feature_importance(
         results.append({"feature":features[k], "loss":loss, "score":score, "feature_importance":fi})
         
     df = pd.DataFrame(results)
+    
+    # feature name mapping
+    feature_map = {
+        '\\q95' : 'q95', 
+        '\\ipmhd':'Ip', 
+        '\\kappa':'kappa', 
+        '\\tritop': 'tri-top', 
+        '\\tribot': 'tri-bot',
+        '\\betap': 'betap',
+        '\\betan': 'betan',
+        '\\li': 'li', 
+        '\\WTOT_DLM03':'W-tot',
+        '\\ne_inter01' : 'Ne-avg', 
+        '\\TS_NE_CORE_AVG' : 'Ne-core', 
+        '\\TS_TE_CORE_AVG': 'Te-core',
+    }
+    
+    df.rename(columns = feature_map)
     df = df.sort_values('feature_importance')
     
     plt.figure(figsize = (8,8))
