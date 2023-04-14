@@ -29,12 +29,12 @@ def visualize_2D_latent_space(model : nn.Module, dataloader : DataLoader, device
     label  = np.array(['disruption','normal'])
     
     # using PCA
-    # pca = PCA(n_components=2, random_state=42)
-    # total_latent = pca.fit_transform(total_latent)
+    pca = PCA(n_components=2, random_state=42)
+    total_latent = pca.fit_transform(total_latent)
     
     # using t-SNE
-    tSNE = TSNE(n_components=2)
-    total_latent = tSNE.fit_transform(total_latent)
+    # tSNE = TSNE(n_components=2, perplexity = 64)
+    # total_latent = tSNE.fit_transform(total_latent)
     
     dis_idx = np.where(total_label == 0)
     normal_idx = np.where(total_label == 1)
@@ -70,11 +70,11 @@ def visualize_3D_latent_space(model : nn.Module, dataloader : DataLoader, device
     label  = np.array(['disruption','normal'])
     
     # using PCA
-    # pca = PCA(n_components=3, random_state=42)
-    # total_latent = pca.fit_transform(total_latent)
+    pca = PCA(n_components=3, random_state=42)
+    total_latent = pca.fit_transform(total_latent)
     
     # using t-SNE
-    tSNE = TSNE(n_components=3)
+    tSNE = TSNE(n_components=3, perplexity = 64)
     total_latent = tSNE.fit_transform(total_latent)
     
     dis_idx = np.where(total_label == 0)

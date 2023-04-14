@@ -324,7 +324,7 @@ if __name__ == "__main__":
     else:
         betas = [0, args['beta'], args['beta'] * 2, args['beta']*3]
         loss_fn = CELoss(weight = per_cls_weights)
-
+    
     # training process
     print("\n################# training process #################\n")
     if args['use_DRW']:

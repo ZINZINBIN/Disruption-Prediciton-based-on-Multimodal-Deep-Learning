@@ -3,7 +3,7 @@ from torch.utils.data import DataLoader
 import os, torch
 
 if(torch.cuda.device_count() >= 1):
-    device = "cuda:1"
+    device = "cuda:0"
 else:
     device = 'cpu'
     
