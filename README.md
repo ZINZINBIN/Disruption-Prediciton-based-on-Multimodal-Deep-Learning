@@ -1,20 +1,45 @@
-# Disruptive prediction model using KSTAR video and numerical data via Deep Learning
+ # Disruptive prediction model using KSTAR video and numerical data via Deep Learning
+<a href = "https://zinzinbin.notion.site/Research-archive-for-graduate-school-8187bf9b3ee5470d8a8dc05120655ceb" target = "_blank">[Paper : Disruption prediction and its analysis using multimodal learning in KSTAR]</a>
+
 ## Introduction
-- This is git repository for research about predicting tokamak disruption prediction from video and 0D data using Deep Learning
-- We used KSTAR IVIS dataset and 0D parameters from iKSTAR and finally we implemented the multi-modal model for (semi) continuous prediction
-- Since video data have spatial-temporal information directly from the IVIS, the real-time prediction during the plasma operation can be possible without any specific data preprocessing.
-- We labeled the video data as a sequence of image data with different duration and distance (prediciton time) 
+<div>
+    This is github repository of research on disruption predictin using deep learning in KSTAR dataset. In this research, KSTAR IVIS data and 0D parameters are used for predicting disruptions. We obtained plasma image data from IVIS in KSTAR and 0D parameters such as stored energy, beta, plasma current, internal inductance and so on. Additonal information such as ECE data including electron temperature and density are also used. 
+</div>
+<div>
+    <img src="/image/연구_소개_컨셉.PNG"  width="360" height="200">
+</div>
+<div>
+    Unlike other research for disruption predictin using machine learning, we also used video data as an input so to use spatial-temporal information of plasma including time-varying plasma shape and light emission induced by plasma-neutral interaction. This requires neural networks which are generally used for video classification task. 
+</div>
+<div>
+    <img src="/image/연구_소개_08.PNG"  width="256" height="196">
+</div>
+<div>
+    However, there is imbalance data distribution issue which results from the time scale difference between disruptive phase and plasma operation. Thus, we applied resampling with Focal loss and LDAM loss to handle this problem. We demonstrated that using multimodal data including video and 0D parameters can enhance the precision of the disruption alarms. Moreover, some consistent results can be shown using GradCAM and permutation feature importance, which implies that the networks focus on the near of the core plasma from both image and 0D parameters(Te, Ne in the core of plasma). Several techniques were used for comparing the model performance indirectly. 
+</div>
+<div>
+    <img src="/image/연구_소개_00.PNG"  width="640" height="256">
+</div>
+<div>
+    If there is any question or comment, please contact my email (personal : wlstn5376@gmail.com, school : asdwlstn@snu.ac.kr) whenever you want.
+</div>
+<p></p>
 
 ### How to generate training data
 <div>
     <img src="/image/연구_소개_01.PNG"  width="640" height="196">
 </div>
+<div>To generate training dataset, we have to use some assumptions and technique. The major process can be listed as below.</div>
 
-- We set image sequence data as input tensor and label the fadeout frame as disruptive phase 
-- We set the last second frame of the video as current quench and predict the disruption before the current quench happens
-- This data generation method can be useful for small dataset since it uses all data obtained from each video
-- However, the severe imbalance data distribution due to the time scale of disruptive phase can happen
-- Therefore, we use specific learning algorithms to handle this issue
+- Firstly, we set image sequence data as an input data (B,T,C,W,H) and assumed that the last frame where the image of the plasma in tokamak disapper is a disruption. 
+- Then, the last second frame of the image sequence can be considered as a current quench.
+- Thus, the frame sequences including the last second frame of each experiment data, are labeled as disruptive. 
+- Under this condition, the neural networks trained by these labeled dataset can predict the disruption prior to a current quench.
+
+<div>
+    This method can be useful for small dataset since it uses all data obtained from each experiment, but imbalance data distribution due to the time scale of disruptive phase can occur in this process. Therefore, we use specific learning algorithms to handle this issue (e.g. Re-sampling, Re-weighting, Focal Loss, LDAM Loss)
+</div>
+<p></p>
 
 ### The model performance of disruption prediction
 <div>
@@ -23,35 +48,49 @@
         <img src="/results/real_time_disruption_prediction_0D_21310.gif"  width="320" height="200">
     </p>
 </div>
+<div>
+    We can proceed continuous disruption prediction using video data(left) and 0D data(right) for KSTAR shot #21310. It is quite obvious that the sensitivity of the model controled by the threshold affects the missing alarm rate(recall). Additionally, different characteristics in predicting disruption are observed according to the data modality. Thus, we can think about combining two different modality of data so to overcome the limits. 
+</div>
+<p></p>
 
-- We can proceed real-time disruption prediction using video data(left) and 0D data(right) for shot 21310. 
-- The sensitivity of the model controled by the threshold affects the missing alarm rate
-- Each data has different characteristics for disruption prediction : How about combining two data at once?
-
-### Analysis of the models using visualization of embedding space
+### Analysis of the models using visualization of hidden vectors
 <div>
     <p float = "left">
-        <img src="/image/연구_소개_02.PNG"  width="640" height="224">
+        <img src="/image/연구_소개_02.PNG"  width="640" height="360">
     </p>
 </div>
+<div>
+    The hidden vectors embedded by vision networks can be visualized using PCA or t-SNE. The separation of the embedded data would seem to be more clear as the model predicts the disruption as well. Since the distinct patterns or precurssors for predicting disruptions can not be detected over long prediction time, the separtion is hardly observed at the case of long prediction time.
+</div>
+<p></p>
 
-- We also analyze the trained model by visualizing the latent vectors that the neural networks generate by compressing the data
-- We can see that the prediction time is longer, the separation between disruptive and non-disruptive data decreases
-
-### Analysis of the models using attention rollout for vision model
+### Analysis of the models using GradCAM and attention rollout
 <div>
     <p float = 'left'>
-        <img src="/image/연구_소개_03.PNG"  width="640" height="224">
+        <img src="/image/연구_소개_03.PNG"  width="640" height="320">
     </p>
 </div>
+<div>
+    GradCAM and attention rollout are applied to visualize the information flow in case of models trained by IVIS data. CNN-based networks are highly trained as well so to focus on the specific region of the inside of the tokamak. However, this locality can not be observed in case of Video Vision Transformer, which has low precision due to high false alarm rate.  
+</div>
+<p></p>
 
-- We also used attention rollout to visualize the attention matrix of the Video Vision Transformers to understand the importance of the video image to predict the disruption
-- But, there would be no effective / important difference between two cases below. 
+### Enhancement of predicting disruptions using multimodal learning
+<div>
+    <p float = 'left'>
+        <img src="/image/연구_소개_09.PNG"  width="360" height="240">
+        <img src="/image/연구_소개_10.PNG"  width="360" height="240">
+    </p>
+</div>
+<div>
+    Applying multimodal learning to the video vision network shows decrease on false alarms and locality in the vision encoder. This means that the modal capabilities increased by multimodal data can enhance the low precision of the disruption predictors and show robustness with respect to the data noise. Furthermore, several factors which induce the various types of disruptions can be considered by using multimodal data including IVIS, 1D profiles, 0D parameters and so on.
+</div>
+<p></p>
 
-### Summary
-- We tried to show that video data would be helpful to detect VDE(Vertical Displacement Error) and time-varying shape characteristics.
-- This means that we can effectivly predict the disruption with low false positive alarms with both video and 0D data since multi-modal learning is robust for data noise due to multi-modality
-- The result of multi-modal data will soon be showned layer
+## Enviornment
+<p>The code was developed using python 3.9 on Ubuntu 18.04</p>
+<p>The GPU used : NVIDIA GeForce RTX 3090 24GB x 4</p>
+<p>The resources for training networks were given by <a href = "http://fusma.snu.ac.kr/plare/" target = "_blank">PLARE</a> in Seoul National University</p>
 
 ## How to Run
 ### setting

@@ -72,7 +72,7 @@ def parsing():
     
     # early stopping
     parser.add_argument('--early_stopping', type = bool, default = True)
-    parser.add_argument("--early_stopping_patience", type = int, default = 12)
+    parser.add_argument("--early_stopping_patience", type = int, default = 64)
     parser.add_argument("--early_stopping_verbose", type = bool, default = True)
     parser.add_argument("--early_stopping_delta", type = float, default = 1e-3)
     
