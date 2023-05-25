@@ -33,46 +33,25 @@ def train_per_epoch(
     model.to(device)
 
     train_loss = 0
-
-    total_pred = np.array([])
-    total_label = np.array([])
+    total_pred = []
+    total_label = []
     total_size = 0
 
     for batch_idx, (data, target) in enumerate(train_loader):
-        # check that the batch_size = 1, if batch_size = 1, skip the process        
-        if model_type == "single":
-            if data.size()[0] <=1 or not torch.isfinite(data).any():
-                print("train_per_epoch | warning : data nan occurs at batch_idx : {}".format(batch_idx))
-                break
-        else:
-            data_video = data['video']
-            if data_video.size()[0] <=1 or not torch.isfinite(data_video).any():
-                print("train_per_epoch | Warning : data nan occurs at batch_idx : {}".format(batch_idx))
-                break
-        
-        # optimizer.zero_grad()
-        # Efficient zero-out gradients
-        for param in model.parameters():
-            param.grad = None
+    
+        optimizer.zero_grad()
         
         if model_type == "single":
-            data = data.to(device)
-            output = model(data)
+            output = model(data.to(device))
         elif model_type == "multi":
-            data_video = data['video'].to(device)
-            data_0D = data['0D'].to(device)
-            output = model(data_video, data_0D)
+            output = model(data['video'].to(device), data['0D'].to(device))
         elif model_type == "multi-GB":
-            data_video = data['video'].to(device)
-            data_0D = data['0D'].to(device)
-            output, output_vis, output_ts = model(data_video, data_0D)
+            output, output_vis, output_ts = model(data['video'].to(device), data['0D'].to(device))
             
-        target = target.to(device)
-        
         if model_type == 'multi-GB':
-            loss = loss_fn(output, output_vis, output_ts, target)
+            loss = loss_fn(output, output_vis, output_ts, target.to(device))
         else:
-            loss = loss_fn(output, target)
+            loss = loss_fn(output, target.to(device))
             
         # if loss == nan, we have to break the training process
         # then, nan does not affect the weight of the parameters
@@ -93,11 +72,14 @@ def train_per_epoch(
         pred = torch.nn.functional.softmax(output, dim = 1).max(1, keepdim = True)[1]
         total_size += pred.size(0) 
         
-        total_pred = np.concatenate((total_pred, pred.cpu().numpy().reshape(-1,)))
-        total_label = np.concatenate((total_label, target.cpu().numpy().reshape(-1,)))
+        total_pred.append(pred.view(-1,1))
+        total_label.append(target.view(-1,1))
         
     if scheduler:
         scheduler.step()
+    
+    total_pred = torch.concat(total_pred, dim = 0).detach().view(-1,).cpu().numpy()
+    total_label = torch.concat(total_label, dim = 0).detach().view(-1,).cpu().numpy()
 
     if total_size > 0:
         train_loss /= total_size
@@ -124,41 +106,37 @@ def valid_per_epoch(
     model.to(device)
     valid_loss = 0
 
-    total_pred = np.array([])
-    total_label = np.array([])
+    total_pred = []
+    total_label = []
     total_size = 0
 
     for batch_idx, (data, target) in enumerate(valid_loader):
         with torch.no_grad():
-            # optimizer.zero_grad()
+            optimizer.zero_grad()
             
             if model_type == "single":
-                data = data.to(device)
-                output = model(data)
+                output = model(data.to(device))
             elif model_type == "multi":
-                data_video = data['video'].to(device)
-                data_0D = data['0D'].to(device)
-                output = model(data_video, data_0D)
+                output = model(data['video'].to(device), data['0D'].to(device))
             elif model_type == "multi-GB":
-                data_video = data['video'].to(device)
-                data_0D = data['0D'].to(device)
-                output, output_vis, output_ts = model(data_video, data_0D)
+                output, output_vis, output_ts = model(data['video'].to(device), data['0D'].to(device))
                 
-            target = target.to(device)
-            
             if model_type == 'multi-GB':
-                loss = loss_fn(output, output_vis, output_ts, target)
+                loss = loss_fn(output, output_vis, output_ts, target.to(device))
             else:
-                loss = loss_fn(output, target)
+                loss = loss_fn(output, target.to(device))
     
             valid_loss += loss.item()
             pred = torch.nn.functional.softmax(output, dim = 1).max(1, keepdim = True)[1]
             total_size += pred.size(0)
 
-            total_pred = np.concatenate((total_pred, pred.cpu().numpy().reshape(-1,)))
-            total_label = np.concatenate((total_label, target.cpu().numpy().reshape(-1,)))
+            total_pred.append(pred.view(-1,1))
+            total_label.append(target.view(-1,1))
 
     valid_loss /= total_size
+    total_pred = torch.concat(total_pred, dim = 0).detach().view(-1,).cpu().numpy()
+    total_label = torch.concat(total_label, dim = 0).detach().view(-1,).cpu().numpy()
+    
     valid_f1 = f1_score(total_label, total_pred, average = "macro")
     
     model.cpu()
@@ -346,8 +324,8 @@ def evaluate(
 
     test_loss = 0
     test_f1 = 0
-    total_pred = np.array([])
-    total_label = np.array([])
+    total_pred = []
+    total_label = []
 
     if device is None:
         device = torch.device("cuda:0")
@@ -361,24 +339,17 @@ def evaluate(
         with torch.no_grad():
             
             if model_type == "single":
-                data = data.to(device)
-                output = model(data)
+                output = model(data.to(device))
             elif model_type == "multi":
-                data_video = data['video'].to(device)
-                data_0D = data['0D'].to(device)
-                output = model(data_video, data_0D)
+                output = model(data['video'].to(device), data['0D'].to(device))
             elif model_type == "multi-GB":
-                data_video = data['video'].to(device)
-                data_0D = data['0D'].to(device)
-                output, output_vis, output_ts = model(data_video, data_0D)
+                output, output_vis, output_ts = model(data['video'].to(device), data['0D'].to(device))
                 
-            target = target.to(device)
-            
             if model_type == 'multi-GB':
-                loss = loss_fn(output, output_vis, output_ts, target)
+                loss = loss_fn(output, output_vis, output_ts, target.to(device))
             else:
-                loss = loss_fn(output, target)
-    
+                loss = loss_fn(output, target.to(device))
+                
             test_loss += loss.item()
             # pred = torch.nn.functional.softmax(output, dim = 1).max(1, keepdim = True)[1]
             
@@ -388,9 +359,12 @@ def evaluate(
             
             pred_normal = torch.nn.functional.softmax(output, dim = 1)[:,1].detach()
             
-            total_pred = np.concatenate((total_pred, pred_normal.cpu().numpy().reshape(-1,)))
-            total_label = np.concatenate((total_label, target.cpu().numpy().reshape(-1,)))
+            total_pred.append(pred.view(-1,1))
+            total_label.append(target.view(-1,1))
             
+    total_pred = torch.concat(total_pred, dim = 0).detach().view(-1,).cpu().numpy()
+    total_label = torch.concat(total_label, dim = 0).detach().view(-1,).cpu().numpy()
+           
     test_loss /= (idx + 1)
     total_pred = np.nan_to_num(total_pred, copy = True, nan = 0, posinf = 1.0, neginf = 0)
     lr_probs = total_pred

@@ -3,7 +3,7 @@ import torch
 import os
 import numpy as np
 from src.models.ViViT import ViViT
-from src.models.ts_transformer import TStransformer
+from src.models.transformer import Transformer
 from src.visualization.visualize_application import generate_real_time_experiment, video2img, VideoDataset, generate_real_time_experiment_0D
 
 ts_cols = [
@@ -84,7 +84,7 @@ if __name__ == "__main__":
     del model
     
     # 0D data
-    model = TStransformer(
+    model = Transformer(
         n_features=len(ts_cols),
         feature_dims = 128,
         max_len = args['seq_len'],

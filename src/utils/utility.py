@@ -733,16 +733,15 @@ def generate_prob_curve(
     ip = ts_data_0D['\\ipmhd']
     kappa = ts_data_0D['\\kappa']
     betap = ts_data_0D['\\betap']
-    betan = ts_data_0D['\\betan']
     li = ts_data_0D['\\li']
-    Bc = ts_data_0D['\\bcentr']
     q95 = ts_data_0D['\\q95']
     tritop = ts_data_0D['\\tritop']
     tribot = ts_data_0D['\\tribot']
-    W_tot = ts_data_0D['\\WTOT_DLM03']
     ne = ts_data_0D['\\ne_inter01']
-    # te = ts_data_0D['\\TS_CORE10:CORE10_TE']
-    te = ts_data_0D['\\TS_TE_CORE_AVG']
+    W_tot = ts_data_0D['\\WTOT_DLM03']
+    te_core = ts_data_0D['\\TS_TE_CORE_AVG']
+    te_edge = ts_data_0D['\\TS_TE_EDGE_AVG']
+    ne_ng_ratio = ts_data_0D['\\ne_nG_ratio']
     
     # video data
     dataset = VideoDataset(file_path, resize_height = 256, resize_width=256, crop_size = 128, seq_len = clip_len, dist = dist_frame, frame_srt=frame_srt, frame_end = frame_end)
@@ -758,8 +757,7 @@ def generate_prob_curve(
     for idx in tqdm(range(dataset.__len__())):
         with torch.no_grad():
             data = dataset.__getitem__(idx)
-            data = data.to(device).unsqueeze(0)
-            output = model(data)
+            output = model(data.to(device).unsqueeze(0))
             probs = torch.nn.functional.softmax(output, dim = 1)[:,0]
             probs = probs.cpu().detach().numpy().tolist()
 
@@ -784,18 +782,15 @@ def generate_prob_curve(
 
     time_x = np.arange(dist_frame, len(prob_list) + dist_frame) * (1/fps) * interval
     
-    print("time : ", len(time_x))
-    print("prob : ", len(prob_list))
-    print("thermal quench : ", tTQend)
-    print("current quench: ", tipminf)
+    print("\n(Info) flat-top : {:.3f}(s) | thermal quench : {:.3f}(s) | current quench : {:.3f}(s)\n".format(tftsrt, tTQend, tipminf))
     
     t_disrupt = tTQend
     t_current = tipminf
     
     # plot the disruption probability with plasma status
-    fig = plt.figure(figsize = (18, 8))
+    fig = plt.figure(figsize = (21, 8))
     fig.suptitle("Disruption prediction with shot : {}".format(shot_num))
-    gs = GridSpec(nrows = 5, ncols = 3)
+    gs = GridSpec(nrows = 4, ncols = 4)
     
     quantile = [0, 0.25, 0.5, 0.75, 1.0, 1.25]
     t_quantile = [q * t_current for q in quantile]
@@ -809,14 +804,14 @@ def generate_prob_curve(
 
     # tri top
     ax_tri_top = fig.add_subplot(gs[1,0])
-    ax_tri_top.plot(t, tritop, label = 'tri_top')
+    ax_tri_top.plot(t, tritop, label = 'tri-top')
     ax_tri_top.text(0.85, 0.8, "tri_top", transform = ax_tri_top.transAxes)
     ax_tri_top.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
     ax_tri_top.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
     
     # tri bot
     ax_tri_bot = fig.add_subplot(gs[2,0])
-    ax_tri_bot.plot(t, tribot, label = 'tri_bot')
+    ax_tri_bot.plot(t, tribot, label = 'tri-bot')
     ax_tri_bot.text(0.85, 0.8, "tri_bot", transform = ax_tri_bot.transAxes)
     ax_tri_bot.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
     ax_tri_bot.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
@@ -827,15 +822,7 @@ def generate_prob_curve(
     ax_Ip.text(0.85, 0.8, "Ip", transform = ax_Ip.transAxes)
     ax_Ip.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
     ax_Ip.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
-    
-    # W_tot
-    ax_W = fig.add_subplot(gs[4,0])
-    ax_W.plot(t, W_tot, label = 'W_tot')
-    ax_W.text(0.85, 0.8, "W_tot", transform = ax_W.transAxes)
-    ax_W.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
-    ax_W.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
-    
-    ax_W.set_xlabel("time(s)")
+    ax_Ip.set_xlabel("time(s)")
     
     # line density
     ax_li = fig.add_subplot(gs[0,1])
@@ -864,34 +851,58 @@ def generate_prob_curve(
     ax_ne.plot(t, ne, label = 'ne')
     ax_ne.text(0.85, 0.8, "ne", transform = ax_ne.transAxes)
     ax_ne.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
-    ax_ne.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
-    
-    # electron temperature
-    ax_te = fig.add_subplot(gs[4,1])
-    ax_te.plot(t, te, label = 'Te-core')
-    ax_te.text(0.85, 0.8, "Te-core", transform = ax_te.transAxes)
-    ax_te.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
-    ax_te.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
-    
+    ax_ne.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")    
     ax_ne.set_xlabel("time(s)")
     
+    # W_tot
+    ax_w_tot = fig.add_subplot(gs[0,2])
+    ax_w_tot.plot(t, W_tot, label = 'W-tot')
+    ax_w_tot.text(0.85, 0.8, "W-tot", transform = ax_w_tot.transAxes)
+    ax_w_tot.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
+    ax_w_tot.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
+    
+    # Te-core
+    ax_te_core = fig.add_subplot(gs[1,2])
+    ax_te_core.plot(t, te_core, label = 'Te-core')
+    ax_te_core.text(0.85, 0.8, "Te-core", transform = ax_te_core.transAxes)
+    ax_te_core.set_ylim([0,10])
+    ax_te_core.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
+    ax_te_core.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
+    
+    # Te-edge
+    ax_te_edge = fig.add_subplot(gs[2,2])
+    ax_te_edge.plot(t, betap, label = 'Te-edge')
+    ax_te_edge.text(0.85, 0.8, "Te-edge", transform = ax_te_edge.transAxes)
+    ax_te_edge.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
+    ax_te_edge.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
+
+    # ne_ng_ratio
+    ax_ne_ng = fig.add_subplot(gs[3,2])
+    ax_ne_ng.plot(t, ne, label = 'Greenwald ratio')
+    ax_ne_ng.text(0.85, 0.8, "Greenwald ratio", transform = ax_ne_ng.transAxes)
+    ax_ne_ng.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
+    ax_ne_ng.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")    
+    ax_ne_ng.set_xlabel("time(s)")
+
     # probability
     threshold_line = [0.5] * len(time_x)
-    
-    ax2 = fig.add_subplot(gs[:,2])
+    ax2 = fig.add_subplot(gs[:,3])
     ax2.plot(time_x, prob_list, 'b', label = 'disrupt prob')
     ax2.plot(time_x, threshold_line, 'k', label = "threshold(p = 0.5)")
-    ax2.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed", label = "TQ")
-    ax2.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed", label = "CQ")
+    ax2.axvline(x = tftsrt, ymin = 0, ymax = 1, color = "black", linestyle = "dashed", label = "flattop (t={:.3f})".format(tftsrt))
+    ax2.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed", label = "TQ (t={:.3f})".format(t_disrupt))
+    ax2.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed", label = "CQ (t={:.3f})".format(t_current))
     ax2.set_ylabel("probability")
     ax2.set_xlabel("time(unit : s)")
     ax2.set_ylim([0,1])
-    ax2.set_xlim([0,max(time_x)])
+    ax2.set_xlim([0, max(time_x) + dt * 8])
     ax2.legend(loc = 'upper right')
     
     fig.tight_layout()
 
-    plt.savefig(save_dir, facecolor = fig.get_facecolor(), edgecolor = 'none', transparent = False)
+    if save_dir:
+        plt.savefig(save_dir, facecolor = fig.get_facecolor(), edgecolor = 'none', transparent = False)
+
     return time_x, prob_list
 
 def generate_prob_curve_from_0D(
@@ -931,15 +942,15 @@ def generate_prob_curve_from_0D(
     ip = ts_data_0D['\\ipmhd']
     kappa = ts_data_0D['\\kappa']
     betap = ts_data_0D['\\betap']
-    betan = ts_data_0D['\\betan']
     li = ts_data_0D['\\li']
-    Bc = ts_data_0D['\\bcentr']
     q95 = ts_data_0D['\\q95']
     tritop = ts_data_0D['\\tritop']
     tribot = ts_data_0D['\\tribot']
-    W_tot = ts_data_0D['\\WTOT_DLM03']
     ne = ts_data_0D['\\ne_inter01']
-    te = ts_data_0D['\\TS_CORE10:CORE10_TE']
+    W_tot = ts_data_0D['\\WTOT_DLM03']
+    te_core = ts_data_0D['\\TS_TE_CORE_AVG']
+    te_edge = ts_data_0D['\\TS_TE_EDGE_AVG']
+    ne_ng_ratio = ts_data_0D['\\ne_nG_ratio']
     
     # video data
     dataset = DatasetFor0D(ts_data_0D, ts_cols, seq_len, dist, dt, scaler)
@@ -955,8 +966,7 @@ def generate_prob_curve_from_0D(
     for idx in tqdm(range(dataset.__len__())):
         with torch.no_grad():
             data = dataset.__getitem__(idx)
-            data = data.to(device).unsqueeze(0)
-            output = model(data)
+            output = model(data.to(device).unsqueeze(0))
             probs = torch.nn.functional.softmax(output, dim = 1)[:,0]
             probs = probs.cpu().detach().numpy().tolist()
 
@@ -987,18 +997,15 @@ def generate_prob_curve_from_0D(
     
     time_x = np.arange(0, len(prob_list)) * (1/fps)
     
-    print("time : ", len(time_x))
-    print("prob : ", len(prob_list))
-    print("thermal quench : ", tTQend)
-    print("current quench: ", tipminf)
+    print("\n(Info) flat-top : {:.3f}(s) | thermal quench : {:.3f}(s) | current quench : {:.3f}(s)\n".format(tftsrt, tTQend, tipminf))
     
     t_disrupt = tTQend
     t_current = tipminf
     
     # plot the disruption probability with plasma status
-    fig = plt.figure(figsize = (16, 8))
+    fig = plt.figure(figsize = (21, 8))
     fig.suptitle("Disruption prediction with shot : {}".format(shot_num))
-    gs = GridSpec(nrows = 4, ncols = 3)
+    gs = GridSpec(nrows = 4, ncols = 4)
     
     quantile = [0, 0.25, 0.5, 0.75, 1.0, 1.25]
     t_quantile = [q * t_current for q in quantile]
@@ -1012,14 +1019,14 @@ def generate_prob_curve_from_0D(
 
     # tri top
     ax_tri_top = fig.add_subplot(gs[1,0])
-    ax_tri_top.plot(t, tritop, label = 'tri_top')
+    ax_tri_top.plot(t, tritop, label = 'tri-top')
     ax_tri_top.text(0.85, 0.8, "tri_top", transform = ax_tri_top.transAxes)
     ax_tri_top.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
     ax_tri_top.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
     
     # tri bot
     ax_tri_bot = fig.add_subplot(gs[2,0])
-    ax_tri_bot.plot(t, tribot, label = 'tri_bot')
+    ax_tri_bot.plot(t, tribot, label = 'tri-bot')
     ax_tri_bot.text(0.85, 0.8, "tri_bot", transform = ax_tri_bot.transAxes)
     ax_tri_bot.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
     ax_tri_bot.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
@@ -1030,10 +1037,7 @@ def generate_prob_curve_from_0D(
     ax_Ip.text(0.85, 0.8, "Ip", transform = ax_Ip.transAxes)
     ax_Ip.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
     ax_Ip.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
-    
     ax_Ip.set_xlabel("time(s)")
-    ax_Ip.set_xticks(t_quantile)
-    ax_Ip.set_xticklabels(["{:.1f}".format(t) for t in t_quantile])
     
     # line density
     ax_li = fig.add_subplot(gs[0,1])
@@ -1062,31 +1066,59 @@ def generate_prob_curve_from_0D(
     ax_ne.plot(t, ne, label = 'ne')
     ax_ne.text(0.85, 0.8, "ne", transform = ax_ne.transAxes)
     ax_ne.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
-    ax_ne.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
-    
+    ax_ne.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")    
     ax_ne.set_xlabel("time(s)")
-    ax_ne.set_xticks(t_quantile)
-    ax_ne.set_xticklabels(["{:.1f}".format(t) for t in t_quantile])
     
+    # W_tot
+    ax_w_tot = fig.add_subplot(gs[0,2])
+    ax_w_tot.plot(t, W_tot, label = 'W-tot')
+    ax_w_tot.text(0.85, 0.8, "W-tot", transform = ax_w_tot.transAxes)
+    ax_w_tot.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
+    ax_w_tot.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
+    
+    # Te-core
+    ax_te_core = fig.add_subplot(gs[1,2])
+    ax_te_core.plot(t, te_core, label = 'Te-core')
+    ax_te_core.text(0.85, 0.8, "Te-core", transform = ax_te_core.transAxes)
+    ax_te_core.set_ylim([0,10])
+    ax_te_core.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
+    ax_te_core.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
+    
+    # Te-edge
+    ax_te_edge = fig.add_subplot(gs[2,2])
+    ax_te_edge.plot(t, betap, label = 'Te-edge')
+    ax_te_edge.text(0.85, 0.8, "Te-edge", transform = ax_te_edge.transAxes)
+    ax_te_edge.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
+    ax_te_edge.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
+
+    # ne_ng_ratio
+    ax_ne_ng = fig.add_subplot(gs[3,2])
+    ax_ne_ng.plot(t, ne, label = 'Greenwald ratio')
+    ax_ne_ng.text(0.85, 0.8, "Greenwald ratio", transform = ax_ne_ng.transAxes)
+    ax_ne_ng.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
+    ax_ne_ng.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")    
+    ax_ne_ng.set_xlabel("time(s)")
+
     # probability
     threshold_line = [0.5] * len(time_x)
-    ax2 = fig.add_subplot(gs[:,2])
+    ax2 = fig.add_subplot(gs[:,3])
     ax2.plot(time_x, prob_list, 'b', label = 'disrupt prob')
     ax2.plot(time_x, threshold_line, 'k', label = "threshold(p = 0.5)")
-    ax2.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed", label = "TQ")
-    ax2.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed", label = "CQ")
+    ax2.axvline(x = tftsrt, ymin = 0, ymax = 1, color = "black", linestyle = "dashed", label = "flattop (t={:.3f})".format(tftsrt))
+    ax2.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed", label = "TQ (t={:.3f})".format(t_disrupt))
+    ax2.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed", label = "CQ (t={:.3f})".format(t_current))
     ax2.set_ylabel("probability")
     ax2.set_xlabel("time(unit : s)")
     ax2.set_ylim([0,1])
-    ax2.set_xlim([0, max(time_x)])
+    ax2.set_xlim([0, max(time_x) + dt * 8])
     ax2.legend(loc = 'upper right')
     
     fig.tight_layout()
 
-    plt.savefig(save_dir, facecolor = fig.get_facecolor(), edgecolor = 'none', transparent = False)
+    if save_dir:
+        plt.savefig(save_dir, facecolor = fig.get_facecolor(), edgecolor = 'none', transparent = False)
 
     return time_x, prob_list
-
 
 ################ Implemented ##################
 def generate_prob_curve_from_multi(
@@ -1133,16 +1165,15 @@ def generate_prob_curve_from_multi(
     ip = ts_data_0D['\\ipmhd']
     kappa = ts_data_0D['\\kappa']
     betap = ts_data_0D['\\betap']
-    betan = ts_data_0D['\\betan']
     li = ts_data_0D['\\li']
-    Bc = ts_data_0D['\\bcentr']
     q95 = ts_data_0D['\\q95']
     tritop = ts_data_0D['\\tritop']
     tribot = ts_data_0D['\\tribot']
-    W_tot = ts_data_0D['\\WTOT_DLM03']
     ne = ts_data_0D['\\ne_inter01']
-    # te = ts_data_0D['\\TS_CORE10:CORE10_TE']
-    te = ts_data_0D['\\TS_TE_CORE_AVG']
+    W_tot = ts_data_0D['\\WTOT_DLM03']
+    te_core = ts_data_0D['\\TS_TE_CORE_AVG']
+    te_edge = ts_data_0D['\\TS_TE_EDGE_AVG']
+    ne_ng_ratio = ts_data_0D['\\ne_nG_ratio']
     
     # Multi-modal data
     dataset = MultiModalDataset(file_path, ts_data_0D, ts_cols, 256, 256, 128, frame_srt, frame_end, t_srt, t_end, vis_seq_len, ts_seq_len, dist, dt, scaler)
@@ -1197,22 +1228,19 @@ def generate_prob_curve_from_multi(
     
     time_x = np.arange(dist, len(prob_list) + dist) * (1/fps)
     
-    print("time : ", len(time_x))
-    print("prob : ", len(prob_list))
-    print("thermal quench : ", tTQend)
-    print("current quench: ", tipminf)
+    print("\n(Info) flat-top : {:.3f}(s) | thermal quench : {:.3f}(s) | current quench : {:.3f}(s)\n".format(tftsrt, tTQend, tipminf))
     
     t_disrupt = tTQend
     t_current = tipminf
     
     # plot the disruption probability with plasma status
-    fig = plt.figure(figsize = (16, 8))
+    fig = plt.figure(figsize = (21, 8))
     fig.suptitle("Disruption prediction with shot : {}".format(shot_num))
-    gs = GridSpec(nrows = 5, ncols = 3)
+    gs = GridSpec(nrows = 4, ncols = 4)
     
     quantile = [0, 0.25, 0.5, 0.75, 1.0, 1.25]
     t_quantile = [q * t_current for q in quantile]
-    
+        
     # kappa
     ax_kappa = fig.add_subplot(gs[0,0])
     ax_kappa.plot(t, kappa, label = 'kappa')
@@ -1222,14 +1250,14 @@ def generate_prob_curve_from_multi(
 
     # tri top
     ax_tri_top = fig.add_subplot(gs[1,0])
-    ax_tri_top.plot(t, tritop, label = 'tri_top')
+    ax_tri_top.plot(t, tritop, label = 'tri-top')
     ax_tri_top.text(0.85, 0.8, "tri_top", transform = ax_tri_top.transAxes)
     ax_tri_top.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
     ax_tri_top.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
     
     # tri bot
     ax_tri_bot = fig.add_subplot(gs[2,0])
-    ax_tri_bot.plot(t, tribot, label = 'tri_bot')
+    ax_tri_bot.plot(t, tribot, label = 'tri-bot')
     ax_tri_bot.text(0.85, 0.8, "tri_bot", transform = ax_tri_bot.transAxes)
     ax_tri_bot.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
     ax_tri_bot.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
@@ -1240,15 +1268,7 @@ def generate_prob_curve_from_multi(
     ax_Ip.text(0.85, 0.8, "Ip", transform = ax_Ip.transAxes)
     ax_Ip.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
     ax_Ip.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
-    
-    # W_tot
-    ax_W = fig.add_subplot(gs[4,0])
-    ax_W.plot(t, W_tot, label = 'W_tot')
-    ax_W.text(0.85, 0.8, "W_tot", transform = ax_W.transAxes)
-    ax_W.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
-    ax_W.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
-    
-    ax_W.set_xlabel("time(s)")
+    ax_Ip.set_xlabel("time(s)")
     
     # line density
     ax_li = fig.add_subplot(gs[0,1])
@@ -1277,36 +1297,60 @@ def generate_prob_curve_from_multi(
     ax_ne.plot(t, ne, label = 'ne')
     ax_ne.text(0.85, 0.8, "ne", transform = ax_ne.transAxes)
     ax_ne.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
-    ax_ne.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
-    
-    # electron temperature
-    ax_te = fig.add_subplot(gs[4,1])
-    ax_te.plot(t, te, label = 'Te-core')
-    ax_te.text(0.85, 0.8, "Te-core", transform = ax_te.transAxes)
-    ax_te.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
-    ax_te.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
-    
+    ax_ne.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")    
     ax_ne.set_xlabel("time(s)")
     
+    
+    # W_tot
+    ax_w_tot = fig.add_subplot(gs[0,2])
+    ax_w_tot.plot(t, W_tot, label = 'W-tot')
+    ax_w_tot.text(0.85, 0.8, "W-tot", transform = ax_w_tot.transAxes)
+    ax_w_tot.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
+    ax_w_tot.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
+    
+    # Te-core
+    ax_te_core = fig.add_subplot(gs[1,2])
+    ax_te_core.plot(t, te_core, label = 'Te-core')
+    ax_te_core.text(0.85, 0.8, "Te-core", transform = ax_te_core.transAxes)
+    ax_te_core.set_ylim([0,10])
+    ax_te_core.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
+    ax_te_core.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
+    
+    # Te-edge
+    ax_te_edge = fig.add_subplot(gs[2,2])
+    ax_te_edge.plot(t, betap, label = 'Te-edge')
+    ax_te_edge.text(0.85, 0.8, "Te-edge", transform = ax_te_edge.transAxes)
+    ax_te_edge.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
+    ax_te_edge.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
+
+    # ne_ng_ratio
+    ax_ne_ng = fig.add_subplot(gs[3,2])
+    ax_ne_ng.plot(t, ne, label = 'Greenwald ratio')
+    ax_ne_ng.text(0.85, 0.8, "Greenwald ratio", transform = ax_ne_ng.transAxes)
+    ax_ne_ng.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
+    ax_ne_ng.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")    
+    ax_ne_ng.set_xlabel("time(s)")
+
     # probability
     threshold_line = [0.5] * len(time_x)
-    ax2 = fig.add_subplot(gs[:,2])
+    ax2 = fig.add_subplot(gs[:,3])
     ax2.plot(time_x, prob_list, 'b', label = 'disrupt prob')
     ax2.plot(time_x, threshold_line, 'k', label = "threshold(p = 0.5)")
-    ax2.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed", label = "TQ")
-    ax2.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed", label = "CQ")
+    ax2.axvline(x = tftsrt, ymin = 0, ymax = 1, color = "black", linestyle = "dashed", label = "flattop (t={:.3f})".format(tftsrt))
+    ax2.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed", label = "TQ (t={:.3f})".format(t_disrupt))
+    ax2.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed", label = "CQ (t={:.3f})".format(t_current))
     ax2.set_ylabel("probability")
     ax2.set_xlabel("time(unit : s)")
     ax2.set_ylim([0,1])
-    ax2.set_xlim([0,max(time_x)])
+    ax2.set_xlim([0, max(time_x) + dt * 8])
     ax2.legend(loc = 'upper right')
     
     fig.tight_layout()
 
-    plt.savefig(save_dir, facecolor = fig.get_facecolor(), edgecolor = 'none', transparent = False)
+    if save_dir:
+        plt.savefig(save_dir, facecolor = fig.get_facecolor(), edgecolor = 'none', transparent = False)
 
     return time_x, prob_list
-
 
 def plot_learning_curve(train_loss, valid_loss, train_f1, valid_f1, figsize : Tuple[int,int] = (12,6), save_dir : str = "./results/learning_curve.png"):
     x_epochs = range(1, len(train_loss) + 1)

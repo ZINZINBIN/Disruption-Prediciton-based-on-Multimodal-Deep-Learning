@@ -4,7 +4,7 @@ import numpy as np
 import argparse
 import copy, os
 from torch.utils.data import DataLoader
-from src.dataset import DEFAULT_TS_COLS, MultiModalDataset2
+from src.dataset import MultiModalDataset2
 from src.utils.sampler import ImbalancedDatasetSampler
 from src.utils.utility import preparing_multi_data, plot_learning_curve, seed_everything, generate_prob_curve_from_multi
 from src.train import train, train_DRW
@@ -14,6 +14,9 @@ from src.visualization.visualize_latent_space import visualize_3D_latent_space_m
 from src.GradientBlending import GradientBlending, train_GB_dynamic, train_GB
 from src.CCA import DeepCCA, train_cca, CCALoss, evaluate_cca_loss
 from src.models.MultiModal import MultiModalModel, MultiModalModel_GB, TFN, TFN_GB
+from src.config import Config
+
+config = Config()
 
 # argument parser
 def parsing():
@@ -130,7 +133,7 @@ def parsing():
     return args
 
 # torch device state
-print("############### device setup ###################")
+print("================= device setup =================")
 print("torch device avaliable : ", torch.cuda.is_available())
 print("torch current device : ", torch.cuda.current_device())
 print("torch device num : ", torch.cuda.device_count())
@@ -146,13 +149,8 @@ if __name__ == "__main__":
     # seed initialize
     seed_everything(args['random_seed'], False)
     
-    # 0D data columns
-    ts_cols = [
-        '\\q95', '\\ipmhd', '\\kappa', 
-        '\\tritop', '\\tribot','\\betap',
-        '\\betan','\\li', '\\WTOT_DLM03', 
-        '\\ne_inter01', '\\TS_NE_CORE_AVG', '\\TS_TE_CORE_AVG',
-        ]
+    # input features for 0D dataset    
+    ts_cols = config.input_features
     
     # default argument
     args_video = {
@@ -231,7 +229,8 @@ if __name__ == "__main__":
     else:
         device = 'cpu'
     
-    print("running : {}".format(tag))
+    print("================= Running code =================")
+    print("Setting : {}".format(tag))
         
     # augmentation argument
     augment_args = {
@@ -259,6 +258,7 @@ if __name__ == "__main__":
     valid_data = MultiModalDataset2(shot_valid, kstar_shot_list, ts_valid, ts_cols, augmentation=False, augmentation_args=None, crop_size=args['image_size'], seq_len = args['seq_len'], dist = args['dist'], dt = 1 / 210, scaler = scaler, tau = 4)
     test_data = MultiModalDataset2(shot_test, kstar_shot_list, ts_test, ts_cols, augmentation=False, augmentation_args=None, crop_size=args['image_size'], seq_len = args['seq_len'], dist = args['dist'], dt = 1 / 210, scaler = scaler, tau = 4)
 
+    print("================= Dataset information =================")
     print("train data : {}, disrupt : {}, non-disrupt : {}".format(train_data.__len__(), train_data.n_disrupt, train_data.n_normal))
     print("valid data : {}, disrupt : {}, non-disrupt : {}".format(valid_data.__len__(), valid_data.n_disrupt, valid_data.n_normal))
     print("test data : {}, disrupt : {}, non-disrupt : {}".format(test_data.__len__(), test_data.n_disrupt, test_data.n_normal))
@@ -295,7 +295,7 @@ if __name__ == "__main__":
                 args_0D
             )
     
-    print("\n################# model summary #################\n")
+    print("\n==================== model summary ====================\n")
     model.summary()
     model.to(device)
         
@@ -332,9 +332,9 @@ if __name__ == "__main__":
         valid_sampler = None
         test_sampler = None
     
-    train_loader = DataLoader(train_data, batch_size = args['batch_size'], sampler=train_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"])
-    valid_loader = DataLoader(valid_data, batch_size = args['batch_size'], sampler=valid_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"])
-    test_loader = DataLoader(test_data, batch_size = args['batch_size'], sampler=test_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"])
+    train_loader = DataLoader(train_data, batch_size = args['batch_size'], sampler=train_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"], drop_last = True)
+    valid_loader = DataLoader(valid_data, batch_size = args['batch_size'], sampler=valid_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"], drop_last = True)
+    test_loader = DataLoader(test_data, batch_size = args['batch_size'], sampler=test_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"], drop_last = True)
 
     # Re-weighting
     if args['use_weighting']:
@@ -378,7 +378,7 @@ if __name__ == "__main__":
         )
     
     # training process
-    print("\n################# training process #################\n")
+    print("\n======================= training process =======================\n")
     if args['use_GB']:
         train_loss, train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train_GB_dynamic(
             train_loader,
@@ -453,7 +453,7 @@ if __name__ == "__main__":
     
     
     # evaluation process
-    print("\n################# evaluation process #################\n")
+    print("\n====================== evaluation process ======================\n")
     model.load_state_dict(torch.load(save_best_dir))
     
     save_conf = os.path.join(save_dir, "{}_test_confusion.png".format(tag))
@@ -485,7 +485,7 @@ if __name__ == "__main__":
         )
     
     # Additional analyzation
-    print("\n################# Visualization process #################\n")  
+    print("\n====================== Visualization process ======================\n")
     try:
         visualize_3D_latent_space_multi(
             model, 
@@ -507,6 +507,7 @@ if __name__ == "__main__":
     # plot the disruption probability curve
     test_shot_num = args['test_shot_num']
 
+    print("\n====================== Probability curve generation process ======================\n")
     time_x, prob_list = generate_prob_curve_from_multi(
         file_path = "./dataset/temp/{}".format(test_shot_num),
         model = model, 

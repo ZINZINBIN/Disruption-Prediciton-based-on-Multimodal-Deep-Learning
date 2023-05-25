@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 from src.models.ViViT import ViViTEncoder, ViViT
-from src.models.ts_transformer import TStransformerEncoder, TStransformer
+from src.models.transformer import TransformerEncoder, Transformer
 from typing import Dict, Literal
 from pytorch_model_summary import summary
 
@@ -16,7 +16,7 @@ class MultiModalModel(nn.Module):
         self.args_0D = args_0D
         self.encoder_video = ViViTEncoder(**args_video)
         
-        self.encoder_0D = TStransformerEncoder(**args_0D)
+        self.encoder_0D = TransformerEncoder(**args_0D)
         linear_input_dims = self.encoder_0D.feature_dims + self.encoder_video.dim
         
         self.classifier = nn.Sequential(
@@ -57,7 +57,7 @@ class MultiModalModel_GB(nn.Module):
         self.args_0D = args_0D
         self.vis_model = ViViT(**args_video)
         
-        self.ts_model = TStransformer(**args_0D)   
+        self.ts_model = Transformer(**args_0D)   
         linear_input_dims = self.ts_model.feature_dims + self.vis_model.dim
         
         self.classifier = nn.Sequential(
@@ -170,7 +170,7 @@ class TFN(nn.Module):
         
         # Modality Embedding SubNetwork
         self.network_video = ViViTEncoder(**args_video)
-        self.network_0D = TStransformer(**args_0D)
+        self.network_0D = Transformer(**args_0D)
         
         self.network_0D_dims = self.feature_dims
         self.network_video_dims = self.network_video.dim
@@ -235,7 +235,7 @@ class TFN_GB(nn.Module):
         # Modality Embedding SubNetwork
         self.embedd_subnet = nn.ModuleDict({
             "network_video" : ViViT(**args_video),
-            "network_0D" : TStransformer(**args_0D)
+            "network_0D" : Transformer(**args_0D)
             })
         
         self.network_0D_dims = self.embedd_subnet['network_0D'].feature_dims

@@ -12,10 +12,11 @@ from src.visualization.visualize_application import generate_real_time_experimen
 from src.train import train, train_DRW
 from src.evaluate import evaluate
 from src.loss import FocalLoss, LDAMLoss, CELoss
-from src.models.ts_transformer import TStransformer
+from src.models.transformer import Transformer
 from src.models.CnnLSTM import CnnLSTM
 from src.models.MLSTM_FCN import MLSTM_FCN
 from src.feature_importance import compute_permute_feature_importance
+from src.config import Config
 
 # columns for use
 # ip error : target - measure value
@@ -45,11 +46,7 @@ Idea : core value or specific position (r = 1.8대비 r = 1.5 등), shot마다 �
 * DB : 32, lock mode error
 '''
 
-ts_cols = [
-    '\\q95', '\\ipmhd', '\\kappa', '\\tritop', '\\tribot',
-    '\\betap','\\betan','\\li', '\\WTOT_DLM03','\\ne_inter01', 
-    '\\TS_NE_CORE_AVG', '\\TS_TE_CORE_AVG'
-]
+config = Config()
 
 # argument parser
 def parsing():
@@ -94,10 +91,10 @@ def parsing():
 
     # imbalanced dataset processing
     # Re-sampling
-    parser.add_argument("--use_sampling", type = bool, default = True)
+    parser.add_argument("--use_sampling", type = bool, default = False)
     
     # Re-weighting
-    parser.add_argument("--use_weighting", type = bool, default = True)
+    parser.add_argument("--use_weighting", type = bool, default = False)
     
     # Deffered Re-weighting
     parser.add_argument("--use_DRW", type = bool, default = False)
@@ -143,7 +140,7 @@ def parsing():
     return args
 
 # torch device state
-print("############### device setup ###################")
+print("================= device setup =================")
 print("torch device avaliable : ", torch.cuda.is_available())
 print("torch current device : ", torch.cuda.current_device())
 print("torch device num : ", torch.cuda.device_count())
@@ -187,13 +184,16 @@ if __name__ == "__main__":
         boost_type = "Normal"
     
     tag = "{}_clip_{}_dist_{}_{}_{}_seed_{}".format(args["tag"], args["seq_len"], args["dist"], loss_type, boost_type, args['random_seed'])
-    # tag = "{}_clip_{}_dist_{}_{}_{}".format(args["tag"], args["seq_len"], args["dist"], loss_type, boost_type)
     
-    print("running : {}".format(tag))
+    print("================= Running code =================")
+    print("Setting : {}".format(tag))
     
     save_best_dir = "./weights/{}_best.pt".format(tag)
     save_last_dir = "./weights/{}_last.pt".format(tag)
     exp_dir = os.path.join("./runs/", "tensorboard_{}".format(tag))
+    
+    # input features
+    ts_cols = config.input_features
  
     # device allocation
     if(torch.cuda.device_count() >= 1):
@@ -209,6 +209,7 @@ if __name__ == "__main__":
     valid_data = DatasetFor0D(ts_valid, kstar_shot_list, seq_len = args['seq_len'], cols = ts_cols, dist = args['dist'], dt = 4 * 1 / 210, scaler = ts_scaler)
     test_data = DatasetFor0D(ts_test, kstar_shot_list, seq_len = args['seq_len'], cols = ts_cols, dist = args['dist'], dt = 4 * 1 / 210, scaler = ts_scaler)
     
+    print("================= Dataset information =================")
     print("train data : {}, disrupt : {}, non-disrupt : {}".format(train_data.__len__(), train_data.n_disrupt, train_data.n_normal))
     print("valid data : {}, disrupt : {}, non-disrupt : {}".format(valid_data.__len__(), valid_data.n_disrupt, valid_data.n_normal))
     print("test data : {}, disrupt : {}, non-disrupt : {}".format(test_data.__len__(), test_data.n_disrupt, test_data.n_normal))
@@ -220,7 +221,7 @@ if __name__ == "__main__":
     # define model
     if args['model'] == 'Transformer':
         
-        model = TStransformer(
+        model = Transformer(
             n_features=len(ts_cols),
             feature_dims = args['feature_dims'],
             max_len = args['seq_len'],
@@ -263,7 +264,7 @@ if __name__ == "__main__":
             n_classes = 2
         )
     
-    print("\n################# model summary #################\n")
+    print("\n==================== model summary ====================\n")
     model.summary()
     model.to(device)
 
@@ -331,7 +332,7 @@ if __name__ == "__main__":
         loss_fn = CELoss(weight = per_cls_weights)
 
     # training process
-    print("\n################# training process #################\n")
+    print("\n======================= training process =======================\n")
     if args['use_DRW']:
         train_loss,  train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train_DRW(
             train_loader,
@@ -384,7 +385,7 @@ if __name__ == "__main__":
     plot_learning_curve(train_loss, valid_loss, train_f1, valid_f1, figsize = (12,6), save_dir = save_learning_curve)
     
     # evaluation process
-    print("\n################# evaluation process #################\n")
+    print("\n====================== evaluation process ======================\n")
     model.load_state_dict(torch.load(save_best_dir))
     
     save_conf = os.path.join(save_dir, "{}_test_confusion.png".format(tag))
@@ -401,7 +402,7 @@ if __name__ == "__main__":
     )
     
     # compute the feature importance of the variables
-    print("\n################# Feature Importance #################\n")
+    print("\n====================== Feature Importance ======================\n")
     compute_permute_feature_importance(
         model,
         test_loader,
@@ -414,7 +415,8 @@ if __name__ == "__main__":
     )
     
     # Additional analyzation
-    print("\n################# Visualization process #################\n")
+    print("\n====================== Visualization process ======================\n")
+    
     try:
         visualize_2D_latent_space(
             model, 
@@ -452,8 +454,8 @@ if __name__ == "__main__":
     
     # plot probability curve
     test_shot_num = args['test_shot_num']
-    
-    print("\n################# Probability curve generation process #################\n")
+
+    print("\n====================== Probability curve generation process ======================\n")
     generate_prob_curve_from_0D(
         model, 
         device = device, 

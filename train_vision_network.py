@@ -78,10 +78,10 @@ def parsing():
     
     # imbalanced dataset processing
     # Re-sampling
-    parser.add_argument("--use_sampling", type = bool, default = True)
+    parser.add_argument("--use_sampling", type = bool, default = False)
     
     # Re-weighting
-    parser.add_argument("--use_weighting", type = bool, default = True)
+    parser.add_argument("--use_weighting", type = bool, default = False)
     
     # Deffered Re-weighting
     parser.add_argument("--use_DRW", type = bool, default = False)
@@ -124,7 +124,7 @@ def parsing():
     return args
 
 # torch device state
-print("############### device setup ###################")
+print("================= device setup =================")
 print("torch device avaliable : ", torch.cuda.is_available())
 print("torch current device : ", torch.cuda.current_device())
 print("torch device num : ", torch.cuda.device_count())
@@ -150,7 +150,6 @@ if __name__ == "__main__":
         print("SlowFast : seq_len must be even number, seq_len-1 as input")
         args['seq_len'] -= 1
     
-    # tag : {model_name}_clip_{seq_len}_dist_{pred_len}_{Loss-type}_{Boosting-type}
     loss_type = args['loss_type']
     
     if args['use_sampling'] and not args['use_weighting'] and not args['use_DRW']:
@@ -172,7 +171,8 @@ if __name__ == "__main__":
     
     tag = "{}_clip_{}_dist_{}_{}_{}_seed_{}".format(args["tag"], args["seq_len"], args["dist"], loss_type, boost_type, args['random_seed'])
     
-    print("running : {}".format(tag))
+    print("================= Running code =================")
+    print("Setting : {}".format(tag))
 
     save_best_dir = "./weights/{}_best.pt".format(tag)
     save_last_dir = "./weights/{}_last.pt".format(tag)
@@ -209,6 +209,7 @@ if __name__ == "__main__":
     valid_data = DatasetForVideo2(shot_valid, df_disrupt, augmentation = False, augmentation_args=augment_args, crop_size = args['image_size'], seq_len = args['seq_len'], dist = args['dist'])
     test_data = DatasetForVideo2(shot_test, df_disrupt, augmentation = False, augmentation_args=augment_args, crop_size = args['image_size'], seq_len = args['seq_len'], dist = args['dist'])
     
+    print("================= Dataset information =================")
     print("train data : {}, disrupt : {}, non-disrupt : {}".format(train_data.__len__(), train_data.n_disrupt, train_data.n_normal))
     print("valid data : {}, disrupt : {}, non-disrupt : {}".format(valid_data.__len__(), valid_data.n_disrupt, valid_data.n_normal))
     print("test data : {}, disrupt : {}, non-disrupt : {}".format(test_data.__len__(), test_data.n_disrupt, test_data.n_normal))
@@ -258,7 +259,7 @@ if __name__ == "__main__":
         )
         
     
-    print("\n################# model summary #################\n")
+    print("\n==================== model summary ====================\n")
     model.summary(show_hierarchical = False, show_parent_layers=True)
     model.to(device)
 
@@ -295,9 +296,9 @@ if __name__ == "__main__":
         valid_sampler = RandomSampler(valid_data)
         test_sampler = RandomSampler(test_data)
     
-    train_loader = DataLoader(train_data, batch_size = args['batch_size'], sampler=train_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"])
-    valid_loader = DataLoader(valid_data, batch_size = args['batch_size'], sampler=valid_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"])
-    test_loader = DataLoader(test_data, batch_size = args['batch_size'], sampler=test_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"])
+    train_loader = DataLoader(train_data, batch_size = args['batch_size'], sampler=train_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"], drop_last = True)
+    valid_loader = DataLoader(valid_data, batch_size = args['batch_size'], sampler=valid_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"], drop_last = True)
+    test_loader = DataLoader(test_data, batch_size = args['batch_size'], sampler=test_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"], drop_last = True)
 
     # Re-weighting
     if args['use_weighting']:
@@ -326,7 +327,7 @@ if __name__ == "__main__":
         loss_fn = CELoss(weight = per_cls_weights)
     
     # training process
-    print("\n################# training process #################\n")
+    print("\n======================= training process =======================\n")
     if args['use_DRW']:
         train_loss,  train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train_DRW(
             train_loader,
@@ -380,7 +381,7 @@ if __name__ == "__main__":
     plot_learning_curve(train_loss, valid_loss, train_f1, valid_f1, figsize = (12,6), save_dir = save_learning_curve)
     
     # evaluation process
-    print("\n################# evaluation process #################\n")
+    print("\n====================== evaluation process ======================\n")
     model.load_state_dict(torch.load(save_best_dir))
     
     save_conf = os.path.join(save_dir, "{}_test_confusion.png".format(tag))
@@ -397,7 +398,7 @@ if __name__ == "__main__":
     )
     
     # Additional analyzation
-    print("\n################# Visualization process #################\n")
+    print("\n====================== Visualization process ======================\n")
     try:
         visualize_2D_latent_space(
             model, 
@@ -436,8 +437,8 @@ if __name__ == "__main__":
         
     # plot the disruption probability curve
     test_shot_num = args['test_shot_num']
-    print("\n################# Probability curve generation process #################\n")
-    
+    print("\n====================== Probability curve generation process ======================\n")
+
     time_x, prob_list = generate_prob_curve(
         file_path = "./dataset/temp/{}".format(test_shot_num),
         model = model, 

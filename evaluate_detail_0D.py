@@ -104,9 +104,9 @@ if __name__ == "__main__":
     model.summary()
     model.to(device)
     
-    train_loader = DataLoader(train_data, batch_size = args['batch_size'], sampler=None, num_workers = args["num_workers"], pin_memory=args["pin_memory"])
-    valid_loader = DataLoader(valid_data, batch_size = args['batch_size'], sampler=None, num_workers = args["num_workers"], pin_memory=args["pin_memory"])
-    test_loader = DataLoader(test_data, batch_size = args['batch_size'], sampler=None, num_workers = args["num_workers"], pin_memory=args["pin_memory"])
+    train_loader = DataLoader(train_data, batch_size = args['batch_size'], sampler=None, num_workers = args["num_workers"], pin_memory=args["pin_memory"], drop_last = True)
+    valid_loader = DataLoader(valid_data, batch_size = args['batch_size'], sampler=None, num_workers = args["num_workers"], pin_memory=args["pin_memory"], drop_last = True)
+    test_loader = DataLoader(test_data, batch_size = args['batch_size'], sampler=None, num_workers = args["num_workers"], pin_memory=args["pin_memory"], drop_last = True)
 
     model.load_state_dict(torch.load(save_best_dir))
     

@@ -8,12 +8,6 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, classification_report, f1_score
 from sklearn.metrics import roc_auc_score, roc_curve, precision_recall_curve
 
-def MAE(pred, true):
-    return np.mean(np.abs(pred - true))
-
-def MSE(pred, true):
-    return np.mean((pred - true)**2)
-
 def evaluate(
     test_loader : DataLoader, 
     model : torch.nn.Module,
@@ -29,8 +23,8 @@ def evaluate(
     test_loss = 0
     test_acc = 0
     test_f1 = 0
-    total_pred = np.array([])
-    total_label = np.array([])
+    total_pred = []
+    total_label = []
 
     if device is None:
         device = torch.device("cuda:0")
@@ -45,76 +39,36 @@ def evaluate(
             optimizer.zero_grad()
             
             if model_type == "single":
-                data = data.to(device)
-                output = model(data)
+                output = model(data.to(device))
             elif model_type == "multi":
-                data_video = data['video'].to(device)
-                data_0D = data['0D'].to(device)
-                output = model(data_video, data_0D)
+                output = model(data['video'].to(device), data['0D'].to(device))
             elif model_type == "multi-GB":
-                data_video = data['video'].to(device)
-                data_0D = data['0D'].to(device)
-                output, output_vis, output_ts = model(data_video, data_0D)
+                output, output_vis, output_ts = model(data['video'].to(device), data['0D'].to(device))
                 
-            target = target.to(device)
-            
             if model_type == 'multi-GB':
-                loss = loss_fn(output, output_vis, output_ts, target)
+                loss = loss_fn(output, output_vis, output_ts, target.to(device))
             else:
-                loss = loss_fn(output, target)
+                loss = loss_fn(output, target.to(device))
     
             test_loss += loss.item()
             # pred = torch.nn.functional.softmax(output, dim = 1).max(1, keepdim = True)[1]
             
             pred = torch.nn.functional.softmax(output, dim = 1)[:,0]
             pred = torch.logical_not((pred > torch.FloatTensor([threshold]).to(device)))
-            test_acc += pred.eq(target.view_as(pred)).sum().item()
+            test_acc += pred.eq(target.to(device).view_as(pred)).sum().item()
             total_size += pred.size(0)
             
             pred_normal = torch.nn.functional.softmax(output, dim = 1)[:,1].detach()
             
-            total_pred = np.concatenate((total_pred, pred_normal.cpu().numpy().reshape(-1,)))
-            total_label = np.concatenate((total_label, target.cpu().numpy().reshape(-1,)))
+            total_pred.append(pred.view(-1,1))
+            total_label.append(target.view(-1,1))
+
+    total_pred = torch.concat(total_pred, dim = 0).detach().view(-1,).cpu().numpy()
+    total_label = torch.concat(total_label, dim = 0).detach().view(-1,).cpu().numpy()
             
     test_loss /= (idx + 1)
     test_acc /= total_size
             
-    '''
-    # method 1 : only compute the f1 score and classification report
-    test_f1 = f1_score(total_label, total_pred, average = "macro")
-    test_auc = roc_auc_score(total_label, total_pred, average='macro')
-    
-    conf_mat = confusion_matrix(total_label, total_pred)
-
-    if save_conf is None:
-        save_conf = "./results/confusion_matrix.png"
-
-    plt.figure()
-    s = sns.heatmap(
-        conf_mat, # conf_mat / np.sum(conf_mat),
-        annot = True,
-        fmt ='04d' ,# fmt = '.2f',
-        cmap = 'Blues',
-        xticklabels=["disruption","normal"],
-        yticklabels=["disruption","normal"],
-    )
-
-    s.set_xlabel("Prediction")
-    s.set_ylabel("Actual")
-
-    plt.savefig(save_conf)
-
-    print("############### Classification Report ####################")
-    print(classification_report(total_label, total_pred, labels = [0,1]))
-    print("\n# test acc : {:.2f}, test f1 : {:.2f}, test AUC : {:.2f}, test loss : {:.3f}".format(test_acc, test_f1, test_auc, test_loss))
-
-    if save_txt:
-        with open(save_txt, 'w') as f:
-            f.write(classification_report(total_label, total_pred, labels = [0,1]))
-            summary = "\n# test score : {:.2f}, test loss : {:.3f}, test f1 : {:.3f}, test_auc : {:.3f}".format(test_acc, test_loss, test_f1, test_auc)
-            f.write(summary)
-    '''
-    
     # method 2 : compute f1, auc, roc and classification report
     # data clipping / postprocessing for ignoring nan, inf, too large data
     total_pred = np.nan_to_num(total_pred, copy = True, nan = 0, posinf = 1.0, neginf = 0)
@@ -194,8 +148,8 @@ def evaluate_tensorboard(
     ):
 
     test_loss = 0
-    total_pred = np.array([])
-    total_label = np.array([])
+    total_pred = []
+    total_label = []
 
     if device is None:
         device = torch.device("cuda:0")
@@ -204,38 +158,34 @@ def evaluate_tensorboard(
     model.eval()
 
     total_size = 0
-
+    
     for idx, (data, target) in enumerate(test_loader):
         with torch.no_grad():
             optimizer.zero_grad()
             
             if model_type == "single":
-                data = data.to(device)
-                output = model(data)
+                output = model(data.to(device))
             elif model_type == "multi":
-                data_video = data['video'].to(device)
-                data_0D = data['0D'].to(device)
-                output = model(data_video, data_0D)
+                output = model(data['video'].to(device), data['0D'].to(device))
             elif model_type == "multi-GB":
-                data_video = data['video'].to(device)
-                data_0D = data['0D'].to(device)
-                output, output_vis, output_ts = model(data_video, data_0D)
+                output, output_vis, output_ts = model(data['video'].to(device), data['0D'].to(device))
                 
-            target = target.to(device)
-            
             if model_type == 'multi-GB':
-                loss = loss_fn(output, output_vis, output_ts, target)
+                loss = loss_fn(output, output_vis, output_ts, target.to(device))
             else:
-                loss = loss_fn(output, target)
+                loss = loss_fn(output, target.to(device))
     
             test_loss += loss.item()
             
             pred = torch.nn.functional.softmax(output, dim = 1)[:,1].detach()
             total_size += pred.size(0)
             
-            total_pred = np.concatenate((total_pred, pred.cpu().numpy().reshape(-1,)))
-            total_label = np.concatenate((total_label, target.cpu().numpy().reshape(-1,)))
+            total_pred.append(pred.view(-1,1))
+            total_label.append(target.view(-1,1))
 
+    total_pred = torch.concat(total_pred, dim = 0).detach().view(-1,).cpu().numpy()
+    total_label = torch.concat(total_label, dim = 0).detach().view(-1,).cpu().numpy()
+            
     test_loss /= (idx + 1)
     
     # data clipping / postprocessing for ignoring nan, inf, too large data

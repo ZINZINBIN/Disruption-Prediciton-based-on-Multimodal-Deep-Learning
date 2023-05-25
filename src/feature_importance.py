@@ -22,6 +22,9 @@ from tqdm.auto import tqdm
 from torch.utils.data import DataLoader
 from typing import Literal, List
 from sklearn.metrics import f1_score
+from src.config import Config
+
+config = Config()
 
 def compute_loss(
     dataloader : DataLoader, 
@@ -36,38 +39,33 @@ def compute_loss(
 
     total_loss = 0
     total_f1 = 0
-    total_pred = np.array([])
-    total_label = np.array([])
+    total_pred = []
+    total_label = []
     total_size = 0
 
     for batch_idx, (data, target) in enumerate(dataloader):
         with torch.no_grad():
             if model_type == "single":
-                data = data.to(device)
-                output = model(data)
+                output = model(data.to(device))
             elif model_type == "multi":
-                data_video = data['video'].to(device)
-                data_0D = data['0D'].to(device)
-                output = model(data_video, data_0D)
+                output = model(data['video'].to(device), data['0D'].to(device))
             elif model_type == "multi-GB":
-                data_video = data['video'].to(device)
-                data_0D = data['0D'].to(device)
-                output, output_vis, output_ts = model(data_video, data_0D)
+                output, output_vis, output_ts = model(data['video'].to(device), data['0D'].to(device))
                 
-            target = target.to(device)
-            
             if model_type == 'multi-GB':
-                loss = loss_fn(output, output_vis, output_ts, target)
+                loss = loss_fn(output, output_vis, output_ts, target.to(device))
             else:
-                loss = loss_fn(output, target)
+                loss = loss_fn(output, target.to(device))
     
             total_loss += loss.item()
             pred = torch.nn.functional.softmax(output, dim = 1).max(1, keepdim = True)[1]
             total_size += pred.size(0)
 
-            total_pred = np.concatenate((total_pred, pred.cpu().numpy().reshape(-1,)))
-            total_label = np.concatenate((total_label, target.cpu().numpy().reshape(-1,)))
+            total_pred.append(pred.view(-1,1))
+            total_label.append(target.view(-1,1))
 
+    total_pred = torch.concat(total_pred, dim = 0).detach().view(-1,).cpu().numpy()
+    total_label = torch.concat(total_label, dim = 0).detach().view(-1,).cpu().numpy()
     total_f1 = f1_score(total_label, total_pred, average = "macro")
 
     return total_loss, total_f1
@@ -117,22 +115,12 @@ def compute_permute_feature_importance(
     df = pd.DataFrame(results)
     
     # feature name mapping
-    feature_map = {
-        '\\q95' : 'q95', 
-        '\\ipmhd':'Ip', 
-        '\\kappa':'kappa', 
-        '\\tritop': 'tri-top', 
-        '\\tribot': 'tri-bot',
-        '\\betap': 'betap',
-        '\\betan': 'betan',
-        '\\li': 'li', 
-        '\\WTOT_DLM03':'W-tot',
-        '\\ne_inter01' : 'Ne-avg', 
-        '\\TS_NE_CORE_AVG' : 'Ne-core', 
-        '\\TS_TE_CORE_AVG': 'Te-core',
-    }
+    feature_map = config.feature_map
     
-    df.rename(columns = feature_map)
+    def _convert_str(x : str):
+        return feature_map[x]
+    
+    df['feature'] = df['feature'].apply(lambda x : _convert_str(x))
     df = df.sort_values('feature_importance')
     
     plt.figure(figsize = (8,8))
@@ -140,7 +128,7 @@ def compute_permute_feature_importance(
     plt.yticks(np.arange(n_features), df.feature.values)
     plt.title('0D data - feature importance')
     plt.ylim((-1,n_features + 1))
-    plt.xlim([0, 5.0])
+    # plt.xlim([0, 5.0])
     plt.xlabel('Permutation feature importance')
     plt.ylabel('Feature', size = 14)
     plt.savefig(save_dir)

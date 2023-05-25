@@ -544,14 +544,33 @@ class DatasetFor0D(Dataset):
         self._generate_index()
         
     def preprocessing(self):
-        # ignore shot which have too many nan values
         shot_ignore = []
-        for shot in tqdm(self.shot_list, desc = 'extract the null data'):
+        
+        # filter : remove invalid shot
+        for shot in tqdm(self.shot_list, desc = 'remove invalid data : null / measurement error'):
+            # 1st filter : remove null data
             df_shot = self.ts_data[self.ts_data.shot == shot]
             null_check = df_shot[self.cols].isna().sum()
             
+            is_null = False
+            
             for c in null_check:
                 if c > 0.5 * len(df_shot):
+                    shot_ignore.append(shot)
+                    is_null = True
+                    break
+            
+            if is_null:
+                continue
+            
+            # 2nd filter : measurement error
+            for col in self.cols:
+                if np.sum(df_shot[col] == 0) > 0.5 * len(df_shot):
+                    shot_ignore.append(shot)
+                    break
+
+                # constant value
+                if df_shot[col].max() - df_shot[col].min() < 1e-3:
                     shot_ignore.append(shot)
                     break
         
@@ -562,9 +581,9 @@ class DatasetFor0D(Dataset):
         # 0D parameter : NAN -> forward fill
         for shot in tqdm(self.shot_list, desc = 'replace nan value'):
             df_shot = self.ts_data[self.ts_data.shot == shot].copy()
-            self.ts_data.loc[self.ts_data.shot == shot, self.cols] = df_shot[self.cols].fillna(method='ffill')
+            self.ts_data.loc[self.ts_data.shot == shot, self.cols] = df_shot[self.cols].fillna(0)
             
-        if self.scaler:
+        if self.scaler is not None:
             self.ts_data[self.cols] = self.scaler.transform(self.ts_data[self.cols])
 
     def _generate_index(self):
@@ -588,7 +607,7 @@ class DatasetFor0D(Dataset):
                 row = df_shot.iloc[idx]
                 t = row['time']
 
-                if idx_last - idx - self.seq_len - self.dist < 0:
+                if idx_last - idx < 0:
                     break
 
                 if t >= tftsrt and t < t_disrupt - self.dt * (self.seq_len + self.dist):
@@ -597,17 +616,26 @@ class DatasetFor0D(Dataset):
                     labels.append(1)
                     idx += self.seq_len // 3
 
-                elif t > t_disrupt - self.dt * (self.seq_len + self.dist) and t <= t_disrupt:
+                elif t >= t_disrupt - self.dt * (2 * self.seq_len + self.dist) and t < t_disrupt - self.dt * (self.seq_len + self.dist):
+                    indx = df_shot.index.values[idx]
+                    indices.append(indx)
+                    labels.append(1)
+                    idx += self.seq_len // 7
+                
+                elif t >= t_disrupt - self.dt * (self.seq_len + self.dist) and t <= t_disrupt - self.dt * self.seq_len + self.dt:
                     indx = df_shot.index.values[idx]
                     indices.append(indx)
                     labels.append(0)
-                    idx += self.seq_len // 3
+                    idx += 1
                 
                 elif t < tftsrt:
-                    idx += self.seq_len
+                    idx += self.seq_len // 3
                 
                 elif t > t_disrupt:
                     break
+                
+                else:
+                    idx += self.seq_len // 3
                 
             self.shot_num.extend([shot for _ in range(len(indices))])
             self.indices.extend(indices)
