@@ -12,8 +12,8 @@ hpo_checkpoint/*
 
 # result file
 results/*.csv
-results/*.png
-results/*.txt
+# results/*.png
+# results/*.txt
 results/disruption_phase/*
 
 # weights

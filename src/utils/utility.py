@@ -56,8 +56,11 @@ def deterministic_split(shot_list : List, test_size : float = 0.2):
     return train_list, test_list
 
 # train-test split for video data model
-def preparing_video_dataset(root_dir : str, random_state : int = STATE_FIXED):
+def preparing_video_dataset(root_dir : str, random_state : int = STATE_FIXED, test_shot : Optional[int] = 21310):
     shot_list = glob2.glob(os.path.join(root_dir, "*"))
+    
+    if test_shot is not None:
+        shot_list = [shot_dir for shot_dir in shot_list if str(test_shot) not in shot_dir]
     
     # stochastic train_test_split
     # shot_train, shot_test = train_test_split(shot_list, test_size = 0.2, random_state = random_state)
@@ -70,7 +73,7 @@ def preparing_video_dataset(root_dir : str, random_state : int = STATE_FIXED):
     return shot_train, shot_valid, shot_test
 
 # train-test split for 0D data models
-def preparing_0D_dataset(filepath : str = "./dataset/KSTAR_Disruption_ts_data_extend.csv", random_state : int = STATE_FIXED, ts_cols : Optional[List] = None, scaler : Literal['Robust', 'Standard', 'MinMax'] = 'Robust'):
+def preparing_0D_dataset(filepath : str = "./dataset/KSTAR_Disruption_ts_data_extend.csv", random_state : int = STATE_FIXED, ts_cols : Optional[List] = None, scaler : Literal['Robust', 'Standard', 'MinMax'] = 'Robust', test_shot : Optional[int] = 21310):
     
     # preparing 0D data for use
     df = pd.read_csv(filepath).reset_index()
@@ -88,6 +91,9 @@ def preparing_0D_dataset(filepath : str = "./dataset/KSTAR_Disruption_ts_data_ex
 
     # train / valid / test data split
     shot_list = np.unique(df.shot.values)
+    
+    if test_shot is not None:
+        shot_list = np.array([shot for shot in shot_list if int(shot) != test_shot])
 
     # stochastic train_test_split
     # shot_train, shot_test = train_test_split(shot_list, test_size = 0.2, random_state = random_state)
@@ -121,8 +127,13 @@ def preparing_0D_dataset(filepath : str = "./dataset/KSTAR_Disruption_ts_data_ex
 
     return df_train, df_valid, df_test, scaler
     
-def preparing_multi_data(root_dir : str, ts_filepath : str = "./dataset/KSTAR_Disruption_ts_data_5ms.csv", ts_cols : Optional[List] = None, scaler : Literal['Robust', 'Standard', 'MinMax'] = 'Robust'):
+def preparing_multi_data(root_dir : str, ts_filepath : str = "./dataset/KSTAR_Disruption_ts_data_5ms.csv", ts_cols : Optional[List] = None, scaler : Literal['Robust', 'Standard', 'MinMax'] = 'Robust', test_shot : Optional[int] = 21310):
+    
     shot_list = glob2.glob(os.path.join(root_dir, "*"))
+    
+    if test_shot is not None:
+        shot_list = [shot_dir for shot_dir in shot_list if str(test_shot) not in shot_dir]
+    
     shot_train, shot_test = train_test_split(shot_list, test_size = 0.2, random_state = 42)
     shot_train, shot_valid = train_test_split(shot_train, test_size = 0.2, random_state = 42) 
     
@@ -164,10 +175,6 @@ def preparing_multi_data(root_dir : str, ts_filepath : str = "./dataset/KSTAR_Di
         scaler = StandardScaler()
     else:
         scaler = MinMaxScaler()
-    
-    # df_train[ts_cols] = scaler.fit_transform(df_train[ts_cols].values)
-    # df_valid[ts_cols] = scaler.transform(df_valid[ts_cols].values)
-    # df_test[ts_cols] = scaler.transform(df_test[ts_cols].values)
     
     scaler.fit(df_train[ts_cols].values)
 
@@ -281,7 +288,6 @@ def load_frames_with_interval(file_path : str, height : int = 256, width : int =
 
 
 def crop(buffer, original_height, original_width, crop_size):
-
     mid_x, mid_y = original_height // 2, original_width // 2
     offset_x, offset_y = crop_size // 2, crop_size // 2
     buffer = buffer[:, mid_x - offset_x:mid_x+offset_x, mid_y - offset_y: mid_y+ offset_y, :]
@@ -895,7 +901,7 @@ def generate_prob_curve(
     ax2.set_ylabel("probability")
     ax2.set_xlabel("time(unit : s)")
     ax2.set_ylim([0,1])
-    ax2.set_xlim([0, max(time_x) + dt * 8])
+    ax2.set_xlim([0, max(time_x) + 0.25])
     ax2.legend(loc = 'upper right')
     
     fig.tight_layout()
@@ -927,7 +933,7 @@ def generate_prob_curve_from_0D(
     
     frame_srt = shot_list_dir[shot_list_dir.shot == shot_num].frame_startup.values[0]
     frame_end = shot_list_dir[shot_list_dir.shot == shot_num].frame_cutoff.values[0]
-
+    
     # input data generation
     ts_data = pd.read_csv(ts_data_dir).reset_index()
 
@@ -937,6 +943,8 @@ def generate_prob_curve_from_0D(
     ts_data.interpolate(method = 'linear', limit_direction = 'forward')
     
     ts_data_0D = ts_data[ts_data['shot'] == shot_num]
+    
+    t_start = ts_data_0D.time.values[0]
     
     t = ts_data_0D.time
     ip = ts_data_0D['\\ipmhd']
@@ -980,8 +988,8 @@ def generate_prob_curve_from_0D(
             
     interval = 4
     fps = 210
-    
-    prob_list = [0] * seq_len + prob_list
+    frame_srt = int(t_start * fps / interval)
+    prob_list = [0] * (frame_srt + seq_len + dist - 1) + prob_list
     
     # correction for startup peaking effect : we will soon solve this problem
     for idx, prob in enumerate(prob_list):
@@ -990,10 +998,11 @@ def generate_prob_curve_from_0D(
             prob_list[idx] = 0
             
     from scipy.interpolate import interp1d
-    prob_x = np.linspace(0, len(prob_list) * interval, num = len(prob_list), endpoint = True)
+    
+    prob_x = np.linspace(0, len(prob_list) * interval, num = len(prob_list), endpoint = True) * (1/fps)
     prob_y = np.array(prob_list)
     f_prob = interp1d(prob_x, prob_y, kind = 'cubic')
-    prob_list = f_prob(np.linspace(0, len(prob_list) * interval, num = len(prob_list) * interval, endpoint = False))
+    prob_list = f_prob(np.linspace(0, len(prob_list) * interval, num = len(prob_list) * interval, endpoint = True) * (1/fps))
     
     time_x = np.arange(0, len(prob_list)) * (1/fps)
     

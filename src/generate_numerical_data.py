@@ -11,7 +11,7 @@ config = Config()
 
 warnings.filterwarnings(action = 'ignore')
 
-def ts_interpolate(df : pd.DataFrame, df_disruption : pd.DataFrame, dt : float = 0.025, n_points : int = 128):
+def ts_interpolate(df : pd.DataFrame, df_disruption : pd.DataFrame, dt : float = 0.025, n_points : int = 128, use_profile : bool = False):
     
     df_interpolate = pd.DataFrame()
     
@@ -185,10 +185,10 @@ def ts_interpolate(df : pd.DataFrame, df_disruption : pd.DataFrame, dt : float =
         
         t_start = tftsrt - dt * 4
         
-        if t_end >= tTQend - dt * 8:
-            t_end = tTQend + dt * 8
+        if t_end >= tipminf - dt * 8:
+            t_end = tipminf + dt * 8
             
-        elif t_end < tTQend - dt * 8:
+        elif t_end < tipminf - dt * 8:
             print("Invalid shot : {} - operation time too short".format(shot))
             continue
         
@@ -236,33 +236,36 @@ def ts_interpolate(df : pd.DataFrame, df_disruption : pd.DataFrame, dt : float =
     # specific case
     df_interpolate['\\WTOT_DLM03'] = df_interpolate['\\WTOT_DLM03'].apply(lambda x : x if x > 0 else 0)
     
-    # profile data generation
-    ne_profile = np.zeros((len(df_interpolate), n_points))
-    te_profile = np.zeros((len(df_interpolate), n_points))
-    idx = 0
-    
-    shot_list = np.unique(df_interpolate['shot'].values)
-    
-    for shot in tqdm(shot_list, desc = 'profile generation'):
+    if use_profile:
+        # profile data generation
+        ne_profile = np.zeros((len(df_interpolate), n_points))
+        te_profile = np.zeros((len(df_interpolate), n_points))
+        idx = 0
         
-        df_shot = df_interpolate[df_interpolate.shot == shot].copy()
-        tes = []
-        nes = []
-        for t in df_shot.time:
-            _, te = get_profile(df_shot, t, radius = config.RADIUS, cols_core = config.TS_TE_CORE_COLS, cols_edge = config.TS_TE_EDGE_COLS, n_points = n_points)
-            _, ne = get_profile(df_shot, t, radius = config.RADIUS, cols_core = config.TS_NE_CORE_COLS, cols_edge = config.TS_NE_EDGE_COLS, n_points = n_points)
-            tes.append(te.reshape(-1,1))
-            nes.append(ne.reshape(-1,1))
+        shot_list = np.unique(df_interpolate['shot'].values)
+        
+        for shot in tqdm(shot_list, desc = 'profile generation'):
             
-        ne_profile[idx:idx + len(df_shot),:] = np.concatenate(nes, axis = 1).transpose(1,0)
-        te_profile[idx:idx + len(df_shot),:] = np.concatenate(tes, axis = 1).transpose(1,0)
-            
-        idx += len(df_shot)    
-    
-    profile_info = {
-        "te" : te_profile,
-        "ne" : ne_profile
-    }
+            df_shot = df_interpolate[df_interpolate.shot == shot].copy()
+            tes = []
+            nes = []
+            for t in df_shot.time:
+                _, te = get_profile(df_shot, t, radius = config.RADIUS, cols_core = config.TS_TE_CORE_COLS, cols_edge = config.TS_TE_EDGE_COLS, n_points = n_points)
+                _, ne = get_profile(df_shot, t, radius = config.RADIUS, cols_core = config.TS_NE_CORE_COLS, cols_edge = config.TS_NE_EDGE_COLS, n_points = n_points)
+                tes.append(te.reshape(-1,1))
+                nes.append(ne.reshape(-1,1))
+                
+            ne_profile[idx:idx + len(df_shot),:] = np.concatenate(nes, axis = 1).transpose(1,0)
+            te_profile[idx:idx + len(df_shot),:] = np.concatenate(tes, axis = 1).transpose(1,0)
+                
+            idx += len(df_shot)    
+        
+        profile_info = {
+            "te" : te_profile,
+            "ne" : ne_profile
+        }
+    else:
+        profile_info = None
     
     return df_interpolate, profile_info
 
@@ -274,14 +277,27 @@ if __name__ == "__main__":
     print(df.describe())
 
     cols = df.columns[df.notna().any()].drop(['Unnamed: 0','shot','time']).tolist()
+    
     fps = 210
-    dt = 1 / fps * 4
+    
+    # if 0D network only
+    # dt = 1 / fps * 4
+    
+    # if multi-modal data
+    dt = 1 / fps * 1
+    
     n_points = 128
     
     df_extend, profile_info = ts_interpolate(df, df_disrupt, dt, n_points)
     df_extend['frame_idx'] = df_extend.time.apply(lambda x : int(round(x * fps)))
-    df_extend.to_csv("./dataset/KSTAR_Disruption_ts_data_extend.csv", index = False)
     
-    np.savez("./dataset/profiles.npz", te = profile_info['te'], ne = profile_info['ne'])
+    # 0D dataset
+    # df_extend.to_csv("./dataset/KSTAR_Disruption_ts_data_extend.csv", index = False)
+    
+    # multimodal dataset
+    df_extend.to_csv("./dataset/KSTAR_Disruption_ts_data_5ms.csv", index = False)
+    
+    if profile_info is not None:
+        np.savez("./dataset/profiles.npz", te = profile_info['te'], ne = profile_info['ne'])
     
     print(df_extend.describe())

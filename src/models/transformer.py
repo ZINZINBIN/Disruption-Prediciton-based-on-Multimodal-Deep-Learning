@@ -40,7 +40,7 @@ class TransformerEncoder(nn.Module):
     def __init__(
         self, 
         n_features : int = 11, 
-        kernel_size : int = 5,
+        kernel_size : int = 3,
         feature_dims : int = 256, 
         max_len : int = 128, 
         n_layers : int = 1, 
@@ -54,15 +54,21 @@ class TransformerEncoder(nn.Module):
         self.max_len = max_len
         self.feature_dims = feature_dims
         
-        self.noise = NoiseLayer(mean = 0, std = 4e-3)
+        self.noise = NoiseLayer(mean = 0, std = 1e-3)
         
         if kernel_size // 2 == 0:
             print("kernel sholud be odd number")
             kernel_size += 1
         padding = (kernel_size - 1) // 2
         
-        self.conv = nn.Conv1d(in_channels = n_features, out_channels = n_features, kernel_size = kernel_size, stride = 1, padding = padding)
-        self.encoder_input_layer = nn.Linear(in_features = n_features, out_features = feature_dims - 1)
+        self.filter = nn.Sequential(
+            nn.Conv1d(in_channels = n_features, out_channels = feature_dims, kernel_size = kernel_size, stride = 1, padding = padding),
+            nn.GELU(),
+            nn.Conv1d(in_channels = feature_dims, out_channels = feature_dims, kernel_size = kernel_size, stride = 1, padding = padding),
+            nn.BatchNorm1d(feature_dims),
+            nn.GELU(),
+        )
+        
         self.pos_enc = PositionalEncoding(d_model = feature_dims, max_len = max_len)
         
         encoder = nn.TransformerEncoderLayer(
@@ -76,6 +82,7 @@ class TransformerEncoder(nn.Module):
         self.transformer_encoder = nn.TransformerEncoder(encoder, num_layers=n_layers)
         self.connector = nn.Sequential(
             nn.Linear(feature_dims, feature_dims),
+            nn.LayerNorm(feature_dims),
             nn.GELU()
         )
         
@@ -85,17 +92,9 @@ class TransformerEncoder(nn.Module):
         x = self.noise(x)
         
         # convolution process
-        x = self.conv(x.permute(0,2,1)).permute(0,2,1)
+        x = self.filter(x.permute(0,2,1)).permute(0,2,1)
         
-        # linear mapping
-        x = self.encoder_input_layer(x)
-        
-        # time sequence order
-        x_extend = torch.zeros((x.size()[0], x.size()[1], 1 + x.size()[2]), dtype = torch.float, device = x.device)
-        x_extend[:,:,0] = torch.arange(0,x.size()[1])
-        x_extend[:,:,1:] = x
-        x = x_extend
-        
+        # mapping for transformer module
         x = x.permute(1,0,2)
         
         self.src_mask = self._generate_square_subsequent_mask(len(x), x.device)
@@ -111,8 +110,8 @@ class TransformerEncoder(nn.Module):
         return mask
 
     def summary(self):
-        sample_x = torch.zeros((2, self.max_len, self.n_features))
-        summary(self, sample_x, batch_size = 2, show_input = True, print_summary=True)
+        sample_x = torch.zeros((1, self.max_len, self.n_features))
+        summary(self, sample_x, batch_size = 1, show_input = True, print_summary=True)
 
 class Transformer(nn.Module):
     def __init__(
@@ -134,7 +133,7 @@ class Transformer(nn.Module):
         self.encoder = TransformerEncoder(n_features, kernel_size, feature_dims, max_len, n_layers, n_heads, dim_feedforward, dropout)
         self.classifier = nn.Sequential(
             nn.Linear(feature_dims, cls_dims),
-            nn.BatchNorm1d(cls_dims),
+            nn.LayerNorm(cls_dims),
             GELU(),
             nn.Linear(cls_dims, n_classes)
         )
@@ -152,5 +151,5 @@ class Transformer(nn.Module):
         return x
     
     def summary(self):
-        sample_x = torch.zeros((2, self.max_len, self.n_features))
-        summary(self, sample_x, batch_size = 2, show_input = True, print_summary=True)
+        sample_x = torch.zeros((1, self.max_len, self.n_features))
+        summary(self, sample_x, batch_size = 1, show_input = True, print_summary=True)

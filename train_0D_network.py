@@ -78,10 +78,10 @@ def parsing():
     parser.add_argument("--optimizer", type = str, default = "AdamW", choices=["SGD","RMSProps","Adam","AdamW"])
     
     # learning rate, step size and decay constant
-    parser.add_argument("--lr", type = float, default = 2e-5)
+    parser.add_argument("--lr", type = float, default = 2e-4)
     parser.add_argument("--use_scheduler", type = bool, default = True)
     parser.add_argument("--step_size", type = int, default = 4)
-    parser.add_argument("--gamma", type = float, default = 0.95)
+    parser.add_argument("--gamma", type = float, default = 0.995)
     
     # early stopping
     parser.add_argument('--early_stopping', type = bool, default = True)
@@ -115,24 +115,24 @@ def parsing():
     
     # model setup : transformer
     parser.add_argument("--alpha", type = float, default = 0.01)
-    parser.add_argument("--dropout", type = float, default = 0.25)
+    parser.add_argument("--dropout", type = float, default = 0.1)
     parser.add_argument("--feature_dims", type = int, default = 128)
     parser.add_argument("--n_layers", type = int, default = 4)
     parser.add_argument("--n_heads", type = int, default = 8)
-    parser.add_argument("--dim_feedforward", type = int, default = 512)
+    parser.add_argument("--dim_feedforward", type = int, default = 1024)
     parser.add_argument("--cls_dims", type = int, default = 128)
     
     # model setup : cnn lstm
-    parser.add_argument("--conv_dim", type = int, default = 32)
+    parser.add_argument("--conv_dim", type = int, default = 64)
     parser.add_argument("--conv_kernel", type = int, default = 3)
     parser.add_argument("--conv_stride", type = int, default = 1)
     parser.add_argument("--conv_padding", type = int, default = 1)
-    parser.add_argument("--lstm_dim", type = int, default = 64)
-    parser.add_argument("--lstm_layers", type = int, default = 2)
+    parser.add_argument("--lstm_dim", type = int, default = 128)
+    parser.add_argument("--lstm_layers", type = int, default = 4)
     parser.add_argument("--bidirectional", type = bool, default = True)
     
     # model setup : MLSTM_FCN
-    parser.add_argument("--fcn_dim", type = int, default = 64)
+    parser.add_argument("--fcn_dim", type = int, default = 128)
     parser.add_argument("--reduction", type = int, default = 16)
     
     args = vars(parser.parse_args())
@@ -202,7 +202,7 @@ if __name__ == "__main__":
         device = 'cpu'
         
     # dataset setup
-    ts_train, ts_valid, ts_test, ts_scaler = preparing_0D_dataset("./dataset/KSTAR_Disruption_ts_data_extend.csv", ts_cols = ts_cols, scaler = 'Robust')
+    ts_train, ts_valid, ts_test, ts_scaler = preparing_0D_dataset("./dataset/KSTAR_Disruption_ts_data_extend.csv", ts_cols = ts_cols, scaler = 'Robust', test_shot = args['test_shot_num'])
     kstar_shot_list = pd.read_csv('./dataset/KSTAR_Disruption_Shot_List.csv', encoding = "euc-kr")
 
     train_data = DatasetFor0D(ts_train, kstar_shot_list, seq_len = args['seq_len'], cols = ts_cols, dist = args['dist'], dt = 4 * 1 / 210, scaler = ts_scaler)
@@ -300,10 +300,14 @@ if __name__ == "__main__":
         train_sampler = RandomSampler(train_data)
         valid_sampler = RandomSampler(valid_data)
         test_sampler = RandomSampler(test_data)
+        
+    # Samplers for visualization of embedding space
+    train_sampler_vis = ImbalancedDatasetSampler(train_data)
+    test_sampler_vis = ImbalancedDatasetSampler(test_data)
     
-    train_loader = DataLoader(train_data, batch_size = args['batch_size'], sampler=train_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"])
-    valid_loader = DataLoader(valid_data, batch_size = args['batch_size'], sampler=valid_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"])
-    test_loader = DataLoader(test_data, batch_size = args['batch_size'], sampler=test_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"])
+    train_loader = DataLoader(train_data, batch_size = args['batch_size'], sampler=train_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"], drop_last = True)
+    valid_loader = DataLoader(valid_data, batch_size = args['batch_size'], sampler=valid_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"], drop_last = True)
+    test_loader = DataLoader(test_data, batch_size = args['batch_size'], sampler=test_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"], drop_last = True)
 
     # Re-weighting
     if args['use_weighting']:
@@ -330,7 +334,7 @@ if __name__ == "__main__":
     else:
         betas = [0, args['beta'], args['beta'] * 2, args['beta']*3]
         loss_fn = CELoss(weight = per_cls_weights)
-
+    
     # training process
     print("\n======================= training process =======================\n")
     if args['use_DRW']:
@@ -384,6 +388,7 @@ if __name__ == "__main__":
     save_learning_curve = os.path.join(save_dir, "{}_lr_curve.png".format(tag))
     plot_learning_curve(train_loss, valid_loss, train_f1, valid_f1, figsize = (12,6), save_dir = save_learning_curve)
     
+    
     # evaluation process
     print("\n====================== evaluation process ======================\n")
     model.load_state_dict(torch.load(save_best_dir))
@@ -417,19 +422,27 @@ if __name__ == "__main__":
     # Additional analyzation
     print("\n====================== Visualization process ======================\n")
     
+    # reset the sampler
+    train_loader = DataLoader(train_data, batch_size = 128, sampler=train_sampler_vis, num_workers = args["num_workers"], pin_memory=args["pin_memory"], drop_last=True)
+    test_loader = DataLoader(test_data, batch_size = 128, sampler=test_sampler_vis, num_workers = args["num_workers"], pin_memory=args["pin_memory"], drop_last=True)
+    
     try:
         visualize_2D_latent_space(
             model, 
             train_loader,
             device,
-            os.path.join(save_dir, "{}_2D_latent_train.png".format(tag))
+            os.path.join(save_dir, "{}_2D_latent_train.png".format(tag)),
+            3,
+            'tSNE'
         )
         
         visualize_2D_latent_space(
             model, 
             test_loader,
             device,
-            os.path.join(save_dir, "{}_2D_latent_test.png".format(tag))
+            os.path.join(save_dir, "{}_2D_latent_test.png".format(tag)),
+            3,
+            'tSNE'
         )
         
     except:
@@ -440,22 +453,26 @@ if __name__ == "__main__":
             model, 
             train_loader,
             device,
-            os.path.join(save_dir, "{}_3D_latent_train.png".format(tag))
+            os.path.join(save_dir, "{}_3D_latent_train.png".format(tag)),
+            3,
+            'tSNE'
         )
         
         visualize_3D_latent_space(
             model, 
             test_loader,
             device,
-            os.path.join(save_dir, "{}_3D_latent_test.png".format(tag))
+            os.path.join(save_dir, "{}_3D_latent_test.png".format(tag)),
+            3,
+            'tSNE'
         )
     except:
         print("{} : visualize 3D latent space doesn't work due to stability error".format(tag))
     
     # plot probability curve
     test_shot_num = args['test_shot_num']
-
-    print("\n====================== Probability curve generation process ======================\n")
+    
+    print("\n================== Probability curve generation process ==================\n")
     generate_prob_curve_from_0D(
         model, 
         device = device, 

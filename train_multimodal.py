@@ -75,16 +75,16 @@ def parsing():
     
     # early stopping
     parser.add_argument('--early_stopping', type = bool, default = True)
-    parser.add_argument("--early_stopping_patience", type = int, default = 12)
+    parser.add_argument("--early_stopping_patience", type = int, default = 40)
     parser.add_argument("--early_stopping_verbose", type = bool, default = True)
     parser.add_argument("--early_stopping_delta", type = float, default = 1e-3)
     
     # imbalanced dataset processing
     # Re-sampling
-    parser.add_argument("--use_sampling", type = bool, default = True)
+    parser.add_argument("--use_sampling", type = bool, default = False)
     
     # Re-weighting
-    parser.add_argument("--use_weighting", type = bool, default = True)
+    parser.add_argument("--use_weighting", type = bool, default = False)
     
     # Deffered Re-weighting
     parser.add_argument("--use_DRW", type = bool, default = False)
@@ -122,7 +122,7 @@ def parsing():
     parser.add_argument("--depth", type = int, default = 2)
     
     # 0D model
-    parser.add_argument("--dropout_0D", type = float, default = 0.25)
+    parser.add_argument("--dropout_0D", type = float, default = 0.1)
     parser.add_argument("--feature_dims_0D", type = int, default = 128)
     parser.add_argument("--n_layers_0D", type = int, default = 4)
     parser.add_argument("--n_heads_0D", type = int, default = 8)
@@ -251,7 +251,7 @@ if __name__ == "__main__":
     # dataset setup
     root_dir = "./dataset/temp"
     ts_filepath = "./dataset/KSTAR_Disruption_ts_data_5ms.csv"
-    (shot_train, ts_train), (shot_valid, ts_valid), (shot_test, ts_test), scaler = preparing_multi_data(root_dir, ts_filepath, ts_cols, scaler = 'Robust')
+    (shot_train, ts_train), (shot_valid, ts_valid), (shot_test, ts_test), scaler = preparing_multi_data(root_dir, ts_filepath, ts_cols, scaler = 'Robust', test_shot = args['test_shot_num'])
     kstar_shot_list = pd.read_csv('./dataset/KSTAR_Disruption_Shot_List_extend.csv', encoding = "euc-kr")
 
     train_data = MultiModalDataset2(shot_train, kstar_shot_list, ts_train, ts_cols, augmentation=True, augmentation_args=augment_args, crop_size=args['image_size'], seq_len = args['seq_len'], dist = args['dist'], dt = 1 / 210, scaler = scaler, tau = 4)
@@ -331,11 +331,15 @@ if __name__ == "__main__":
         train_sampler = None
         valid_sampler = None
         test_sampler = None
+        
+    # Samplers for visualization of embedding space
+    train_sampler_vis = ImbalancedDatasetSampler(train_data)
+    test_sampler_vis = ImbalancedDatasetSampler(test_data)
     
     train_loader = DataLoader(train_data, batch_size = args['batch_size'], sampler=train_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"], drop_last = True)
     valid_loader = DataLoader(valid_data, batch_size = args['batch_size'], sampler=valid_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"], drop_last = True)
     test_loader = DataLoader(test_data, batch_size = args['batch_size'], sampler=test_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"], drop_last = True)
-
+    
     # Re-weighting
     if args['use_weighting']:
         per_cls_weights = 1.0 / np.array(cls_num_list)
@@ -486,19 +490,28 @@ if __name__ == "__main__":
     
     # Additional analyzation
     print("\n====================== Visualization process ======================\n")
+    
+    # reset the sampler
+    train_loader = DataLoader(train_data, batch_size = 128, sampler=train_sampler_vis, num_workers = args["num_workers"], pin_memory=args["pin_memory"], drop_last=True)
+    test_loader = DataLoader(test_data, batch_size = 128, sampler=test_sampler_vis, num_workers = args["num_workers"], pin_memory=args["pin_memory"], drop_last=True)
+    
     try:
         visualize_3D_latent_space_multi(
             model, 
             train_loader,
             device,
-            os.path.join(save_dir, "{}_3D_latent_train.png".format(tag))
+            os.path.join(save_dir, "{}_3D_latent_train.png".format(tag)),
+            3,
+            'tSNE'
         )
         
         visualize_3D_latent_space_multi(
             model, 
             test_loader,
             device,
-            os.path.join(save_dir, "{}_3D_latent_test.png".format(tag))
+            os.path.join(save_dir, "{}_3D_latent_test.png".format(tag)),
+            3,
+            'tSNE'
         )
         
     except:

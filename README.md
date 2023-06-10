@@ -103,10 +103,10 @@
 - Video Dataset Generation : old version, inefficient memory usage and scalability
     ```
     # generate disruptive video data and normal video data from .avi
-    python3 ./src/generate_video_data.py    --fps 210 
-                                            --duration 21 
-                                            --distance 5 
-                                            --save_path './dataset/'
+    python3 ./src/generate_video_data_fixed.py  --fps 210
+                                                --duration 21 
+                                                --distance 5 
+                                                --save_path './dataset/'
 
     # train and test split with converting video as image sequences
     python3 ./src/preprocessing.py  --test_ratio 0.2 
@@ -121,7 +121,7 @@
     python3 ./src/generate_modified_shot_log.py
 
     # generate video dataset from extended KSTAR shot log : you don't need to split the train-test set for every distance
-    python3 ./src/generate_video_data2.py   --fps 210
+    python3 ./src/generate_video_data.py    --fps 210
                                             --raw_video_path "./dataset/raw_videos/raw_videos/"
                                             --df_shot_list_path "./dataset/KSTAR_Disruption_Shot_List_extend.csv"
                                             --save_path "./dataset/temp"

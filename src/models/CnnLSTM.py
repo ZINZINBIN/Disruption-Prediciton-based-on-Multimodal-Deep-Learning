@@ -35,7 +35,7 @@ class CnnLSTM(nn.Module):
         self.bidirectional = bidirectional
         self.n_classes = n_classes
         
-        self.noise = NoiseLayer(mean = 0, std = 1e-2)
+        self.noise = NoiseLayer(mean = 0, std = 1e-3)
 
         # spatio-conv encoder : analyze spatio-effect between variables
         self.conv = nn.Sequential(

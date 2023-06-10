@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 import argparse
-from src.dataset import DatasetForVideo2
+from src.dataset import DatasetForVideo
 from torch.utils.data import DataLoader, RandomSampler
 from src.utils.sampler import ImbalancedDatasetSampler
 from src.utils.utility import preparing_video_dataset, plot_learning_curve, generate_prob_curve, seed_everything
@@ -39,12 +39,12 @@ def parsing():
 
     # common argument
     # batch size / sequence length / epochs / distance / num workers / pin memory use
-    parser.add_argument("--batch_size", type = int, default = 32)
+    parser.add_argument("--batch_size", type = int, default = 64)
     parser.add_argument("--num_epoch", type = int, default = 128)
     parser.add_argument("--seq_len", type = int, default = 21)
     parser.add_argument("--dist", type = int, default = 3)
     parser.add_argument("--num_workers", type = int, default = 4)
-    parser.add_argument("--pin_memory", type = bool, default = False)
+    parser.add_argument("--pin_memory", type = bool, default = True)
     
     # detail setting for training process
     # data augmentation : conventional
@@ -72,7 +72,7 @@ def parsing():
     
     # early stopping
     parser.add_argument('--early_stopping', type = bool, default = True)
-    parser.add_argument("--early_stopping_patience", type = int, default = 64)
+    parser.add_argument("--early_stopping_patience", type = int, default = 40)
     parser.add_argument("--early_stopping_verbose", type = bool, default = True)
     parser.add_argument("--early_stopping_delta", type = float, default = 1e-3)
     
@@ -202,12 +202,12 @@ if __name__ == "__main__":
     
     # use modified dataset
     root_dir = "./dataset/temp"
-    shot_train, shot_valid, shot_test = preparing_video_dataset(root_dir)
+    shot_train, shot_valid, shot_test = preparing_video_dataset(root_dir,test_shot = args['test_shot_num'])
     df_disrupt = pd.read_csv("./dataset/KSTAR_Disruption_Shot_List_extend.csv")
     
-    train_data = DatasetForVideo2(shot_train, df_disrupt, augmentation = True, augmentation_args=augment_args, crop_size = args['image_size'], seq_len = args['seq_len'], dist = args['dist'])
-    valid_data = DatasetForVideo2(shot_valid, df_disrupt, augmentation = False, augmentation_args=augment_args, crop_size = args['image_size'], seq_len = args['seq_len'], dist = args['dist'])
-    test_data = DatasetForVideo2(shot_test, df_disrupt, augmentation = False, augmentation_args=augment_args, crop_size = args['image_size'], seq_len = args['seq_len'], dist = args['dist'])
+    train_data = DatasetForVideo(shot_train, df_disrupt, augmentation = True, augmentation_args=augment_args, crop_size = args['image_size'], seq_len = args['seq_len'], dist = args['dist'])
+    valid_data = DatasetForVideo(shot_valid, df_disrupt, augmentation = False, augmentation_args=augment_args, crop_size = args['image_size'], seq_len = args['seq_len'], dist = args['dist'])
+    test_data = DatasetForVideo(shot_test, df_disrupt, augmentation = False, augmentation_args=augment_args, crop_size = args['image_size'], seq_len = args['seq_len'], dist = args['dist'])
     
     print("================= Dataset information =================")
     print("train data : {}, disrupt : {}, non-disrupt : {}".format(train_data.__len__(), train_data.n_disrupt, train_data.n_normal))
@@ -295,6 +295,10 @@ if __name__ == "__main__":
         train_sampler = RandomSampler(train_data)
         valid_sampler = RandomSampler(valid_data)
         test_sampler = RandomSampler(test_data)
+        
+    # Samplers for visualization of embedding space
+    train_sampler_vis = ImbalancedDatasetSampler(train_data)
+    test_sampler_vis = ImbalancedDatasetSampler(test_data)
     
     train_loader = DataLoader(train_data, batch_size = args['batch_size'], sampler=train_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"], drop_last = True)
     valid_loader = DataLoader(valid_data, batch_size = args['batch_size'], sampler=valid_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"], drop_last = True)
@@ -399,19 +403,28 @@ if __name__ == "__main__":
     
     # Additional analyzation
     print("\n====================== Visualization process ======================\n")
+    
+    # reset the sampler
+    train_loader = DataLoader(train_data, batch_size = 128, sampler=train_sampler_vis, num_workers = args["num_workers"], pin_memory=args["pin_memory"], drop_last=True)
+    test_loader = DataLoader(test_data, batch_size = 128, sampler=test_sampler_vis, num_workers = args["num_workers"], pin_memory=args["pin_memory"], drop_last=True)
+    
     try:
         visualize_2D_latent_space(
             model, 
             train_loader,
             device,
-            os.path.join(save_dir, "{}_2D_latent_train.png".format(tag))
+            os.path.join(save_dir, "{}_2D_latent_train.png".format(tag)),
+            3,
+            'tSNE'
         )
         
         visualize_2D_latent_space(
             model, 
             test_loader,
             device,
-            os.path.join(save_dir, "{}_2D_latent_test.png".format(tag))
+            os.path.join(save_dir, "{}_2D_latent_test.png".format(tag)),
+            3,
+            'tSNE'
         )
         
     except:
@@ -422,14 +435,18 @@ if __name__ == "__main__":
             model, 
             train_loader,
             device,
-            os.path.join(save_dir, "{}_3D_latent_train.png".format(tag))
+            os.path.join(save_dir, "{}_3D_latent_train.png".format(tag)),
+            3,
+            'tSNE'
         )
         
         visualize_3D_latent_space(
             model, 
             test_loader,
             device,
-            os.path.join(save_dir, "{}_3D_latent_test.png".format(tag))
+            os.path.join(save_dir, "{}_3D_latent_test.png".format(tag)),
+            3,
+            'tSNE'
         )
         
     except:

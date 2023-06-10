@@ -110,7 +110,7 @@ class MLSTM_FCN(nn.Module):
             SqueezeExciteBlock(2*fcn_dim, reduction),
         )
         
-        self.noise = NoiseLayer(mean = 0, std = 1e-2)
+        self.noise = NoiseLayer(mean = 0, std = 1e-3)
         
         self.rnn = SelfAttentionRnn(n_features, lstm_dim, lstm_n_layers, lstm_bidirectional, lstm_dropout)
         

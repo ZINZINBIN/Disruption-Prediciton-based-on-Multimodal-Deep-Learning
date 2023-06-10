@@ -1,15 +1,15 @@
-'''Generate video data code
-- raw_video_path : path for video data 
-- video_shot_list_path : path for shot list corresponding to video with thermal quench time
-- ts_data_path : path for shot list with numerical dataset(=plasma parameter)
-- fps : frame per second, default = 210
-- distance : time-step posterior to current state
-- duration : time-duration used for prediction
-- gap : frame gap
+'''
+    Generate video data from .api to .png in each folder
+    In the original code, we have to split each data as folder
+    but it is not efficient since we have to do experiment with different prediction time
+    So, we only split the data as folder with respect to the shot number
+    - raw_video_path : path for video data 
+    - df_shot_list_path : path for dataframe with video shot number and thermal quench time
+    - fps : frame per second, default = 210
 '''
 import cv2, os
 import numpy as np
-import pandas as pd
+import pandas as pd 
 import argparse
 from functools import partial
 from tqdm.auto import tqdm
@@ -20,47 +20,20 @@ parser = argparse.ArgumentParser(description="generate dataset from raw video + 
 
 # video setting : fps, duration, distance and gap
 parser.add_argument("--fps", type = int, default = 210)
-parser.add_argument("--duration", type = int, default = 21) # duration * fps(=210) = seq_len(or frame length)
-parser.add_argument("--distance", type = int, default = 0) # prediction length
-parser.add_argument("--gap", type = int, default = int(0.1 * 207))
 
 # path for data + shot list
 parser.add_argument("--raw_video_path", type = str, default = "./dataset/raw_videos/raw_videos/")
-parser.add_argument("--video_shot_list_path", type = str, default = "./dataset/KSTAR_Disruption_Shot_List_extend.csv")
-parser.add_argument("--ts_data_path", type = str, default = "./dataset/KSTAR_Disruption_ts_data_extend.csv")
+parser.add_argument("--df_shot_list_path", type = str, default = "./dataset/KSTAR_Disruption_Shot_List_extend.csv")
 
 # path for saving result(=dataset)
-parser.add_argument("--save_path", type = str, default = "./dataset/")
+parser.add_argument("--save_path", type = str, default = "./dataset/temp")
+
+# video parameter
+parser.add_argument("--width", type = int, default = 256)
+parser.add_argument("--height", type = int, default = 256)
+parser.add_argument("--overwrite", type = bool, default = True)
 
 args = vars(parser.parse_args())
-
-fps = args["fps"]
-duration = args["duration"]
-distance = args["distance"]
-gap = args["gap"]
-
-raw_video_path = args["raw_video_path"]
-video_shot_list_path = args['video_shot_list_path']
-ts_data_path = args['ts_data_path']
-
-save_path = args["save_path"]
-
-def select_shot_list(
-    video_data : pd.DataFrame,
-    ts_data : pd.DataFrame 
-    ):
-
-    video_shot_list = video_data.shot.values
-    ts_shot_list = np.unique(ts_data.shot.values)
-
-    shot_list = []
-
-    for shot in tqdm(ts_shot_list, desc = "select common shot list between video and numerical dataset"):
-        if shot in video_shot_list:
-            shot_list.append(shot)
-        else:
-            pass
-    return shot_list
 
 def frame_calculator(time, fps=210, gap=0):
     frame_time = 1./fps
@@ -68,50 +41,31 @@ def frame_calculator(time, fps=210, gap=0):
     frame_num = frame_num + gap
     return round(frame_num)
 
-def check_directory(save_path : str):
+def check_directory(save_path : str, shot_num : int):
     # save path 
-    save_path = save_path + "dur{}_dis{}/".format(duration, distance)
+    save_path = os.path.join(save_path, str(shot_num))
+    
     if os.path.isdir(save_path) == False :
         os.mkdir(save_path)
 
-    dis_path = save_path + "disruption/"
-    nom_path = save_path + "normal/"
-
-    if os.path.isdir(dis_path) == False :
-        os.mkdir(dis_path)
-    if os.path.isdir(nom_path) == False :
-        os.mkdir(nom_path)
-
-def make_dataset(
-    shot_num : int, 
-    fps : int, 
-    gap : int, 
-    duration : int, # duration frame
-    distance : int, # distance frame
+def make_folder(
+    shot_num : int,  
     raw_videos_path : str, 
     save_path : str,
-    video_data : pd.DataFrame, # video shot list with thermal quench time
+    width : int,
+    height : int,
+    overwrite : bool
     ):
-
-    video_df = video_data[video_data.shot == shot_num]
-
-    # thermal quench를 기준으로 disruption 시점을 정의
-    tftsrt = video_df['tftsrt'].apply(frame_calculator, fps = fps, gap = gap).values.item()
-
-    # tTQend_frame = video_df['tTQend'].apply(frame_calculator, fps = fps, gap = gap).values.item()
-    # dis_frame = tTQend_frame - distance
-    tipminf_frame = video_df['frame_tipminf'].values.item()
-    cutoff_frame = video_df['frame_cutoff'].values.item()
-
-    dis_frame = tipminf_frame - distance
-
-    # dis_frame에 정수배로 duration 간격에 따라 데이터셋을 구축하기 위해 start_frame을 조정
-    start_frame = dis_frame % duration
-
-    save_path = save_path + "dur{}_dis{}/".format(duration, distance)
-    dis_path = save_path + "disruption/"
-    nom_path = save_path + "normal/"
-
+    
+    ''' argument
+        - raw_videos_path : directory for .avi data
+        - save_path : directory for saving .png file
+        - shot_num : plasma operation shot number
+        - width : resize width
+        - height : resize height
+    '''
+    
+    # path for video data
     video_shot = "%06dtv01.avi"%shot_num
     video_path = raw_videos_path + video_shot
     is_flip = False
@@ -120,89 +74,60 @@ def make_dataset(
         video_shot = "%06dtv02.avi"%shot_num
         video_path = raw_videos_path + video_shot
         is_flip = True
-
-    if os.path.isfile(video_path) :
-        cap = cv2.VideoCapture(video_path)
-        frame_rate = int(round(cap.get(cv2.CAP_PROP_FPS)))
-        w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        vn = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         
-        name, exe = video_shot.split('.')
+    # check the directory for saving video data
+    if os.path.isfile(video_path):
+        check_directory(save_path, shot_num)
+    else:
+        return
+    
+    save_path = os.path.join(save_path, str(shot_num))
+    
+    # convert video file to image in the directory
+    if os.path.isfile(video_path):
+        capture = cv2.VideoCapture(video_path)
+        frame_rate = int(round(capture.get(cv2.CAP_PROP_FPS)))
+
+        frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
+        frame_width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+        frame_height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
         
-        fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        if not overwrite and os.path.isdir(save_path):
+            return
 
-        frame_num = 0
-        disruption_bool = False
-        save_start = True
-        out = None
+        count = 0
+        retaining = True
 
-        while cap.isOpened():
-            ret, frame = cap.read()
-            
-            if not ret:
-                break
+        while(count < frame_count and retaining):
+            retaining, frame = capture.read()
 
-            if frame_num < tftsrt:
-                pass
-            else:
-                if save_start and (frame_num - start_frame)%duration == 0:
-                    save_video = "{}_{}_{}.".format(shot_num, frame_num, frame_num+duration) + exe
-                    out = cv2.VideoWriter(nom_path+save_video, fourcc, fps, (w, h))
-                    save_start = False
-                else:
-                    # disruption phase
-                    if frame_num + duration == dis_frame: 
-                        out.release()
-                        save_video = "{}_{}_{}.".format(shot_num,frame_num, frame_num+duration) + exe
-                        out = cv2.VideoWriter(dis_path+save_video, fourcc, fps, (w, h))
-                        disruption_bool= True
+            if frame is None:
+                frame = np.zeros((width, height))
 
-                    # normal phase
-                    elif (frame_num - start_frame)%duration == 0 and frame_num != start_frame: 
-                        if disruption_bool :
-                            break
-                        else:
-                            out.release()
-                            save_video = "{}_{}_{}.".format(shot_num, frame_num, frame_num+duration) +exe
-                            out = cv2.VideoWriter(nom_path+save_video, fourcc, fps, (w, h))
-                        
-                    if is_flip:
-                        frame = cv2.flip(frame, 1)
-
-                    if out:
-                        out.write(frame)
-                
-            frame_num+=1
-
-        try :
-            cap.release()
-            out.release()
-        except Exception as err:
-            print("{} err: {}".format(shot_num, err))
+            if frame_height != height or frame_width != width:
+                frame = cv2.resize(frame, (width, height), cv2.INTER_CUBIC)
+  
+            cv2.imwrite(filename = os.path.join(save_path, '%06d.jpg'%count), img = frame)
+            count += 1
+        
+        capture.release()   
 
 
 if __name__ == "__main__":
+    
+    fps = args["fps"]
+    raw_video_path = args["raw_video_path"]
+    video_shot_list_path = args['df_shot_list_path']
+    save_path = args["save_path"]
+    width = args['width']
+    height = args['height']
+    overwrite = args['overwrite']
 
     # video shot list
     video_shot_df = pd.read_csv(video_shot_list_path, encoding = "euc-kr")
-
-    # N_index = video_shot_df['Isdata'][video_shot_df['Isdata'] == 'N'].index
-    # video_shot_df = video_shot_df.drop(N_index)
-
     video_shot_df.reset_index(drop = True, inplace = True)
-
-    # shot info list
-    ts_shot_df = pd.read_csv(ts_data_path)
-
-    # choose data columns (time series data)
-    # ts_cols = ts_shot_df.columns[ts_shot_df.notna().any()].drop(['Unnamed: 0','shot','time']).tolist()
-
-    # check directory
-    check_directory(save_path)
-
-    # select shot list
-    shot_list = select_shot_list(video_shot_df, ts_shot_df)
+    
+    shot_list = video_shot_df.shot.values
 
     # multi-processing for video - numerical dataset preparation
     n_procs = cpu_count()
@@ -210,14 +135,12 @@ if __name__ == "__main__":
     pool = Pool(processes=n_procs)
 
     make_data_per_proc = partial(
-        make_dataset, 
-        fps = fps, 
-        gap = gap, 
-        duration = duration,
-        distance = distance, 
+        make_folder, 
         raw_videos_path = raw_video_path, 
         save_path = save_path,
-        video_data = video_shot_df,
+        width = width,
+        height = height,
+        overwrite = overwrite
     )
 
     with tqdm(total=len(shot_list)) as pbar:
@@ -227,4 +150,4 @@ if __name__ == "__main__":
     pool.close()
     pool.join()
 
-    print("######## generate data with multiprocessing complete....! ########")
+    print("######## process done ########")

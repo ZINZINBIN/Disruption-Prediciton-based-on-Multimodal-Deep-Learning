@@ -55,8 +55,8 @@ class Config():
     
     # input features for 0D network
     input_features = [
-        '\\q95', '\\ipmhd', '\\kappa', '\\tritop', '\\tribot',
-        '\\betap','\\li', '\\WTOT_DLM03', '\\ne_inter01', '\\ne_nG_ratio',
+        '\\q95', '\\ipmhd', '\\kappa', '\\tritop', '\\tribot', '\\rsurf', '\\aminor',
+        '\\betap','\\li', '\\WTOT_DLM03', '\\ne_inter01', '\\ne_nG_ratio','\\VCM03',
         '\\TS_NE_CORE_AVG', '\\TS_TE_CORE_AVG', '\\TS_TE_EDGE_AVG', '\\TS_NE_EDGE_AVG',
     ]
     
@@ -80,5 +80,7 @@ class Config():
         '\\ne_nG_ratio' : 'NG ratio',
         '\\DLM03': 'DLM03',
         '\\RC03' : 'RC03',
-        '\\VCM03' : 'VCM03'
+        '\\VCM03' : 'VCM03',
+        '\\rsurf' : 'Rc', 
+        '\\aminor' : 'a',
     }

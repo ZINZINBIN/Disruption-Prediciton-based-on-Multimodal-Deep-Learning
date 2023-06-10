@@ -3,7 +3,7 @@ import torch.nn as nn
 import numpy as np
 import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader
-from sklearn.decomposition import PCA
+from sklearn.decomposition import PCA, IncrementalPCA
 from sklearn.manifold import TSNE
 from typing import Literal
 from tqdm.auto import tqdm
@@ -36,7 +36,7 @@ def visualize_2D_latent_space(model : nn.Module, dataloader : DataLoader, device
     print("Dimension reduction process : start | latent vector : ({}, {})".format(total_latent.shape[0], total_latent.shape[1]))
     if method == 'PCA':
         # using PCA
-        pca = PCA(n_components=2, random_state=42)
+        pca = IncrementalPCA(n_components=2)
         total_latent = pca.fit_transform(total_latent)
     else:
         # using t-SNE
@@ -90,7 +90,7 @@ def visualize_2D_decision_boundary(model : nn.Module, dataloader : DataLoader, d
     print("Dimension reduction process : start | latent vector : ({}, {})".format(total_latent.shape[0], total_latent.shape[1]))
     if method == 'PCA':
         # using PCA
-        pca = PCA(n_components=2, random_state=42)
+        pca = IncrementalPCA(n_components=2)
         total_latent = pca.fit_transform(total_latent)
     else:
         # using t-SNE
@@ -154,7 +154,7 @@ def visualize_3D_latent_space(model : nn.Module, dataloader : DataLoader, device
     print("Dimension reduction process : start | latent vector : ({}, {})".format(total_latent.shape[0], total_latent.shape[1]))
     if method == 'PCA':
         # using PCA
-        pca = PCA(n_components=3, random_state=42)
+        pca = IncrementalPCA(n_components=3)
         total_latent = pca.fit_transform(total_latent)
     else:
         # using t-SNE
@@ -215,9 +215,9 @@ def visualize_3D_latent_space_multi(model : nn.Module, dataloader : DataLoader, 
     print("Dimension reduction process : start | latent vector : ({}, {})".format(total_latent_fusion.shape[0], total_latent_fusion.shape[1]))
     if method == 'PCA':
         # using PCA
-        pca_fusion = PCA(n_components=3, random_state=42)
-        pca_vis = PCA(n_components=3, random_state=42)
-        pca_0D = PCA(n_components=3, random_state=42)
+        pca_fusion = IncrementalPCA(n_components=3)
+        pca_vis = IncrementalPCA(n_components=3)
+        pca_0D = IncrementalPCA(n_components=3)
         
         total_latent_fusion = pca_fusion.fit_transform(total_latent_fusion)
         total_latent_vis = pca_vis.fit_transform(total_latent_vis)
