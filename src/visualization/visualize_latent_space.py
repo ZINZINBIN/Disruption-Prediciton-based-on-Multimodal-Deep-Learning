@@ -238,15 +238,15 @@ def visualize_3D_latent_space_multi(model : nn.Module, dataloader : DataLoader, 
     dis_idx = np.where(total_label == 0)
     normal_idx = np.where(total_label == 1)
         
-    fig = plt.figure(figsize = (18,6))
-    
+    fig = plt.figure(figsize = (18,8))
     ax = fig.add_subplot(1, 3, 1, projection='3d')
+    
     ax.scatter(total_latent_fusion[dis_idx,0], total_latent_fusion[dis_idx,1], total_latent_fusion[dis_idx,2], c = color[0], label = label[0])
     ax.scatter(total_latent_fusion[normal_idx,0], total_latent_fusion[normal_idx,1], total_latent_fusion[normal_idx,2], c = color[1], label = label[1])
     ax.set_xlabel('z-0')
     ax.set_ylabel('z-1')
     ax.set_zlabel('z-2')
-    ax.set_title("Fusion Network Embedding")
+    ax.set_title("Embedded space for video + 0D data")
     ax.legend()
     
     ax = fig.add_subplot(1, 3, 2, projection='3d')
@@ -255,7 +255,7 @@ def visualize_3D_latent_space_multi(model : nn.Module, dataloader : DataLoader, 
     ax.set_xlabel('z-0')
     ax.set_ylabel('z-1')
     ax.set_zlabel('z-2')
-    ax.set_title("Video Data Embedding")
+    ax.set_title("Embedded space for video data")
     ax.legend()
     
     ax = fig.add_subplot(1, 3, 3, projection='3d')
@@ -264,9 +264,8 @@ def visualize_3D_latent_space_multi(model : nn.Module, dataloader : DataLoader, 
     ax.set_xlabel('z-0')
     ax.set_ylabel('z-1')
     ax.set_zlabel('z-2')
-    ax.set_title("0D data Embedding")
+    ax.set_title("Embedded space for 0D data")
     ax.legend()
     
     fig.tight_layout()
-    
     plt.savefig(save_dir)

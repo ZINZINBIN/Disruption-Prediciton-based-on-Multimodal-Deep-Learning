@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 import argparse
-from src.dataset import DatasetForVideo2
+from src.dataset import DatasetForVideo
 from torch.utils.data import DataLoader
 from src.utils.utility import preparing_video_dataset
 from src.visualization.visualize_latent_space import visualize_2D_latent_space, visualize_3D_latent_space
@@ -82,9 +82,9 @@ if __name__ == "__main__":
     shot_train, shot_valid, shot_test = preparing_video_dataset(root_dir)
     df_disrupt = pd.read_csv("./dataset/KSTAR_Disruption_Shot_List_extend.csv")
     
-    train_data = DatasetForVideo2(shot_train, df_disrupt, augmentation = False, augmentation_args=None, crop_size = args['image_size'], seq_len = args['seq_len'], dist = args['dist'])
-    valid_data = DatasetForVideo2(shot_valid, df_disrupt, augmentation = False, augmentation_args=None, crop_size = args['image_size'], seq_len = args['seq_len'], dist = args['dist'])
-    test_data = DatasetForVideo2(shot_test, df_disrupt, augmentation = False, augmentation_args=None, crop_size = args['image_size'], seq_len = args['seq_len'], dist = args['dist'])
+    train_data = DatasetForVideo(shot_train, df_disrupt, augmentation = False, augmentation_args=None, crop_size = args['image_size'], seq_len = args['seq_len'], dist = args['dist'])
+    valid_data = DatasetForVideo(shot_valid, df_disrupt, augmentation = False, augmentation_args=None, crop_size = args['image_size'], seq_len = args['seq_len'], dist = args['dist'])
+    test_data = DatasetForVideo(shot_test, df_disrupt, augmentation = False, augmentation_args=None, crop_size = args['image_size'], seq_len = args['seq_len'], dist = args['dist'])
     
     print("train data : {}, disrupt : {}, non-disrupt : {}".format(train_data.__len__(), train_data.n_disrupt, train_data.n_normal))
     print("valid data : {}, disrupt : {}, non-disrupt : {}".format(valid_data.__len__(), valid_data.n_disrupt, valid_data.n_normal))

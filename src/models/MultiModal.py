@@ -19,19 +19,23 @@ class MultiModalModel(nn.Module):
         self.encoder_0D = TransformerEncoder(**args_0D)
         linear_input_dims = self.encoder_0D.feature_dims + self.encoder_video.dim
         
-        self.classifier = nn.Sequential(
+        self.connector = nn.Sequential(
             nn.Linear(linear_input_dims, linear_input_dims // 2),
-            nn.BatchNorm1d(linear_input_dims // 2),
+            nn.ReLU()
+        )
+        
+        self.classifier = nn.Sequential(
+            nn.Linear(linear_input_dims//2, linear_input_dims // 2),
+            nn.LayerNorm(linear_input_dims // 2),
             nn.ReLU(),
             nn.Linear(linear_input_dims // 2, n_classes)
         )
         
     def forward(self, x_video : torch.Tensor, x_0D : torch.Tensor):
         x_video = self.encoder_video(x_video)
-        # x_video = x_video.mean(dim = 1) if self.encoder_video.pool == 'mean' else x_video[:, 0]
         x_0D = self.encoder_0D(x_0D)
-        
         x = torch.cat([x_video, x_0D], axis = 1)
+        x = self.connector(x)
         output = self.classifier(x)
         return output
     
@@ -40,12 +44,13 @@ class MultiModalModel(nn.Module):
             h_vis = self.encoder_video(x_vis)
             h_0D = self.encoder_0D(x_0D)
             h_concat = torch.cat([h_vis, h_0D], axis = 1)
+            h_concat = self.connector(h_concat)
             
         return (h_concat, h_vis, h_0D)
     
     def summary(self, device : str = 'cpu', show_input : bool = True, show_hierarchical : bool = False, print_summary : bool = True, show_parent_layers : bool = False):
-        sample_video = torch.zeros((8,  self.args_video["in_channels"], self.args_video["n_frames"], self.args_video["image_size"], self.args_video["image_size"]), device = device)
-        sample_0D = torch.zeros((8, self.seq_len, self.args_0D["n_features"]), device = device)
+        sample_video = torch.zeros((1,  self.args_video["in_channels"], self.args_video["n_frames"], self.args_video["image_size"], self.args_video["image_size"]), device = device)
+        sample_0D = torch.zeros((1, self.seq_len, self.args_0D["n_features"]), device = device)
         return summary(self, sample_video, sample_0D, show_input = show_input, show_hierarchical=show_hierarchical, print_summary = print_summary, show_parent_layers=show_parent_layers)
 
 # MultiModal Network for GradientBlending
@@ -60,9 +65,14 @@ class MultiModalModel_GB(nn.Module):
         self.ts_model = Transformer(**args_0D)   
         linear_input_dims = self.ts_model.feature_dims + self.vis_model.dim
         
-        self.classifier = nn.Sequential(
+        self.connector = nn.Sequential(
             nn.Linear(linear_input_dims, linear_input_dims // 2),
-            nn.BatchNorm1d(linear_input_dims // 2),
+            nn.ReLU()
+        )
+        
+        self.classifier = nn.Sequential(
+            nn.Linear(linear_input_dims // 2, linear_input_dims // 2),
+            nn.LayerNorm(linear_input_dims // 2),
             nn.ReLU(),
             nn.Linear(linear_input_dims // 2, n_classes)
         )
@@ -136,6 +146,7 @@ class MultiModalModel_GB(nn.Module):
             vis_latent = self.vis_latent[0]
             ts_latent = self.ts_latent[0]
             x = torch.cat([vis_latent, ts_latent], axis = 1)
+            x = self.connector(x)
             out_multi = self.classifier(x)
     
             return out_multi if self.use_stream == 'multi' else (out_multi, out_vis, out_ts)
@@ -148,14 +159,13 @@ class MultiModalModel_GB(nn.Module):
             vis_latent = self.vis_latent[0]
             ts_latent = self.ts_latent[0]
             x = torch.cat([vis_latent, ts_latent], axis = 1)
+            x = self.connector(x)
             
         return (x, vis_latent, ts_latent)
             
     def summary(self, device : str = 'cpu', show_input : bool = True, show_hierarchical : bool = False, print_summary : bool = True, show_parent_layers : bool = False):
-        sample_video = torch.zeros((8,  self.args_video["in_channels"], self.args_video["n_frames"], self.args_video["image_size"], self.args_video["image_size"]), device = device)
-        # sample_0D = torch.zeros((8, self.args_0D["seq_len"], self.args_0D["col_dim"]), device = device)
-        
-        sample_0D = torch.zeros((8, self.args_0D["max_len"], self.args_0D["n_features"]), device = device)
+        sample_video = torch.zeros((1,  self.args_video["in_channels"], self.args_video["n_frames"], self.args_video["image_size"], self.args_video["image_size"]), device = device)
+        sample_0D = torch.zeros((1, self.args_0D["max_len"], self.args_0D["n_features"]), device = device)
         return summary(self, sample_video, sample_0D, show_input = show_input, show_hierarchical=show_hierarchical, print_summary = print_summary, show_parent_layers=show_parent_layers)
 
 # Tensor Fusion Network

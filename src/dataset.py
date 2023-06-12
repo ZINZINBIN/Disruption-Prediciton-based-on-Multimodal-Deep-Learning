@@ -702,18 +702,22 @@ class MultiModalDataset2(Dataset):
             tftsrt_frame = df_disrupt[df_disrupt.shot == shot_num]['frame_startup'].values.item()
             
             t_disrupt = tipminf - dist * self.dt
-            dis_frame = tipmin_frame - dist 
+            dis_frame = tipmin_frame - dist - seq_len * tau
             
-            res = min(len(df_shot) - len(df_shot[df_shot.time > t_disrupt]), self.seq_len * self.tau)
+            if dis_frame < self.seq_len * self.tau:
+                continue
+            
+            if max(df_shot.time.values) < t_disrupt:
+                continue
             
             # indices for video and ts data per shot
             # video indices
-            video_indices = [i for i in reversed(range(dis_frame - res, tftsrt_frame, -tau*seq_len//3))]
+            video_indices = [i for i in reversed(range(dis_frame, tftsrt_frame, -tau*seq_len//3))]
             
             # ts indices
-            ts_idx_last = len(df_shot) - len(df_shot[df_shot.time > t_disrupt])
+            ts_idx_last = len(df_shot) - len(df_shot[df_shot.time > t_disrupt]) - seq_len * tau
             ts_idx_start = int(tftsrt * self.dt)
-            ts_indices = [i for i in reversed(range(ts_idx_last - res, ts_idx_start, -tau*seq_len//3))]
+            ts_indices = [i for i in reversed(range(ts_idx_last, ts_idx_start, -tau*seq_len//3))]
             
             # video path per shot
             video_path = sorted(glob2.glob(os.path.join(shot_dir, "*")))
@@ -740,14 +744,14 @@ class MultiModalDataset2(Dataset):
                 # with tau
                 self.video_file_path.append(video_path[idx + tau*seq_len + 1:idx+1:-tau][::-1])
                 
-                if idx >= dis_frame - tau * self.seq_len - tau * self.seq_len // 6:
+                if idx >= dis_frame - tau * self.seq_len // 6:
                     self.labels.append(0)
                 else:
                     self.labels.append(1)
                     
             self.shot_num.extend([shot_num for _ in range(len(video_indices))])
             
-        print("# check | video data : {}, 0D data : {}".format(len(self.video_file_path), len(self.ts_data_indices)))
+        print("# check | video data : {}, 0D data : {} | # of shot : {}".format(len(self.video_file_path), len(self.ts_data_indices), len(self.shot_num)))
         self.n_disrupt = np.sum(np.array(self.labels)==0)
         self.n_normal = np.sum(np.array(self.labels)==1)
 

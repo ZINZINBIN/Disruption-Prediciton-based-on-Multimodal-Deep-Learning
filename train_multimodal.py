@@ -214,8 +214,6 @@ if __name__ == "__main__":
     
     if args['use_GB']:
         tag = "{}_clip_{}_dist_{}_{}_{}_GB_seed_{}".format(args["tag"], args["seq_len"], args["dist"], loss_type, boost_type, args['random_seed'])
-        # temp # 
-        tag = "{}_clip_{}_dist_{}_{}_{}_GB".format(args["tag"], args["seq_len"], args["dist"], loss_type, boost_type)
     else:
         tag = "{}_clip_{}_dist_{}_{}_{}_seed_{}".format(args["tag"], args["seq_len"], args["dist"], loss_type, boost_type, args['random_seed'])
     
@@ -454,7 +452,6 @@ if __name__ == "__main__":
     # plot the learning curve
     save_learning_curve = os.path.join(save_dir, "{}_lr_curve.png".format(tag))
     plot_learning_curve(train_loss, valid_loss, train_f1, valid_f1, figsize = (12,6), save_dir = save_learning_curve)
-    
     
     # evaluation process
     print("\n====================== evaluation process ======================\n")

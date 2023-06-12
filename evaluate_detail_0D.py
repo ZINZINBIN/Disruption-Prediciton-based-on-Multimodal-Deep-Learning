@@ -7,7 +7,7 @@ from src.dataset import DatasetFor0D
 from torch.utils.data import DataLoader
 from src.utils.utility import preparing_0D_dataset
 from src.evaluate import evaluate_detail
-from src.models.ts_transformer import TStransformer
+from src.models.transformer import Transformer
 from src.feature_importance import compute_permute_feature_importance
 from src.loss import FocalLoss
 
@@ -89,7 +89,7 @@ if __name__ == "__main__":
     print("test data : {}, disrupt : {}, non-disrupt : {}".format(test_data.__len__(), test_data.n_disrupt, test_data.n_normal))
     
     # define model
-    model = TStransformer(
+    model = Transformer(
         n_features=len(ts_cols),
         feature_dims = args['feature_dims'],
         max_len = args['seq_len'],
