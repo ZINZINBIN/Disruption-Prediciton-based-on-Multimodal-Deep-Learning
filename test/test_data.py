@@ -2,7 +2,7 @@ import pytest, torch
 import glob2, os, random
 import pandas as pd
 import numpy as np
-from src.dataset import DatasetForVideo2, DatasetFor0D, MultiModalDataset2
+from src.dataset import DatasetForVideo, DatasetFor0D, MultiModalDataset2
 from src.utils.sampler import ImbalancedDatasetSampler
 from sklearn.preprocessing import RobustScaler
 
@@ -65,7 +65,7 @@ def test_data_check():
     df_disrupt = pd.read_csv("./dataset/KSTAR_Disruption_Shot_List_extend.csv")
     
     # test for specific case : dist 3 and seq len 21, no augmentation
-    data = DatasetForVideo2(shot_list, df_disrupt, augmentation = False, augmentation_args=None, crop_size = 128, seq_len = 20, dist = 3)
+    data = DatasetForVideo(shot_list, df_disrupt, augmentation = False, augmentation_args=None, crop_size = 128, seq_len = 20, dist = 3)
     
     # label distribution for LDAM / Focal Loss
     data.get_num_per_cls()

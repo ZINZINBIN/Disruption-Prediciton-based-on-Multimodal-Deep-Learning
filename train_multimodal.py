@@ -27,7 +27,7 @@ def parsing():
     
     # tag and result directory
     parser.add_argument("--tag", type = str, default = "Multi-Modal")
-    parser.add_argument("--model", type = str, default = 'CONCAT', choices=['CONCAT', 'TFN'])
+    parser.add_argument("--model", type = str, default = 'concat', choices=['concat', 'TFN'])
     parser.add_argument("--save_dir", type = str, default = "./results")
     
     # test shot for disruption probability curve
@@ -39,6 +39,7 @@ def parsing():
     # data input shape 
     parser.add_argument("--image_size", type = int, default = 128)
     parser.add_argument("--patch_size", type = int, default = 16)
+    parser.add_argument("--tau", type = int, default = 2)
 
     # common argument
     # batch size / sequence length / epochs / distance / num workers / pin memory use
@@ -75,7 +76,7 @@ def parsing():
     
     # early stopping
     parser.add_argument('--early_stopping', type = bool, default = True)
-    parser.add_argument("--early_stopping_patience", type = int, default = 40)
+    parser.add_argument("--early_stopping_patience", type = int, default = 64)
     parser.add_argument("--early_stopping_verbose", type = bool, default = True)
     parser.add_argument("--early_stopping_delta", type = float, default = 1e-3)
     
@@ -109,7 +110,7 @@ def parsing():
     parser.add_argument("--focal_gamma", type = float, default = 2.0)
     
     # monitoring the training process
-    parser.add_argument("--verbose", type = int, default = 4)
+    parser.add_argument("--verbose", type = int, default = 16)
     
     # model setup
     # Vision model
@@ -160,7 +161,7 @@ if __name__ == "__main__":
         "dim": args['dim'], 
         "depth" : args['depth'], 
         "n_heads" : args['n_heads'], 
-        "pool" : 'cls', 
+        "pool" : 'mean', 
         "in_channels" : 3, 
         "d_head" : args['d_head'], 
         "dropout" : args['dropout'],
@@ -211,6 +212,11 @@ if __name__ == "__main__":
         boost_type = "DRW"
     elif not args['use_sampling'] and not args['use_weighting'] and not args['use_DRW']:
         boost_type = "Normal"
+        
+    if args['model'] =='TFN':
+        args['tag'] = "{}_TFN".format(args['tag'])
+    else:
+        args['tag'] = "{}_concat".format(args['tag'])
     
     if args['use_GB']:
         tag = "{}_clip_{}_dist_{}_{}_{}_GB_seed_{}".format(args["tag"], args["seq_len"], args["dist"], loss_type, boost_type, args['random_seed'])
@@ -252,9 +258,9 @@ if __name__ == "__main__":
     (shot_train, ts_train), (shot_valid, ts_valid), (shot_test, ts_test), scaler = preparing_multi_data(root_dir, ts_filepath, ts_cols, scaler = 'Robust', test_shot = args['test_shot_num'])
     kstar_shot_list = pd.read_csv('./dataset/KSTAR_Disruption_Shot_List_extend.csv', encoding = "euc-kr")
 
-    train_data = MultiModalDataset2(shot_train, kstar_shot_list, ts_train, ts_cols, augmentation=True, augmentation_args=augment_args, crop_size=args['image_size'], seq_len = args['seq_len'], dist = args['dist'], dt = 1 / 210, scaler = scaler, tau = 4)
-    valid_data = MultiModalDataset2(shot_valid, kstar_shot_list, ts_valid, ts_cols, augmentation=False, augmentation_args=None, crop_size=args['image_size'], seq_len = args['seq_len'], dist = args['dist'], dt = 1 / 210, scaler = scaler, tau = 4)
-    test_data = MultiModalDataset2(shot_test, kstar_shot_list, ts_test, ts_cols, augmentation=False, augmentation_args=None, crop_size=args['image_size'], seq_len = args['seq_len'], dist = args['dist'], dt = 1 / 210, scaler = scaler, tau = 4)
+    train_data = MultiModalDataset2(shot_train, kstar_shot_list, ts_train, ts_cols, augmentation=True, augmentation_args=augment_args, crop_size=args['image_size'], seq_len = args['seq_len'], dist = args['dist'], dt = 1 / 210, scaler = scaler, tau = args['tau'])
+    valid_data = MultiModalDataset2(shot_valid, kstar_shot_list, ts_valid, ts_cols, augmentation=False, augmentation_args=None, crop_size=args['image_size'], seq_len = args['seq_len'], dist = args['dist'], dt = 1 / 210, scaler = scaler, tau = args['tau'])
+    test_data = MultiModalDataset2(shot_test, kstar_shot_list, ts_test, ts_cols, augmentation=False, augmentation_args=None, crop_size=args['image_size'], seq_len = args['seq_len'], dist = args['dist'], dt = 1 / 210, scaler = scaler, tau = args['tau'])
 
     print("================= Dataset information =================")
     print("train data : {}, disrupt : {}, non-disrupt : {}".format(train_data.__len__(), train_data.n_disrupt, train_data.n_normal))
@@ -272,7 +278,7 @@ if __name__ == "__main__":
                 args_video,
                 args_0D
             )
-        elif args['model'] == 'CONCAT':
+        elif args['model'] == 'concat':
             model = MultiModalModel_GB(
                 2,
                 args_video,
@@ -285,10 +291,10 @@ if __name__ == "__main__":
                 args_video,
                 args_0D
             )
-        elif args['model'] == 'CONCAT':
+            
+        elif args['model'] == 'concat':
             model = MultiModalModel(
                 2,
-                args['seq_len'],
                 args_video,
                 args_0D
             )
@@ -398,7 +404,7 @@ if __name__ == "__main__":
             save_best_dir,
             save_last_dir,
             exp_dir,
-            1.0,
+            5.0,
             "f1_score",
             test_for_check_per_epoch=test_loader
         )
@@ -416,7 +422,7 @@ if __name__ == "__main__":
             save_best_dir = save_best_dir,
             save_last_dir = save_last_dir,
             exp_dir = exp_dir,
-            max_norm_grad = 1.0,
+            max_norm_grad = 5.0,
             betas = betas,
             cls_num_list = cls_num_list,
             model_type = "multi",
@@ -440,7 +446,7 @@ if __name__ == "__main__":
             save_best_dir = save_best_dir,
             save_last_dir = save_last_dir,
             exp_dir = exp_dir,
-            max_norm_grad = 1.0,
+            max_norm_grad = 5.0,
             model_type = "multi",
             test_for_check_per_epoch=test_loader,
             is_early_stopping = args['early_stopping'],

@@ -877,7 +877,7 @@ def generate_prob_curve(
     
     # Te-edge
     ax_te_edge = fig.add_subplot(gs[2,2])
-    ax_te_edge.plot(t, betap, label = 'Te-edge')
+    ax_te_edge.plot(t, te_edge, label = 'Te-edge')
     ax_te_edge.text(0.85, 0.8, "Te-edge", transform = ax_te_edge.transAxes)
     ax_te_edge.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
     ax_te_edge.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
@@ -1095,7 +1095,7 @@ def generate_prob_curve_from_0D(
     
     # Te-edge
     ax_te_edge = fig.add_subplot(gs[2,2])
-    ax_te_edge.plot(t, betap, label = 'Te-edge')
+    ax_te_edge.plot(t, te_edge, label = 'Te-edge')
     ax_te_edge.text(0.85, 0.8, "Te-edge", transform = ax_te_edge.transAxes)
     ax_te_edge.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
     ax_te_edge.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")
@@ -1327,7 +1327,7 @@ def generate_prob_curve_from_multi(
     
     # Te-edge
     ax_te_edge = fig.add_subplot(gs[2,2])
-    ax_te_edge.plot(t, betap, label = 'Te-edge')
+    ax_te_edge.plot(t, te_edge, label = 'Te-edge')
     ax_te_edge.text(0.85, 0.8, "Te-edge", transform = ax_te_edge.transAxes)
     ax_te_edge.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
     ax_te_edge.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")

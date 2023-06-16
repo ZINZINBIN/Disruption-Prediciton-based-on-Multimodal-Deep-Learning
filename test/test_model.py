@@ -14,11 +14,11 @@ import glob2, os, random
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import RobustScaler
-from src.dataset import DatasetForVideo2, DatasetFor0D, MultiModalDataset2
+from src.dataset import DatasetForVideo, DatasetFor0D, MultiModalDataset2
 from src.models.R2Plus1D import R2Plus1DClassifier
 from src.models.slowfast import SlowFast
 from src.models.ViViT import ViViT
-from src.models.ts_transformer import TStransformer
+from src.models.transformer import Transformer
 from src.models.CnnLSTM import CnnLSTM
 from src.utils.sampler import ImbalancedDatasetSampler
 from src.loss import LDAMLoss, FocalLoss
@@ -56,7 +56,7 @@ def test_vision_model(test_device):
     df_disrupt = pd.read_csv("./dataset/KSTAR_Disruption_Shot_List_extend.csv")
     
     # test for specific case : dist 3 and seq len 21, no augmentation
-    data = DatasetForVideo2(shot_list, df_disrupt, augmentation = False, augmentation_args=None, crop_size = 128, seq_len = 20, dist = 3)
+    data = DatasetForVideo(shot_list, df_disrupt, augmentation = False, augmentation_args=None, crop_size = 128, seq_len = 20, dist = 3)
     
     # label distribution for LDAM / Focal Loss
     data.get_num_per_cls()
@@ -215,12 +215,12 @@ def test_ts_model(test_device):
     loss_Focal = FocalLoss(weight = per_cls_weights, gamma = 2.0)
     loss_CE = torch.nn.CrossEntropyLoss(reduction = "mean", weight = per_cls_weights)
     
-    model_cases = ["TStransformer"]
+    model_cases = ["Transformer"]
     
     for case in model_cases:
         
-        if case == "TStransformer":
-            model = TStransformer(
+        if case == "Transformer":
+            model = Transformer(
                 n_features=len(ts_cols),
                 feature_dims = 128,
                 max_len = 21,

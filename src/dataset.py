@@ -667,11 +667,29 @@ class MultiModalDataset2(Dataset):
                 shot_ignore.append(shot)
                 break
             
+            is_null = False
+            
+            # 1st filter : null check
             for c in null_check:
                 if c > 0.5 * len(df_shot):
                     shot_ignore.append(shot)
+                    is_null = True
                     break
-        
+            
+            if is_null:
+                continue
+            
+            # 2nd filter : measurement error
+            for col in self.ts_cols:
+                if np.sum(df_shot[col] == 0) > 0.5 * len(df_shot):
+                    shot_ignore.append(shot)
+                    break
+
+                # constant value
+                if df_shot[col].max() - df_shot[col].min() < 1e-3:
+                    shot_ignore.append(shot)
+                    break
+            
         shot_list_tmp = []
         shot_dir_list_tmp = []
         for shot, shot_dir in zip(self.shot_list, self.shot_dir_list):
@@ -712,11 +730,11 @@ class MultiModalDataset2(Dataset):
             
             # indices for video and ts data per shot
             # video indices
-            video_indices = [i for i in reversed(range(dis_frame, tftsrt_frame, -tau*seq_len//3))]
+            video_indices = [i for i in range(dis_frame, tftsrt_frame, -tau*seq_len//3)]
             
             # ts indices
             ts_idx_last = len(df_shot) - len(df_shot[df_shot.time > t_disrupt]) - seq_len * tau
-            ts_idx_start = int(tftsrt * self.dt)
+            ts_idx_start = int(tftsrt / self.dt)
             ts_indices = [i for i in reversed(range(ts_idx_last, ts_idx_start, -tau*seq_len//3))]
             
             # video path per shot
@@ -742,7 +760,7 @@ class MultiModalDataset2(Dataset):
             # video indices
             for idx in video_indices:
                 # with tau
-                self.video_file_path.append(video_path[idx + tau*seq_len + 1:idx+1:-tau][::-1])
+                self.video_file_path.append(video_path[idx+tau*seq_len+1:idx+1:-tau][::-1])
                 
                 if idx >= dis_frame - tau * self.seq_len // 6:
                     self.labels.append(0)

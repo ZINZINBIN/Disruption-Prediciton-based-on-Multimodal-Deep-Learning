@@ -1,4 +1,5 @@
 from src.models.MultiModal import MultiModalModel, MultiModalModel_GB
+from src.config import Config
 from torch.utils.data import DataLoader
 import os, torch
 
@@ -6,12 +7,9 @@ if(torch.cuda.device_count() >= 1):
     device = "cuda:0"
 else:
     device = 'cpu'
-    
-ts_cols = [
-    '\\q95', '\\ipmhd', '\\kappa', '\\tritop', '\\tribot',
-    '\\betap','\\betan','\\li', '\\WTOT_DLM03', '\\ne_inter01', 
-    '\\TS_NE_CORE_AVG', '\\TS_TE_CORE_AVG'
-]
+
+config = Config()
+ts_cols = config.input_features
 
 args_video = {
     "image_size" : 128, 
@@ -40,7 +38,6 @@ args_0D = {
 
 model = MultiModalModel(
     2,
-    21,
     args_video,
     args_0D
 )

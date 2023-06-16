@@ -10,7 +10,7 @@ from copy import deepcopy
 
 # Dataset and Dataloader
 from torch.utils.data import DataLoader, RandomSampler
-from src.dataset import DatasetForVideo2, DatasetFor0D
+from src.dataset import DatasetForVideo, DatasetFor0D
 from src.utils.sampler import ImbalancedDatasetSampler
 from src.utils.utility import preparing_video_dataset, preparing_0D_dataset, seed_everything
 
@@ -27,7 +27,7 @@ from src.models.resnet import Bottleneck3D
 from src.models.slowfast import SlowFast
 
 # 0D Network
-from src.models.ts_transformer import TStransformer
+from src.models.transformer import Transformer
 from src.models.CnnLSTM import CnnLSTM
 from src.models.MLSTM_FCN import MLSTM_FCN
 
@@ -106,7 +106,7 @@ def parsing():
         
     # imbalanced dataset processing
     # Re-sampling
-    parser.add_argument("--use_sampling", type = bool, default = True)
+    parser.add_argument("--use_sampling", type = bool, default = False)
     
     # Re-weighting
     parser.add_argument("--use_weighting", type = bool, default = False)
@@ -126,7 +126,7 @@ def parsing():
     parser.add_argument("--focal_gamma", type = float, default = 2.0)
     
     # monitoring the training process
-    parser.add_argument("--verbose", type = int, default = 4)
+    parser.add_argument("--verbose", type = int, default = 16)
     
     args = vars(parser.parse_args())
 
@@ -225,11 +225,10 @@ if args["model"] in ["R2Plus1D", "SlowFast", "ViViT"]:
     shot_train, shot_valid, shot_test = preparing_video_dataset(root_dir)
     df_disrupt = pd.read_csv("./dataset/KSTAR_Disruption_Shot_List_extend.csv")
     
-    train_data = DatasetForVideo2(shot_train, df_disrupt, augmentation = True, augmentation_args=augment_args, crop_size = args['image_size'], seq_len = args['seq_len'], dist = args['dist'])
-    valid_data = DatasetForVideo2(shot_valid, df_disrupt, augmentation = False, augmentation_args=augment_args, crop_size = args['image_size'], seq_len = args['seq_len'], dist = args['dist'])
-    test_data = DatasetForVideo2(shot_test, df_disrupt, augmentation = False, augmentation_args=augment_args, crop_size = args['image_size'], seq_len = args['seq_len'], dist = args['dist'])
+    train_data = DatasetForVideo(shot_train, df_disrupt, augmentation = True, augmentation_args=augment_args, crop_size = args['image_size'], seq_len = args['seq_len'], dist = args['dist'])
+    valid_data = DatasetForVideo(shot_valid, df_disrupt, augmentation = False, augmentation_args=augment_args, crop_size = args['image_size'], seq_len = args['seq_len'], dist = args['dist'])
+    test_data = DatasetForVideo(shot_test, df_disrupt, augmentation = False, augmentation_args=augment_args, crop_size = args['image_size'], seq_len = args['seq_len'], dist = args['dist'])
 
-    
 elif args["model"] in ["Transformer","CnnLSTM","MLSTM_FCN"]:
     ts_train, ts_valid, ts_test, ts_scaler = preparing_0D_dataset("./dataset/KSTAR_Disruption_ts_data_extend.csv", ts_cols = ts_cols, scaler = 'Robust')
     kstar_shot_list = pd.read_csv('./dataset/KSTAR_Disruption_Shot_List.csv', encoding = "euc-kr")
@@ -321,8 +320,9 @@ def load_model(model_argument:Dict):
             pretrained = False, 
             alpha = model_argument['alpha']
         )
+        
     elif args['model'] == 'Transformer':
-        model = TStransformer(
+        model = Transformer(
             n_features=len(ts_cols),
             feature_dims = model_argument['feature_dims'],
             max_len = args['seq_len'],
@@ -363,7 +363,7 @@ def load_model(model_argument:Dict):
             alpha = model_argument['alpha'],
             n_classes = 2
         )
-        
+       
     return model
 
 def train_for_hpo(
@@ -479,10 +479,10 @@ if __name__ == "__main__":
     elif args['model'] == 'Transformer':
         model_argument = {
             'feature_dims':tune.sample_from(lambda _: 2**np.random.randint(6,9)),
-            'n_layers':tune.choice([2,4,6]),
+            'n_layers':tune.choice([2,4,6,8]),
             'n_heads':tune.choice([2,4,8]),
             'dim_feedforward':tune.sample_from(lambda _: 2**np.random.randint(7,10)),
-            'dropout':tune.loguniform(1e-2, 5e-1),
+            'dropout':tune.loguniform(1e-2, 2e-1),
             'cls_dims':tune.sample_from(lambda _: 2**np.random.randint(6,8)),
         }
         
