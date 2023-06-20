@@ -90,7 +90,7 @@
 ## Enviornment
 <p>The code was developed using python 3.9 on Ubuntu 18.04</p>
 <p>The GPU used : NVIDIA GeForce RTX 3090 24GB x 4</p>
-<p>The resources for training networks were given by <a href = "http://fusma.snu.ac.kr/plare/" target = "_blank">PLARE</a> in Seoul National University</p>
+<p>The resources for training networks were provided by <a href = "http://fusma.snu.ac.kr/plare/" target = "_blank">PLARE</a> in Seoul National University</p>
 
 ## How to Run
 ### setting
