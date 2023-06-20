@@ -2,16 +2,14 @@
 import torch
 import os
 import numpy as np
+from src.config import Config
 from src.models.ViViT import ViViT
 from src.models.transformer import Transformer
 from src.visualization.visualize_application import generate_real_time_experiment, video2img, VideoDataset, generate_real_time_experiment_0D
 
-ts_cols = [
-    '\\q95', '\\ipmhd', '\\kappa', '\\tritop', '\\tribot',
-    '\\betap','\\betan','\\li', '\\WTOT_DLM03','\\ne_inter01', 
-    '\\TS_NE_CORE_AVG', '\\TS_TE_CORE_AVG'
-]
 
+config = Config()
+ts_cols = config.input_features
 
 args = {
     "seq_len" : 21,

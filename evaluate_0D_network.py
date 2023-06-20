@@ -4,53 +4,21 @@ import numpy as np
 import pandas as pd
 import argparse
 from src.dataset import DatasetFor0D
-from torch.utils.data import DataLoader, RandomSampler
-from src.utils.sampler import ImbalancedDatasetSampler
-from src.utils.utility import preparing_0D_dataset, plot_learning_curve, generate_prob_curve_from_0D, seed_everything
+from torch.utils.data import DataLoader
+from src.utils.utility import preparing_0D_dataset,generate_prob_curve_from_0D, seed_everything
 from src.visualization.visualize_latent_space import visualize_2D_latent_space, visualize_3D_latent_space
 from src.visualization.visualize_application import generate_real_time_experiment_0D
-from src.train import train, train_DRW
-from src.evaluate import evaluate
-from src.loss import FocalLoss, LDAMLoss, CELoss
+from src.evaluate import evaluate, evaluate_detail
+from src.config import Config
 from src.models.transformer import Transformer
 from src.models.CnnLSTM import CnnLSTM
 from src.models.MLSTM_FCN import MLSTM_FCN
 from src.feature_importance import compute_permute_feature_importance
-from src.config import Config
-
-# columns for use
-# ip error : target - measure value
-# ne_inter03 : nan value 
-# ne_tci01 : since 2018, minus(shot : 21272)
-# 2018년도 샷은 ne가 이상해서 쓰지 않는 것 추천 / 확인해볼 것
-# shot 31356 -> abrupt disruption, 다른 진단이 필요하다, LM
-# shot 31243 -> abrupt disruption, 
-# shot 31676 -> 
-# warning region : ~ 400ms? 정도로 확대해서 disruption prediction 해보자
-# flag2 : no train, no valid (20%, 240)
-
-# Heaing factor, EC, NBI
-# shot list 확장 + prediction region(warning time ~ 400ms)
-# abrupt disruption shot 
-
-# input_shape : [Batch, sequence lenth, ]
-
-'''
-Te = [x1,x2,x3,x4,x5, .... , x50]
-   = [0,0,0,0,...,100,120,...,100,0,0,0,]
-
-Idea : core value or specific position (r = 1.8대비 r = 1.5 등), shot마다 다른지 확인
-* edge : error가 높아서 좋지 않음(accuracy bad)
-* lock mode : ikstar 참조, work/disruption/machinelearning/database/data, LM
-* lock mode에 대한 numbering도 포함
-* DB : 32, lock mode error
-'''
-
-config = Config()
+from src.loss import FocalLoss, LDAMLoss, CELoss
 
 # argument parser
 def parsing():
-    parser = argparse.ArgumentParser(description="training disruption prediction model with 0D data")
+    parser = argparse.ArgumentParser(description="Experiment for ViViT model")
     
     # random seed
     parser.add_argument("--random_seed", type = int, default = 42)
@@ -65,31 +33,7 @@ def parsing():
 
     # gpu allocation
     parser.add_argument("--gpu_num", type = int, default = 0)
-
-    # batch size / sequence length / epochs / distance / num workers / pin memory use
-    parser.add_argument("--batch_size", type = int, default = 256)
-    parser.add_argument("--num_epoch", type = int, default = 128)
-    parser.add_argument("--seq_len", type = int, default = 21)
-    parser.add_argument("--dist", type = int, default = 3)
-    parser.add_argument("--num_workers", type = int, default = 4)
-    parser.add_argument("--pin_memory", type = bool, default = True)
     
-    # optimizer : SGD, RMSProps, Adam, AdamW
-    parser.add_argument("--optimizer", type = str, default = "AdamW", choices=["SGD","RMSProps","Adam","AdamW"])
-    
-    # learning rate, step size and decay constant
-    parser.add_argument("--lr", type = float, default = 2e-4)
-    parser.add_argument("--use_scheduler", type = bool, default = True)
-    parser.add_argument("--step_size", type = int, default = 4)
-    parser.add_argument("--gamma", type = float, default = 0.995)
-    
-    # early stopping
-    parser.add_argument('--early_stopping', type = bool, default = True)
-    parser.add_argument("--early_stopping_patience", type = int, default = 32)
-    parser.add_argument("--early_stopping_verbose", type = bool, default = True)
-    parser.add_argument("--early_stopping_delta", type = float, default = 1e-3)
-
-    # imbalanced dataset processing
     # Re-sampling
     parser.add_argument("--use_sampling", type = bool, default = False)
     
@@ -98,21 +42,18 @@ def parsing():
     
     # Deffered Re-weighting
     parser.add_argument("--use_DRW", type = bool, default = False)
-    parser.add_argument("--beta", type = float, default = 0.25)
 
     # loss type : CE, Focal, LDAM
     parser.add_argument("--loss_type", type = str, default = "Focal", choices = ['CE','Focal', 'LDAM'])
-    
-    # LDAM Loss parameter
-    parser.add_argument("--max_m", type = float, default = 0.5)
-    parser.add_argument("--s", type = float, default = 1.0)
-    
-    # Focal Loss parameter
-    parser.add_argument("--focal_gamma", type = float, default = 2.0)
-    
-    # monitoring the training process
-    parser.add_argument("--verbose", type = int, default = 4)
-    
+
+    # common argument
+    # batch size / sequence length / epochs / distance / num workers / pin memory use
+    parser.add_argument("--batch_size", type = int, default = 128)
+    parser.add_argument("--seq_len", type = int, default = 21)
+    parser.add_argument("--dist", type = int, default = 3)
+    parser.add_argument("--num_workers", type = int, default = 8)
+    parser.add_argument("--pin_memory", type = bool, default = False)
+
     # model setup : transformer
     parser.add_argument("--alpha", type = float, default = 0.01)
     parser.add_argument("--dropout", type = float, default = 0.1)
@@ -134,13 +75,12 @@ def parsing():
     # model setup : MLSTM_FCN
     parser.add_argument("--fcn_dim", type = int, default = 128)
     parser.add_argument("--reduction", type = int, default = 16)
-    
     args = vars(parser.parse_args())
 
     return args
 
 # torch device state
-print("================= device setup =================")
+print("############### device setup ###################")
 print("torch device avaliable : ", torch.cuda.is_available())
 print("torch current device : ", torch.cuda.current_device())
 print("torch device num : ", torch.cuda.device_count())
@@ -148,7 +88,6 @@ print("torch device num : ", torch.cuda.device_count())
 # torch cuda initialize and clear cache
 torch.cuda.init()
 torch.cuda.empty_cache()
-
 
 if __name__ == "__main__":
 
@@ -190,17 +129,17 @@ if __name__ == "__main__":
     
     save_best_dir = "./weights/{}_best.pt".format(tag)
     save_last_dir = "./weights/{}_last.pt".format(tag)
-    exp_dir = os.path.join("./runs/", "tensorboard_{}".format(tag))
     
-    # input features
-    ts_cols = config.input_features
- 
     # device allocation
     if(torch.cuda.device_count() >= 1):
         device = "cuda:" + str(args["gpu_num"])
     else:
         device = 'cpu'
         
+    # columns for use
+    config = Config()
+    ts_cols = config.input_features
+    
     # dataset setup
     ts_train, ts_valid, ts_test, ts_scaler = preparing_0D_dataset("./dataset/KSTAR_Disruption_ts_data_extend.csv", ts_cols = ts_cols, scaler = 'Robust', test_shot = args['test_shot_num'])
     kstar_shot_list = pd.read_csv('./dataset/KSTAR_Disruption_Shot_List.csv', encoding = "euc-kr")
@@ -267,48 +206,13 @@ if __name__ == "__main__":
     print("\n==================== model summary ====================\n")
     model.summary()
     model.to(device)
-
-    # optimizer
-    if args["optimizer"] == "SGD":
-        optimizer = torch.optim.SGD(model.parameters(), lr = args['lr'])
-    elif args["optimizer"] == "RMSProps":
-        optimizer = torch.optim.RMSprop(model.parameters(), lr = args['lr'])
-    elif args["optimizer"] == "Adam":
-        optimizer = torch.optim.Adam(model.parameters(), lr = args['lr'])
-    elif args["optimizer"] == "AdamW":
-        optimizer = torch.optim.AdamW(model.parameters(), lr = args['lr'])
-    else:
-        optimizer = torch.optim.AdamW(model.parameters(), lr = args['lr'])
-        
-    # scheduler
-    if args["use_scheduler"] and not args["use_DRW"]:    
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size = args['step_size'], gamma=args['gamma'])
-        
-    elif args["use_DRW"]:
-        scheduler = "DRW"
-        
-    else:
-        scheduler = None
-        
-    # Re-sampling
-    if args["use_sampling"]:
-        train_sampler = ImbalancedDatasetSampler(train_data)
-        valid_sampler = RandomSampler(valid_data)
-        test_sampler = RandomSampler(test_data)
-
-    else:
-        train_sampler = RandomSampler(train_data)
-        valid_sampler = RandomSampler(valid_data)
-        test_sampler = RandomSampler(test_data)
-        
-    # Samplers for visualization of embedding space
-    train_sampler_vis = ImbalancedDatasetSampler(train_data)
-    test_sampler_vis = ImbalancedDatasetSampler(test_data)
     
-    train_loader = DataLoader(train_data, batch_size = args['batch_size'], sampler=train_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"], drop_last = True)
-    valid_loader = DataLoader(valid_data, batch_size = args['batch_size'], sampler=valid_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"], drop_last = True)
-    test_loader = DataLoader(test_data, batch_size = args['batch_size'], sampler=test_sampler, num_workers = args["num_workers"], pin_memory=args["pin_memory"], drop_last = True)
+    train_loader = DataLoader(train_data, batch_size = args['batch_size'], sampler=None, num_workers = args["num_workers"], pin_memory=args["pin_memory"], drop_last = True)
+    valid_loader = DataLoader(valid_data, batch_size = args['batch_size'], sampler=None, num_workers = args["num_workers"], pin_memory=args["pin_memory"], drop_last = True)
+    test_loader = DataLoader(test_data, batch_size = args['batch_size'], sampler=None, num_workers = args["num_workers"], pin_memory=args["pin_memory"], drop_last = True)
 
+    model.load_state_dict(torch.load(save_best_dir))
+    
     # Re-weighting
     if args['use_weighting']:
         per_cls_weights = 1.0 / np.array(cls_num_list)
@@ -335,77 +239,22 @@ if __name__ == "__main__":
         betas = [0, args['beta'], args['beta'] * 2, args['beta']*3]
         loss_fn = CELoss(weight = per_cls_weights)
 
-    # training process
-    print("\n======================= training process =======================\n")
-    if args['use_DRW']:
-        train_loss,  train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train_DRW(
-            train_loader,
-            valid_loader,
-            model,
-            optimizer,
-            loss_fn,
-            device,
-            args['num_epoch'],
-            args['verbose'],
-            save_best_dir = save_best_dir,
-            save_last_dir = save_last_dir,
-            exp_dir = exp_dir,
-            max_norm_grad = 1.0,
-            betas = betas,
-            cls_num_list = cls_num_list,
-            model_type = "single",
-            test_for_check_per_epoch=test_loader,
-            is_early_stopping = args['early_stopping'],
-            early_stopping_verbose = args['early_stopping_verbose'],
-            early_stopping_patience = args['early_stopping_patience'],
-            early_stopping_delta = args['early_stopping_delta']
-        )
-        
-    else:
-        train_loss,  train_acc, train_f1, valid_loss, valid_acc, valid_f1 = train(
-            train_loader,
-            valid_loader,
-            model,
-            optimizer,
-            scheduler,
-            loss_fn,
-            device,
-            args['num_epoch'],
-            args['verbose'],
-            save_best_dir = save_best_dir,
-            save_last_dir = save_last_dir,
-            exp_dir = exp_dir,
-            max_norm_grad = 1.0,
-            model_type = "single",
-            test_for_check_per_epoch=test_loader,
-            is_early_stopping = args['early_stopping'],
-            early_stopping_verbose = args['early_stopping_verbose'],
-            early_stopping_patience = args['early_stopping_patience'],
-            early_stopping_delta = args['early_stopping_delta']
-        )
-    
-    # plot the learning curve
-    save_learning_curve = os.path.join(save_dir, "{}_lr_curve.png".format(tag))
-    plot_learning_curve(train_loss, valid_loss, train_f1, valid_f1, figsize = (12,6), save_dir = save_learning_curve)
-    
     # evaluation process
     print("\n====================== evaluation process ======================\n")
-    model.load_state_dict(torch.load(save_best_dir))
-    
     save_conf = os.path.join(save_dir, "{}_test_confusion.png".format(tag))
     save_txt = os.path.join(save_dir, "{}_test_eval.txt".format(tag))
     
     test_loss, test_acc, test_f1 = evaluate(
         test_loader,
         model,
-        optimizer,
+        None,
         loss_fn,
         device,
         save_conf = save_conf,
         save_txt = save_txt
     )
-    
-    # compute the feature importance of the variables
+
+     # compute the feature importance of the variables
     print("\n====================== Feature Importance ======================\n")
     compute_permute_feature_importance(
         model,
@@ -420,11 +269,6 @@ if __name__ == "__main__":
     
     # Additional analyzation
     print("\n====================== Visualization process ======================\n")
-    
-    # reset the sampler
-    train_loader = DataLoader(train_data, batch_size = 128, sampler=train_sampler_vis, num_workers = args["num_workers"], pin_memory=args["pin_memory"], drop_last=True)
-    test_loader = DataLoader(test_data, batch_size = 128, sampler=test_sampler_vis, num_workers = args["num_workers"], pin_memory=args["pin_memory"], drop_last=True)
-    
     try:
         visualize_2D_latent_space(
             model, 
@@ -484,4 +328,18 @@ if __name__ == "__main__":
         dist = args['dist'],
         dt = 4 / 210,
         scaler = ts_scaler
+    )
+    
+    # evaluate with shot comparison
+    print("\n================== Detail evaluation for each experiment ==================\n")
+    save_csv = os.path.join(save_dir, "{}_total_score.csv".format(tag))
+    evaluate_detail(
+        train_loader,
+        valid_loader,
+        test_loader,
+        model,
+        device,
+        save_csv,
+        tag,
+        model_type = 'single'
     )

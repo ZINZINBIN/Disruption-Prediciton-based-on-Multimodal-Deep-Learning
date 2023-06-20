@@ -4,7 +4,7 @@ import numpy as np
 import argparse
 import copy, os
 from torch.utils.data import DataLoader
-from src.dataset import MultiModalDataset2
+from src.dataset import MultiModalDataset
 from src.utils.sampler import ImbalancedDatasetSampler
 from src.utils.utility import preparing_multi_data, plot_learning_curve, seed_everything, generate_prob_curve_from_multi
 from src.train import train, train_DRW
@@ -39,7 +39,7 @@ def parsing():
     # data input shape 
     parser.add_argument("--image_size", type = int, default = 128)
     parser.add_argument("--patch_size", type = int, default = 16)
-    parser.add_argument("--tau", type = int, default = 2)
+    parser.add_argument("--tau", type = int, default = 1)
 
     # common argument
     # batch size / sequence length / epochs / distance / num workers / pin memory use
@@ -76,7 +76,7 @@ def parsing():
     
     # early stopping
     parser.add_argument('--early_stopping', type = bool, default = True)
-    parser.add_argument("--early_stopping_patience", type = int, default = 64)
+    parser.add_argument("--early_stopping_patience", type = int, default = 32)
     parser.add_argument("--early_stopping_verbose", type = bool, default = True)
     parser.add_argument("--early_stopping_delta", type = float, default = 1e-3)
     
@@ -258,9 +258,9 @@ if __name__ == "__main__":
     (shot_train, ts_train), (shot_valid, ts_valid), (shot_test, ts_test), scaler = preparing_multi_data(root_dir, ts_filepath, ts_cols, scaler = 'Robust', test_shot = args['test_shot_num'])
     kstar_shot_list = pd.read_csv('./dataset/KSTAR_Disruption_Shot_List_extend.csv', encoding = "euc-kr")
 
-    train_data = MultiModalDataset2(shot_train, kstar_shot_list, ts_train, ts_cols, augmentation=True, augmentation_args=augment_args, crop_size=args['image_size'], seq_len = args['seq_len'], dist = args['dist'], dt = 1 / 210, scaler = scaler, tau = args['tau'])
-    valid_data = MultiModalDataset2(shot_valid, kstar_shot_list, ts_valid, ts_cols, augmentation=False, augmentation_args=None, crop_size=args['image_size'], seq_len = args['seq_len'], dist = args['dist'], dt = 1 / 210, scaler = scaler, tau = args['tau'])
-    test_data = MultiModalDataset2(shot_test, kstar_shot_list, ts_test, ts_cols, augmentation=False, augmentation_args=None, crop_size=args['image_size'], seq_len = args['seq_len'], dist = args['dist'], dt = 1 / 210, scaler = scaler, tau = args['tau'])
+    train_data = MultiModalDataset(shot_train, kstar_shot_list, ts_train, ts_cols, augmentation=True, augmentation_args=augment_args, crop_size=args['image_size'], seq_len = args['seq_len'], dist = args['dist'], dt = 1 / 210, scaler = scaler, tau = args['tau'])
+    valid_data = MultiModalDataset(shot_valid, kstar_shot_list, ts_valid, ts_cols, augmentation=False, augmentation_args=None, crop_size=args['image_size'], seq_len = args['seq_len'], dist = args['dist'], dt = 1 / 210, scaler = scaler, tau = args['tau'])
+    test_data = MultiModalDataset(shot_test, kstar_shot_list, ts_test, ts_cols, augmentation=False, augmentation_args=None, crop_size=args['image_size'], seq_len = args['seq_len'], dist = args['dist'], dt = 1 / 210, scaler = scaler, tau = args['tau'])
 
     print("================= Dataset information =================")
     print("train data : {}, disrupt : {}, non-disrupt : {}".format(train_data.__len__(), train_data.n_disrupt, train_data.n_normal))
@@ -321,7 +321,6 @@ if __name__ == "__main__":
         
     elif args["use_DRW"]:
         scheduler = "DRW"
-        
     else:
         scheduler = None
         
@@ -468,28 +467,19 @@ if __name__ == "__main__":
     
     if args['use_GB']:
         model_type = "multi-GB"
-        test_loss, test_acc, test_f1 = evaluate(
-            test_loader,
-            model,
-            optimizer,
-            loss_fn_gb,
-            device,
-            save_conf = save_conf,
-            save_txt = save_txt,
-            model_type = model_type
-        )
     else:
         model_type = "multi"
-        test_loss, test_acc, test_f1 = evaluate(
-            test_loader,
-            model,
-            optimizer,
-            loss_fn,
-            device,
-            save_conf = save_conf,
-            save_txt = save_txt,
-            model_type = model_type
-        )
+    
+    test_loss, test_acc, test_f1 = evaluate(
+        test_loader,
+        model,
+        optimizer,
+        loss_fn,
+        device,
+        save_conf = save_conf,
+        save_txt = save_txt,
+        model_type = model_type
+    )
     
     # Additional analyzation
     print("\n====================== Visualization process ======================\n")
@@ -537,5 +527,6 @@ if __name__ == "__main__":
         ts_seq_len = args['seq_len'],
         dist = args['dist'],
         dt = 1 / 210,
-        scaler = scaler
+        scaler = scaler,
+        tau = args['tau']
     )

@@ -46,5 +46,4 @@ model.to(device)
 
 from src.utils.utility import measure_computation_time_multi
 t_avg, t_std, t_measures = measure_computation_time_multi(model, input_shape_vis = (1, 3, 21, 128, 128), input_shape_0D = (1,21,12), n_samples = 16, device = device)
-
 print("t_avg : {:.3f}, t_std : {:.3f}".format(t_avg, t_std))

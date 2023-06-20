@@ -174,7 +174,7 @@
                                 --use_LDAM {bool : use LDAM loss} --use_GB {bool : use Deferred re-weighting} 
                                 --tag {name of experiment / info} --use_DRW {bool : use Deferred re-weighting} 
                                 --use_RS {bool : use re-sampling} --seq_len {int : input sequence length} 
-                                --pred_len {int : prediction time}
+                                --pred_len {int : prediction time} --tau {int : stride for input sequence}
     ```
 
 ### Experiment

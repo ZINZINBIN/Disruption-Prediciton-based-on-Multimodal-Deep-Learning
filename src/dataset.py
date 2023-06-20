@@ -433,146 +433,6 @@ class DatasetFor0D(Dataset):
 class MultiModalDataset(Dataset):
     def __init__(
         self, 
-        task : Literal["train", "valid", "test"] = "train", 
-        ts_data : Optional[pd.DataFrame] = None,
-        ts_cols : Optional[List] = None,
-        mult_info : Optional[pd.DataFrame] = None,
-        dt : Optional[float] = 1.0 / 210 * 4,
-        distance : Optional[int] = 0,
-        n_fps : Optional[int] = 4,
-        resize_height : Optional[int] = 256,
-        resize_width : Optional[int] = 256,
-        crop_size : Optional[int] = 128,
-        seq_len : int = 21,
-        n_classes : int = 2,
-        ):
-        self.task = task # task : train / valid / test 
-        
-        # resize each frame from video
-        self.resize_height = resize_height
-        self.resize_width = resize_width
-        
-        # crop
-        self.crop_size = crop_size
-        
-        # video sequence length
-        # warning : 0D data and video data should have equal sequence length
-        self.seq_len = seq_len
-        
-        # use for 0D data prediction
-        self.distance = distance # prediction time
-        self.dt = dt # time difference of 0D data
-        self.n_fps = n_fps
-
-        # video_file_path : video file path : {database}/{shot_num}_{frame_start}_{frame_end}.avi
-        # indices : index for tabular data, shot == shot_num, index <- df[df.frame_idx == frame_start].index
-        self.n_classes = n_classes
-
-        self.ts_data = ts_data
-        self.mult_info = mult_info
-        self.ts_cols = ts_cols
-        
-        # select columns for 0D data prediction
-        if ts_cols is None:
-            self.ts_cols = DEFAULT_TS_COLS
-            
-        self.video_file_path = mult_info[mult_info.task == task]["path"].values.tolist()
-        self.labels = [0 if label is True else 1 for label in mult_info[mult_info.task == task].is_disrupt]
-        self.indices = mult_info[mult_info.task == task]["t_start_index"].astype(int).values.tolist()
-
-    def load_frames(self, file_dir : str):
-        frames = sorted([os.path.join(file_dir, img) for img in os.listdir(file_dir)])
-        frame_count = self.seq_len
-        buffer = np.empty((frame_count, self.resize_height, self.resize_width, 3), np.dtype('float32'))
-        
-        for i, frame_name in enumerate(frames[::-1][::self.n_fps][::-1]):
-            frame = np.array(cv2.imread(frame_name)).astype(np.float32)
-            buffer[i] = frame
-    
-        return buffer
-    
-    def __len__(self):
-        return len(self.labels)
-
-    def __getitem__(self, idx : int):
-        data_video = self.get_video_data(idx)
-        data_0D = self.get_tabular_data(idx)
-        data_dict = {
-            "video" : data_video,
-            "0D" : data_0D
-        }
-        label = torch.from_numpy(np.array(self.labels[idx]))
-        return data_dict, label
-
-    def get_video_data(self, index : int):
-        buffer = self.load_frames(self.video_file_path[index])
-        if buffer.shape[0] < self.seq_len:
-            buffer = self.refill_temporal_slide(buffer)
-        buffer = self.crop(buffer, self.seq_len, self.crop_size)
-        buffer = self.normalize(buffer)
-        buffer = self.to_tensor(buffer)
-        return torch.from_numpy(buffer)
-    
-    def get_tabular_data(self, index : int):
-        ts_idx = self.indices[index]
-        data = self.ts_data[self.ts_cols].loc[ts_idx:ts_idx+self.seq_len-1].values
-        return torch.from_numpy(data).float()
-
-    def refill_temporal_slide(self, buffer:np.ndarray):
-        for _ in range(self.seq_len - buffer.shape[0]):
-            frame_new = buffer[-1].reshape(1, self.resize_height, self.resize_width, 3)
-            buffer = np.concatenate((buffer, frame_new))
-        return buffer
-
-    def normalize(self, buffer):
-        for i, frame in enumerate(buffer):
-            frame -= np.array([[[90.0, 98.0, 102.0]]])
-            buffer[i] = frame
-        return buffer
-
-    def to_tensor(self, buffer:Union[np.ndarray, torch.Tensor]):
-        return buffer.transpose((3, 0, 1, 2))
-
-    def crop(self, buffer : Union[np.ndarray, torch.Tensor], clip_len : int, crop_size : int, is_random : bool = False):
-        if buffer.shape[0] < clip_len :
-            time_index = np.random.randint(abs(buffer.shape[0] - clip_len))
-        elif buffer.shape[0] == clip_len :
-            time_index = 0
-        else :
-            time_index = np.random.randint(buffer.shape[0] - clip_len)
-
-        if not is_random:
-            original_height = self.resize_height
-            original_width = self.resize_width
-            mid_x, mid_y = original_height // 2, original_width // 2
-            offset_x, offset_y = crop_size // 2, crop_size // 2
-            buffer = buffer[time_index : time_index + clip_len, mid_x - offset_x:mid_x+offset_x, mid_y - offset_y: mid_y+ offset_y, :]
-        else:
-            height_index = np.random.randint(buffer.shape[1] - crop_size)
-            width_index = np.random.randint(buffer.shape[2] - crop_size)
-
-            buffer = buffer[time_index:time_index + clip_len,
-                    height_index:height_index + crop_size,
-                    width_index:width_index + crop_size, :]
-        return buffer
-
-    def get_num_per_cls(self):
-        classes = np.unique(self.labels)
-        self.num_per_cls_dict = dict()
-
-        for cls in classes:
-            num = np.sum(np.where(self.labels == cls, 1, 0))
-            self.num_per_cls_dict[cls] = num
-         
-    def get_cls_num_list(self):
-        cls_num_list = []
-        for i in range(self.n_classes):
-            cls_num_list.append(self.num_per_cls_dict[i])
-        return cls_num_list
-
-class MultiModalDataset2(Dataset):
-    def __init__(
-        self, 
         shot_dir_list : List,
         df_disrupt : pd.DataFrame, 
         ts_data : pd.DataFrame, 
@@ -728,21 +588,56 @@ class MultiModalDataset2(Dataset):
             if max(df_shot.time.values) < t_disrupt:
                 continue
             
-            # indices for video and ts data per shot
-            # video indices
-            video_indices = [i for i in range(dis_frame, tftsrt_frame, -tau*seq_len//3)]
-            
-            # ts indices
             ts_idx_last = len(df_shot) - len(df_shot[df_shot.time > t_disrupt]) - seq_len * tau
-            ts_idx_start = int(tftsrt / self.dt)
-            ts_indices = [i for i in reversed(range(ts_idx_last, ts_idx_start, -tau*seq_len//3))]
+            ts_idx_start = len(df_shot[df_shot.time < tftsrt])
+
+            ## indices for video and ts data per  : 2022 version
+            ## video indices
+            # video_indices = [i for i in range(dis_frame, tftsrt_frame, -tau*seq_len//3)]
+            
+            ## ts indices
+            # ts_indices = [i for i in range(ts_idx_last, ts_idx_start, -tau*seq_len//3)]
+            
+    
+            # 2023.06.20 : index generation edition
+            # near the disruptive phase, the sampling rate should be higher than other region
+            # original indices : interval = 1
+            video_indices_orig = [i for i in range(dis_frame + dist, tftsrt_frame, -1)]
+            ts_indices_orig = [i for i in range(ts_idx_last + dist, ts_idx_start, -1)]
+            
+            video_indices = []
+            ts_indices = []
+            
+            if len(ts_indices_orig) > len(video_indices_orig):
+                ts_indices_orig = ts_indices_orig[0:len(video_indices_orig)]
+            elif len(ts_indices_orig) < len(video_indices_orig):
+                video_indices_orig = video_indices_orig[0:len(ts_indices_orig)]
+            
+            idx_last = len(ts_indices_orig)
+            idx = 0
+            
+            while(idx < idx_last):
+                video_idx = video_indices_orig[idx]
+                ts_idx = ts_indices_orig[idx]
+                
+                video_indices.append(video_idx)
+                ts_indices.append(ts_idx)
+                
+                if ts_indices_orig[0] - ts_idx <= dist:
+                    idx += 1
+                elif ts_indices_orig[0] - ts_idx > dist and abs(ts_idx - ts_indices_orig[0]) < seq_len * tau:
+                    idx += int(tau * seq_len) // 7
+                elif ts_indices_orig[0] - ts_idx >= seq_len * tau:
+                    idx += int(tau * seq_len) // 3
+                else:
+                   idx += int(tau * seq_len) // 3
             
             # video path per shot
             video_path = sorted(glob2.glob(os.path.join(shot_dir, "*")))
             
             # ts indices
             ts_indices_tmp = []
-            for idx in reversed(ts_indices):
+            for idx in ts_indices:
                 row = df_shot.iloc[idx]
                 t = row['time']
                 
@@ -755,20 +650,20 @@ class MultiModalDataset2(Dataset):
             elif len(ts_indices_tmp) < len(video_indices):
                 video_indices = video_indices[0:len(ts_indices_tmp)]
             
-            self.ts_data_indices.extend(reversed(ts_indices_tmp))
+            self.ts_data_indices.extend(ts_indices_tmp)
             
             # video indices
             for idx in video_indices:
                 # with tau
                 self.video_file_path.append(video_path[idx+tau*seq_len+1:idx+1:-tau][::-1])
                 
-                if idx >= dis_frame - tau * self.seq_len // 6:
+                if idx >= dis_frame - tau * self.seq_len // 7:
                     self.labels.append(0)
                 else:
                     self.labels.append(1)
                     
             self.shot_num.extend([shot_num for _ in range(len(video_indices))])
-            
+        
         print("# check | video data : {}, 0D data : {} | # of shot : {}".format(len(self.video_file_path), len(self.ts_data_indices), len(self.shot_num)))
         self.n_disrupt = np.sum(np.array(self.labels)==0)
         self.n_normal = np.sum(np.array(self.labels)==1)

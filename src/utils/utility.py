@@ -550,10 +550,11 @@ class MultiModalDataset(Dataset):
         vis_seq_len : int = 21, 
         ts_seq_len : int = 21,
         dist:int = 3, 
-        dt : float = 1.0 / 210 * 4,
+        dt:float = 1.0 / 210 * 4,
         scaler : Optional[BaseEstimator] = None,
-        tau_0D : int = 4,
+        tau : int = 4,
         ):
+        
         # properties of multi-modal data
         self.root_dir = root_dir
         self.ts_data = ts_data
@@ -563,6 +564,7 @@ class MultiModalDataset(Dataset):
         self.crop_size = crop_size
         self.vis_seq_len = vis_seq_len
         self.ts_seq_len = ts_seq_len
+        self.tau = tau
         
         self.dist = dist
         self.dt = dt
@@ -617,11 +619,11 @@ class MultiModalDataset(Dataset):
         
         # video file path
         for idx in video_indices:
-            if idx > vis_seq_len:
-                self.video_file_path.append(self.paths[idx + 1 - vis_seq_len: idx + 1])
+            if idx > vis_seq_len * tau:
+                self.video_file_path.append(self.paths[idx + 1 : idx - tau * vis_seq_len + 1 : -tau][::-1])  
 
         for idx in ts_indices:
-            if idx > ts_seq_len:
+            if idx > ts_seq_len * tau:
                 self.ts_indices.append(idx)
 
         if len(self.video_file_path) > len(self.ts_indices):
@@ -697,9 +699,9 @@ class MultiModalDataset(Dataset):
 
     def get_ts_data(self, idx : int):
         idx_end = self.ts_indices[idx]
-        idx_srt = idx_end - self.ts_seq_len
-        data = self.ts_data[self.ts_cols].iloc[idx_srt + 1: idx_end + 1].values
-        data = torch.from_numpy(data)
+        idx_srt = idx_end - self.ts_seq_len * self.tau
+        data = self.ts_data[self.ts_cols].iloc[idx_srt + 1: idx_end + 1].values[::self.tau, :]
+        data = torch.from_numpy(data).float()
         return data
 
 # function for ploting the probability curve for video network
@@ -884,7 +886,7 @@ def generate_prob_curve(
 
     # ne_ng_ratio
     ax_ne_ng = fig.add_subplot(gs[3,2])
-    ax_ne_ng.plot(t, ne, label = 'Greenwald ratio')
+    ax_ne_ng.plot(t, ne_ng_ratio, label = 'Greenwald ratio')
     ax_ne_ng.text(0.85, 0.8, "Greenwald ratio", transform = ax_ne_ng.transAxes)
     ax_ne_ng.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
     ax_ne_ng.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")    
@@ -1102,7 +1104,7 @@ def generate_prob_curve_from_0D(
 
     # ne_ng_ratio
     ax_ne_ng = fig.add_subplot(gs[3,2])
-    ax_ne_ng.plot(t, ne, label = 'Greenwald ratio')
+    ax_ne_ng.plot(t, ne_ng_ratio, label = 'Greenwald ratio')
     ax_ne_ng.text(0.85, 0.8, "Greenwald ratio", transform = ax_ne_ng.transAxes)
     ax_ne_ng.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
     ax_ne_ng.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")    
@@ -1144,6 +1146,7 @@ def generate_prob_curve_from_multi(
     dist : Optional[int] = None,
     dt : Optional[int] = None,
     scaler : Optional[BaseEstimator] = None,
+    tau : int = 1,
     ):
     
     # obtain tTQend, tipmin and tftsrt
@@ -1185,7 +1188,7 @@ def generate_prob_curve_from_multi(
     ne_ng_ratio = ts_data_0D['\\ne_nG_ratio']
     
     # Multi-modal data
-    dataset = MultiModalDataset(file_path, ts_data_0D, ts_cols, 256, 256, 128, frame_srt, frame_end, t_srt, t_end, vis_seq_len, ts_seq_len, dist, dt, scaler)
+    dataset = MultiModalDataset(file_path, ts_data_0D, ts_cols, 256, 256, 128, frame_srt, frame_end, t_srt, t_end, vis_seq_len, ts_seq_len, dist, dt, scaler, tau)
 
     prob_list = []
     is_disruption = []
@@ -1334,7 +1337,7 @@ def generate_prob_curve_from_multi(
 
     # ne_ng_ratio
     ax_ne_ng = fig.add_subplot(gs[3,2])
-    ax_ne_ng.plot(t, ne, label = 'Greenwald ratio')
+    ax_ne_ng.plot(t, ne_ng_ratio, label = 'Greenwald ratio')
     ax_ne_ng.text(0.85, 0.8, "Greenwald ratio", transform = ax_ne_ng.transAxes)
     ax_ne_ng.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed")
     ax_ne_ng.axvline(x = t_current, ymin = 0, ymax = 1, color = "green", linestyle = "dashed")    
