@@ -364,7 +364,7 @@ class DatasetFor0D(Dataset):
                 if idx_last - idx < 0:
                     break
 
-                if t >= tftsrt and t < t_disrupt - self.dt * (self.seq_len + self.dist):
+                if t >= tftsrt and t < t_disrupt - self.dt * (2 * self.seq_len + self.dist):
                     indx = df_shot.index.values[idx]
                     indices.append(indx)
                     labels.append(1)

@@ -6,13 +6,16 @@
     This is github repository of research on disruption predictin using deep learning in KSTAR dataset. In this research, KSTAR IVIS data and 0D parameters are used for predicting disruptions. We obtained plasma image data from IVIS in KSTAR and 0D parameters such as stored energy, beta, plasma current, internal inductance and so on. Additonal information such as ECE data including electron temperature and density are also used. 
 </div>
 <div>
-    <img src="/image/연구_소개_컨셉.PNG"  width="360" height="200">
+    <img src="/image/연구_소개_컨셉.PNG"  width="640" height="320">
 </div>
 <div>
     Unlike other research for disruption predictin using machine learning, we also used video data as an input so to use spatial-temporal information of plasma including time-varying plasma shape and light emission induced by plasma-neutral interaction. This requires neural networks which are generally used for video classification task. 
 </div>
 <div>
-    <img src="/image/연구_소개_08.PNG"  width="256" height="196">
+    <p float = 'left'>
+        <img src="/image/연구_소개_08.PNG"  width="320" height="200">
+        <img src="/image/연구_소개_11.PNG"  width="320" height="200">
+    </p>
 </div>
 <div>
     However, there is imbalance data distribution issue which results from the time scale difference between disruptive phase and plasma operation. Thus, we applied resampling with Focal loss and LDAM loss to handle this problem. We demonstrated that using multimodal data including video and 0D parameters can enhance the precision of the disruption alarms. Moreover, some consistent results can be shown using GradCAM and permutation feature importance, which implies that the networks focus on the near of the core plasma from both image and 0D parameters(Te, Ne in the core of plasma). Several techniques were used for comparing the model performance indirectly. 
@@ -56,7 +59,7 @@
 ### Analysis of the models using visualization of hidden vectors
 <div>
     <p float = "left">
-        <img src="/image/연구_소개_02.PNG"  width="640" height="360">
+        <img src="/image/연구_소개_02.PNG"  width="640" height="320">
     </p>
 </div>
 <div>
@@ -64,10 +67,21 @@
 </div>
 <p></p>
 
+### Analysis of the models using permutation feature importance
+<div>
+    <p float = "left">
+        <img src="/image/연구_소개_12.PNG"  width="640" height="300">
+    </p>
+</div>
+<div>
+    The importance of the 0D parameters can be estimated by permutation feature importance. According to the permuatation feature importance, we can observe that the electron information such as electron density and temperatature from both edge and core is important to predict the disruption. It is quite interesting that the importance of q95 is smaller than other values except kappa. Since KSTAR operations proceed in high q95 region, low q-limit is not considerable than other factors.  
+</div>
+<p></p>
+
 ### Analysis of the models using GradCAM and attention rollout
 <div>
     <p float = 'left'>
-        <img src="/image/연구_소개_03.PNG"  width="640" height="320">
+        <img src="/image/연구_소개_03.PNG"  width="640" height="280">
     </p>
 </div>
 <div>

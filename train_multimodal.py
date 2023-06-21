@@ -458,6 +458,7 @@ if __name__ == "__main__":
     save_learning_curve = os.path.join(save_dir, "{}_lr_curve.png".format(tag))
     plot_learning_curve(train_loss, valid_loss, train_f1, valid_f1, figsize = (12,6), save_dir = save_learning_curve)
     
+    
     # evaluation process
     print("\n====================== evaluation process ======================\n")
     model.load_state_dict(torch.load(save_best_dir))
@@ -509,7 +510,7 @@ if __name__ == "__main__":
         
     except:
         print("{} : visualize 3D latent space doesn't work due to stability error".format(tag))
-        
+    
     # plot the disruption probability curve
     test_shot_num = args['test_shot_num']
 

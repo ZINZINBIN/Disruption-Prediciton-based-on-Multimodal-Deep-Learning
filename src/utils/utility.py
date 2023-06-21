@@ -601,13 +601,13 @@ class MultiModalDataset(Dataset):
             self.ts_data[ts_cols] = self.scaler.transform(self.ts_data[ts_cols].values)
             
         # indice matching process
-        video_indices = [i for i in reversed(range(frame_end, frame_srt, -1))]
+        video_indices = [i for i in reversed(range(frame_end, frame_srt, -tau))]
             
         # ts indices
         ts_idx_end = len(ts_data) - len(ts_data[ts_data.time > t_end])
         ts_idx_start = int(t_srt / self.dt)
         
-        ts_indices = [i for i in reversed(range(ts_idx_end, ts_idx_start, -1))]
+        ts_indices = [i for i in reversed(range(ts_idx_end, ts_idx_start, -tau))]
         
         if len(video_indices) > len(ts_indices):
             video_indices = video_indices[- len(ts_indices):]
@@ -1131,7 +1131,6 @@ def generate_prob_curve_from_0D(
 
     return time_x, prob_list
 
-################ Implemented ##################
 def generate_prob_curve_from_multi(
     file_path : str,
     model : torch.nn.Module, 
@@ -1217,28 +1216,38 @@ def generate_prob_curve_from_multi(
             
     t_srt = dataset.ts_data.iloc[dataset.ts_indices[0]].time.item()
     t_end = dataset.ts_data.iloc[dataset.ts_indices[-1]].time.item()
-    dt_end = 1.0
-            
-    interval = 1
-    fps = 210
     
-    prob_list = [0] * int(t_srt * fps + vis_seq_len + dist) + prob_list + [0] * int(dt_end * fps)
+    dt_end = 1.0
+    interval = tau
+    fps = 210
+
+    total_prob_list = [0] * int(t_srt * fps / interval + dist) + prob_list + [0] * int(dt_end * fps / interval)
     
     # correction for startup peaking effect : we will soon solve this problem
-    for idx, prob in enumerate(prob_list):
+    for idx, prob in enumerate(total_prob_list):
         
-        if idx < fps * 1 and prob >= 0.5:
-            prob_list[idx] = 0
+        if idx < fps * 1.0 / interval and prob >= 0.5:
+            total_prob_list[idx] = 0
             
     from scipy.interpolate import interp1d
     
-    prob_x = np.linspace(0, t_end + dt_end, num = len(prob_list), endpoint = True)
-    prob_y = np.array(prob_list)
+    # there are different time interval between each region
+    x_srt = [i * interval / fps for i in range(0, int(t_srt * fps / interval))]
+    x_dist = [x_srt[-1] + i * 1 / fps for i in range(1, dist + 1)]
+    x_prob_list = [x_dist[-1] + i * 1 / fps * interval for i in range(1, len(prob_list) + int(dt_end * fps / interval) + 1)]
     
-    f_prob = interp1d(prob_x, prob_y, kind = 'cubic')
-    prob_list = f_prob(np.linspace(0, t_end + dt_end, num = len(prob_list) * interval, endpoint = False))
+    # prob_x and prob_y for interpolation
+    prob_x = x_srt + x_dist + x_prob_list
+    prob_x = np.array(prob_x)
+    prob_y = np.array(total_prob_list)
     
-    time_x = np.arange(dist, len(prob_list) + dist) * (1/fps)
+    # interpolation for modifying the time interval
+    f_prob = interp1d(prob_x, prob_y, kind = 'cubic', fill_value = "extrapolate")
+    total_prob_list = f_prob(np.linspace(0, t_end + dt_end, num = len(total_prob_list) * interval, endpoint = True))
+    
+    # For convinent view, - dist added to move the graph left to the x-axis
+    # time_x = np.arange(dist, len(total_prob_list) + dist) * (1/fps)
+    time_x = np.arange(0, len(total_prob_list) + 0) * (1/fps)
     
     print("\n(Info) flat-top : {:.3f}(s) | thermal quench : {:.3f}(s) | current quench : {:.3f}(s)\n".format(tftsrt, tTQend, tipminf))
     
@@ -1346,7 +1355,7 @@ def generate_prob_curve_from_multi(
     # probability
     threshold_line = [0.5] * len(time_x)
     ax2 = fig.add_subplot(gs[:,3])
-    ax2.plot(time_x, prob_list, 'b', label = 'disrupt prob')
+    ax2.plot(time_x, total_prob_list, 'b', label = 'disrupt prob')
     ax2.plot(time_x, threshold_line, 'k', label = "threshold(p = 0.5)")
     ax2.axvline(x = tftsrt, ymin = 0, ymax = 1, color = "black", linestyle = "dashed", label = "flattop (t={:.3f})".format(tftsrt))
     ax2.axvline(x = t_disrupt, ymin = 0, ymax = 1, color = "red", linestyle = "dashed", label = "TQ (t={:.3f})".format(t_disrupt))
