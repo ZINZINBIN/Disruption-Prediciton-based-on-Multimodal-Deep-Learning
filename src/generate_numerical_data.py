@@ -39,12 +39,14 @@ def ts_interpolate(df : pd.DataFrame, df_disruption : pd.DataFrame, dt : float =
     df[config.TS_TE_CORE_COLS] = df[config.TS_TE_CORE_COLS].apply(lambda x : x / (1e3))
     df[config.TS_TE_EDGE_COLS] = df[config.TS_TE_EDGE_COLS].apply(lambda x : x / (1e3))
     
-    
     def _bound(x, value : float = 1e2):
         return x if abs(x) < value else value * x / abs(x)
     
     for col in tompson_cols:
         df[col] = df[col].apply(lambda x : _bound(x, 1e2))
+        
+    # scaling for betap-dlm03
+    df['\\BETAP_DLM03'] = df['\\BETAP_DLM03'].apply(lambda x : _bound(x, 2.0))
     
     # 0D parameters : should be positive
     for col in config.DEFAULT_COLS:
@@ -66,9 +68,9 @@ def ts_interpolate(df : pd.DataFrame, df_disruption : pd.DataFrame, dt : float =
     # RC scaling
     for col in config.RC:
         if col == "\\RC03":
-            df[col] = df[col].apply(lambda x : x / 1e6)
+            df[col] = df[col].apply(lambda x : x / 1e6 * (-1))
         elif col == '\\VCM03':
-            df[col] = df[col].apply(lambda x : x / 1e6)
+            df[col] = df[col].apply(lambda x : x / 1e6 * (-1))
         elif col == '\\RCPPU1' or col == '\\RCPPL1':
             df[col] = df[col].apply(lambda x : x / 1e6)
        
@@ -218,6 +220,10 @@ def ts_interpolate(df : pd.DataFrame, df_disruption : pd.DataFrame, dt : float =
     df_interpolate['\\nG'] = df_interpolate['\\ipmhd'] / math.pi / df_interpolate['\\aminor'] ** 2
     df_interpolate['\\ne_nG_ratio'] = df_interpolate['\\ne_inter01'] / df_interpolate['\\nG'] * 0.1
     
+    # vessel current
+    df_interpolate['\\Iv'] = df_interpolate['\\VCM03'] - df_interpolate['\\RC03']
+    
+    # shot number : integer
     df_interpolate['shot'] = df_interpolate['shot'].astype(int)
     
     # negative value removal
@@ -280,23 +286,27 @@ if __name__ == "__main__":
     
     fps = 210
     
-    # if 0D network only
-    # dt = 1 / fps * 4
+    case = 'multi' # '0D', 'multi'
     
-    # if multi-modal data
-    dt = 1 / fps * 1
-    
+    if case == '0D':
+        # if 0D network only
+        dt = 1 / fps * 4
+    elif case == 'multi':
+        # if multi-modal data
+        dt = 1 / fps * 1
+        
     n_points = 128
     
     df_extend, profile_info = ts_interpolate(df, df_disrupt, dt, n_points)
     df_extend['frame_idx'] = df_extend.time.apply(lambda x : int(round(x * fps)))
     
-    # 0D dataset
-    # df_extend.to_csv("./dataset/KSTAR_Disruption_ts_data_extend.csv", index = False)
-    
-    # multimodal dataset
-    df_extend.to_csv("./dataset/KSTAR_Disruption_ts_data_5ms.csv", index = False)
-    
+    if case == '0D':
+        # 0D dataset
+        df_extend.to_csv("./dataset/KSTAR_Disruption_ts_data_extend.csv", index = False)
+    elif case == 'multi':        
+        # multimodal dataset
+        df_extend.to_csv("./dataset/KSTAR_Disruption_ts_data_5ms.csv", index = False)
+     
     if profile_info is not None:
         np.savez("./dataset/profiles.npz", te = profile_info['te'], ne = profile_info['ne'])
     

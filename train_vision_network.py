@@ -15,6 +15,7 @@ from src.models.ViViT import ViViT
 from src.models.R2Plus1D import R2Plus1DClassifier
 from src.models.resnet import Bottleneck3D
 from src.models.slowfast import SlowFast
+from src.config import Config
 
 # argument parser
 def parsing():
@@ -142,6 +143,9 @@ if __name__ == "__main__":
     
     # save directory
     save_dir = args['save_dir']
+    
+    config = Config()
+    ts_cols = config.input_features
     
     if not os.path.isdir(save_dir):
         os.mkdir(save_dir)
@@ -451,7 +455,7 @@ if __name__ == "__main__":
         
     except:
         print("{} : visualize 3D latent space doesn't work due to stability error".format(tag))
-        
+    
     # plot the disruption probability curve
     test_shot_num = args['test_shot_num']
     print("\n====================== Probability curve generation process ======================\n")
@@ -463,6 +467,7 @@ if __name__ == "__main__":
         save_dir = os.path.join(save_dir, "{}_probs_curve_{}.png".format(tag, test_shot_num)),
         shot_list_dir = "./dataset/KSTAR_Disruption_Shot_List_extend.csv",
         ts_data_dir = "./dataset/KSTAR_Disruption_ts_data_extend.csv",
+        ts_cols = ts_cols,
         shot_num = test_shot_num,
         clip_len = args['seq_len'],
         dist_frame = args['dist'],

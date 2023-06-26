@@ -55,9 +55,9 @@ class Config():
     
     # input features for 0D network
     input_features = [
-        '\\q95', '\\ipmhd', '\\kappa', '\\tritop', '\\tribot', '\\rsurf', '\\aminor',
-        '\\betap','\\li', '\\WTOT_DLM03', '\\ne_inter01', '\\ne_nG_ratio','\\VCM03',
-        '\\TS_NE_CORE_AVG', '\\TS_TE_CORE_AVG', '\\TS_TE_EDGE_AVG', '\\TS_NE_EDGE_AVG',
+        '\\q95', '\\RC03', '\\kappa', '\\tritop', '\\tribot', '\\rsurf', '\\aminor',
+        '\\BETAP_DLM03','\\li', '\\WTOT_DLM03', '\\ne_inter01', '\\ne_nG_ratio','\\Iv',
+        '\\TS_NE_CORE_AVG', '\\TS_TE_CORE_AVG', '\\TS_TE_EDGE_AVG', '\\TS_NE_EDGE_AVG', '\\bcentr'
     ]
     
     # permutation feature importance
@@ -67,11 +67,11 @@ class Config():
         '\\kappa':'kappa', 
         '\\tritop': 'tri-top', 
         '\\tribot': 'tri-bot',
-        '\\betap': 'betap',
+        '\\BETAP_DLM03': 'betap',
         '\\betan': 'betan',
         '\\li': 'li',  
         '\\WTOT_DLM03':'W-tot',
-        '\\ne_inter01' : 'Ne-avg', 
+        '\\ne_inter01' : 'Ne-line', 
         '\\TS_NE_CORE_AVG' : 'Ne-core', 
         '\\TS_TE_CORE_AVG': 'Te-core',
         '\\TS_NE_EDGE_AVG' : 'Ne-edge', 
@@ -79,8 +79,9 @@ class Config():
         '\\nG' : 'N-Greenwald',
         '\\ne_nG_ratio' : 'NG ratio',
         '\\DLM03': 'DLM03',
-        '\\RC03' : 'RC03',
-        '\\VCM03' : 'VCM03',
+        '\\RC03' : 'Ip',
+        '\\Iv' : 'Iv',
         '\\rsurf' : 'Rc', 
         '\\aminor' : 'a',
+        '\\bcentr' : 'B',
     }

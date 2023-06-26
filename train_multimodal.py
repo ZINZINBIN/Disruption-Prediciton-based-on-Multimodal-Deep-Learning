@@ -127,7 +127,7 @@ def parsing():
     parser.add_argument("--feature_dims_0D", type = int, default = 128)
     parser.add_argument("--n_layers_0D", type = int, default = 4)
     parser.add_argument("--n_heads_0D", type = int, default = 8)
-    parser.add_argument("--dim_feedforward_0D", type = int, default = 512)
+    parser.add_argument("--dim_feedforward_0D", type = int, default = 1024)
     
     args = vars(parser.parse_args())
 

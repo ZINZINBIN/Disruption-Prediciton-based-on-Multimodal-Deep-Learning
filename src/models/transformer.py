@@ -63,10 +63,9 @@ class TransformerEncoder(nn.Module):
         
         self.filter = nn.Sequential(
             nn.Conv1d(in_channels = n_features, out_channels = feature_dims, kernel_size = kernel_size, stride = 1, padding = padding),
-            nn.GELU(),
             nn.Conv1d(in_channels = feature_dims, out_channels = feature_dims, kernel_size = kernel_size, stride = 1, padding = padding),
             nn.BatchNorm1d(feature_dims),
-            nn.GELU(),
+            nn.ReLU(),
         )
         
         self.pos_enc = PositionalEncoding(d_model = feature_dims, max_len = max_len)

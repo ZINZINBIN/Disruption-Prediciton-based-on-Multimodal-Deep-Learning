@@ -657,7 +657,7 @@ class MultiModalDataset(Dataset):
                 # with tau
                 self.video_file_path.append(video_path[idx+tau*seq_len+1:idx+1:-tau][::-1])
                 
-                if idx >= dis_frame - tau * self.seq_len // 7:
+                if idx >= dis_frame - 1:
                     self.labels.append(0)
                 else:
                     self.labels.append(1)
