@@ -56,6 +56,96 @@ def visualize_2D_latent_space(model : nn.Module, dataloader : DataLoader, device
     plt.tight_layout()
     plt.savefig(save_dir)
     
+def visualize_2D_latent_space_multi(model : nn.Module, dataloader : DataLoader, device : str = 'cpu', save_dir : str = './results/fusion_latent_3d_space.png', limit_iters : int = 2, method : Literal['PCA', 'tSNE'] = 'PCA',):
+    model.to(device)
+    model.eval()
+    
+    total_label = np.array([])
+    total_latent_vis = []
+    total_latent_0D = []
+    total_latent_fusion = []
+    
+    for idx, (data, target) in enumerate(dataloader):
+        with torch.no_grad():
+            data_vis = data['video'].to(device)
+            data_0D = data['0D'].to(device)
+            
+            latent_fusion, latent_vis, latent_0D = model.encode(data_vis, data_0D)
+            batch = data['video'].size()[0]
+
+            total_latent_fusion.append(latent_fusion.detach().cpu().numpy().reshape(batch,-1))
+            total_latent_vis.append(latent_vis.detach().cpu().numpy().reshape(batch,-1))
+            total_latent_0D.append(latent_0D.detach().cpu().numpy().reshape(batch,-1))
+            
+            total_label = np.concatenate((total_label, target.detach().cpu().numpy().reshape(-1,)), axis = 0)
+            
+            if limit_iters > 0 and idx + 1 > limit_iters:
+                break
+            
+    total_latent_fusion = np.concatenate(total_latent_fusion, axis = 0)
+    total_latent_vis = np.concatenate(total_latent_vis, axis = 0)
+    total_latent_0D = np.concatenate(total_latent_0D, axis = 0)
+    
+    total_label = total_label.astype(int)
+    
+    color = np.array(['#1f77b4', '#ff7f0e'])
+    label  = np.array(['disruption','normal'])
+    
+    print("Dimension reduction process : start | latent vector : ({}, {})".format(total_latent_fusion.shape[0], total_latent_fusion.shape[1]))
+    if method == 'PCA':
+        # using PCA
+        pca_fusion = IncrementalPCA(n_components=2)
+        pca_vis = IncrementalPCA(n_components=2)
+        pca_0D = IncrementalPCA(n_components=2)
+        
+        total_latent_fusion = pca_fusion.fit_transform(total_latent_fusion)
+        total_latent_vis = pca_vis.fit_transform(total_latent_vis)
+        total_latent_0D = pca_0D.fit_transform(total_latent_0D)
+        
+    else:
+        # using t-SNE
+        tSNE_fusion = TSNE(n_components=2)
+        tSNE_vis = TSNE(n_components=2)
+        tSNE_0D = TSNE(n_components=2)
+        
+        total_latent_fusion = tSNE_fusion.fit_transform(total_latent_fusion)
+        total_latent_vis = tSNE_vis.fit_transform(total_latent_vis)
+        total_latent_0D = tSNE_0D.fit_transform(total_latent_0D)
+        
+    print("Dimension reduction process : complete")
+
+    dis_idx = np.where(total_label == 0)
+    normal_idx = np.where(total_label == 1)
+        
+    fig = plt.figure(figsize = (18,8))
+    ax = fig.add_subplot(1, 3, 1)
+    
+    ax.scatter(total_latent_fusion[dis_idx,0], total_latent_fusion[dis_idx,1], c = color[0], label = label[0])
+    ax.scatter(total_latent_fusion[normal_idx,0], total_latent_fusion[normal_idx,1], c = color[1], label = label[1])
+    ax.set_xlabel('z-0')
+    ax.set_ylabel('z-1')
+    ax.set_title("Embedded space for video + 0D data")
+    ax.legend()
+    
+    ax = fig.add_subplot(1, 3, 2)
+    ax.scatter(total_latent_vis[dis_idx,0], total_latent_vis[dis_idx,1], c = color[0], label = label[0])
+    ax.scatter(total_latent_vis[normal_idx,0], total_latent_vis[normal_idx,1], c = color[1], label = label[1])
+    ax.set_xlabel('z-0')
+    ax.set_ylabel('z-1')
+    ax.set_title("Embedded space for video data")
+    ax.legend()
+    
+    ax = fig.add_subplot(1, 3, 3)
+    ax.scatter(total_latent_0D[dis_idx,0], total_latent_0D[dis_idx,1], c = color[0], label = label[0])
+    ax.scatter(total_latent_0D[normal_idx,0], total_latent_0D[normal_idx,1], c = color[1], label = label[1])
+    ax.set_xlabel('z-0')
+    ax.set_ylabel('z-1')
+    ax.set_title("Embedded space for 0D data")
+    ax.legend()
+    
+    fig.tight_layout()
+    plt.savefig(save_dir)
+    
 def visualize_2D_decision_boundary(model : nn.Module, dataloader : DataLoader, device : str = 'cpu', save_dir : str = './results/decision_boundary_2D_space.png', limit_iters : int = 2, method : Literal['PCA', 'tSNE'] = 'PCA'):
     model.to(device)
     model.eval()

@@ -1101,7 +1101,7 @@ def generate_prob_curve_from_multi(
     
     # prob_x and prob_y for interpolation
     prob_x = x_srt + x_dist + x_prob_list
-    prob_x = np.array(prob_x) + dist
+    prob_x = np.array(prob_x) + dist * 1 / fps
     prob_y = np.array(total_prob_list)
     
     # interpolation for modifying the time interval
@@ -1153,15 +1153,16 @@ def measure_computation_time(model : torch.nn.Module, input_shape : Tuple, n_sam
         torch.cuda.empty_cache()
         torch.cuda.init()
         
-        sample_data = torch.zeros(input_shape)
-        t_start = time.time()
-        sample_output = model(sample_data.to(device))
-        t_end = time.time()
-        dt = t_end - t_start
-        t_measures.append(dt)
-        
-        sample_output.cpu()
-        sample_data.cpu()
+        with torch.no_grad():
+            sample_data = torch.zeros(input_shape)
+            t_start = time.time()
+            sample_output = model(sample_data.to(device))
+            t_end = time.time()
+            dt = t_end - t_start
+            t_measures.append(dt)
+            
+            sample_output.cpu()
+            sample_data.cpu()
         
         del sample_data
         del sample_output
@@ -1184,18 +1185,19 @@ def measure_computation_time_multi(model : torch.nn.Module, input_shape_vis : Tu
         torch.cuda.empty_cache()
         torch.cuda.init()
         
-        sample_vis = torch.zeros(input_shape_vis)
-        sample_0D = torch.zeros(input_shape_0D)
-        
-        t_start = time.time()
-        sample_output = model(sample_vis.to(device), sample_0D.to(device))
-        t_end = time.time()
-        dt = t_end - t_start
-        t_measures.append(dt)
-        
-        sample_output.cpu()
-        sample_vis.cpu()
-        sample_0D.cpu()
+        with torch.no_grad():
+            sample_vis = torch.zeros(input_shape_vis)
+            sample_0D = torch.zeros(input_shape_0D)
+            
+            t_start = time.time()
+            sample_output = model(sample_vis.to(device), sample_0D.to(device))
+            t_end = time.time()
+            dt = t_end - t_start
+            t_measures.append(dt)
+            
+            sample_output.cpu()
+            sample_vis.cpu()
+            sample_0D.cpu()
 
         del sample_output
         del sample_vis

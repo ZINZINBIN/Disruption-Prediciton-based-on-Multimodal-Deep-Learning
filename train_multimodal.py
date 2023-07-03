@@ -10,7 +10,7 @@ from src.utils.utility import preparing_multi_data, plot_learning_curve, seed_ev
 from src.train import train, train_DRW
 from src.evaluate import evaluate, evaluate_detail
 from src.loss import LDAMLoss, FocalLoss, CELoss
-from src.visualization.visualize_latent_space import visualize_3D_latent_space_multi
+from src.visualization.visualize_latent_space import visualize_2D_latent_space_multi, visualize_3D_latent_space_multi
 from src.GradientBlending import GradientBlending, train_GB_dynamic, train_GB
 from src.CCA import DeepCCA, train_cca, CCALoss, evaluate_cca_loss
 from src.models.MultiModal import MultiModalModel, MultiModalModel_GB, TFN, TFN_GB
@@ -490,12 +490,31 @@ if __name__ == "__main__":
     test_loader = DataLoader(test_data, batch_size = 128, sampler=test_sampler_vis, num_workers = args["num_workers"], pin_memory=args["pin_memory"], drop_last=True)
     
     try:
+    
+        visualize_2D_latent_space_multi(
+            model, 
+            train_loader,
+            device,
+            os.path.join(save_dir, "{}_2D_latent_train.png".format(tag)),
+            10,
+            'tSNE'
+        )
+        
+        visualize_2D_latent_space_multi(
+            model, 
+            test_loader,
+            device,
+            os.path.join(save_dir, "{}_2D_latent_test.png".format(tag)),
+            10,
+            'tSNE'
+        )
+    
         visualize_3D_latent_space_multi(
             model, 
             train_loader,
             device,
             os.path.join(save_dir, "{}_3D_latent_train.png".format(tag)),
-            3,
+            10,
             'tSNE'
         )
         
@@ -504,7 +523,7 @@ if __name__ == "__main__":
             test_loader,
             device,
             os.path.join(save_dir, "{}_3D_latent_test.png".format(tag)),
-            3,
+            16,
             'tSNE'
         )
         
@@ -531,3 +550,4 @@ if __name__ == "__main__":
         scaler = scaler,
         tau = args['tau']
     )
+    
