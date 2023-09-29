@@ -103,18 +103,9 @@ def preparing_0D_dataset(filepath : str = "./dataset/KSTAR_Disruption_ts_data_ex
     shot_train, shot_test = deterministic_split(shot_list, test_size = 0.2)
     shot_train, shot_valid = deterministic_split(shot_train, test_size = 0.2)
     
-    df_train = pd.DataFrame()
-    df_valid = pd.DataFrame()
-    df_test = pd.DataFrame()
-
-    for shot in shot_train:
-        df_train = pd.concat([df_train, df[df.shot == shot]], axis = 0)
-
-    for shot in shot_valid:
-        df_valid = pd.concat([df_valid, df[df.shot == shot]], axis = 0)
-
-    for shot in shot_test:
-        df_test = pd.concat([df_test, df[df.shot == shot]], axis = 0)
+    df_train = df[df.shot.isin(shot_train)]
+    df_valid = df[df.shot.isin(shot_valid)]
+    df_test = df[df.shot.isin(shot_test)]
         
     if scaler == 'Robust':
         scaler = RobustScaler()

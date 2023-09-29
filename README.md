@@ -1,5 +1,5 @@
  # Disruptive prediction model using KSTAR video and numerical data via Deep Learning
-<a href = "https://zinzinbin.notion.site/Research-archive-for-graduate-school-8187bf9b3ee5470d8a8dc05120655ceb" target = "_blank">[Paper : Disruption prediction and its analysis using multimodal learning in KSTAR]</a>
+<a href = "https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4563937" target = "_blank">[Paper : Disruption Prediction and Analysis Through Multimodal Deep Learning in KSTAR]</a>
 
 ## Introduction
 <div>
