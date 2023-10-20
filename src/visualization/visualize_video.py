@@ -37,7 +37,7 @@ def show_all_frame(
     retaining = True
 
     if shot_list_dir and shot_number:
-        shot_list = pd.read_csv(shot_list_dir)
+        shot_list = pd.read_csv(shot_list_dir, encoding = "euc-kr")
         shot_info = shot_list[shot_list["shot"] == shot_number]
         t_disrupt = shot_info["tTQend"].values[0]
         tifminf = shot_info["tipminf"].values[0]
@@ -131,7 +131,10 @@ def show_all_frame(
             subplot_title = "frame at t : " + str(round(t,3)) + "(s)"
 
         axes[-1].set_title(subplot_title)  
-        plt.imshow(frame)
+        
+        frame = frame / np.amax(frame)
+        frame = np.clip(frame, 0, 1)
+        plt.imshow(frame[:,:,::-1])
 
     fig.tight_layout()    
     plt.show()
