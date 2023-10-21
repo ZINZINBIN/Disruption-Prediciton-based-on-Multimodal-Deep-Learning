@@ -3,19 +3,11 @@ import os
 import numpy as np
 import pandas as pd
 import argparse
-from src.dataset import DatasetFor0D
-from torch.utils.data import DataLoader, RandomSampler
-from src.utils.sampler import ImbalancedDatasetSampler
-from src.utils.utility import preparing_0D_dataset, plot_learning_curve, generate_prob_curve_from_0D, seed_everything
-from src.visualization.visualize_latent_space import visualize_2D_latent_space, visualize_3D_latent_space
-from src.visualization.visualize_application import generate_real_time_experiment_0D
-from src.train import train, train_DRW
-from src.evaluate import evaluate
-from src.loss import FocalLoss, LDAMLoss, CELoss
+from src.utils.utility import seed_everything
 from src.models.transformer import Transformer
 from src.models.CnnLSTM import CnnLSTM
 from src.models.MLSTM_FCN import MLSTM_FCN
-from src.feature_importance import compute_permute_feature_importance
+from src.models.ViViT import ViViT
 from src.config import Config
 
 # columns for use
@@ -56,7 +48,7 @@ def parsing():
     parser.add_argument("--random_seed", type = int, default = 42)
     
     # tag and result directory
-    parser.add_argument("--model", type = str, default = 'Transformer', choices=['Transformer', 'CnnLSTM', 'MLSTM_FCN'])
+    parser.add_argument("--model", type = str, default = 'Transformer', choices=['Transformer', 'CnnLSTM', 'MLSTM_FCN', 'ViViT'])
     parser.add_argument("--tag", type = str, default = "Transformer")
     parser.add_argument("--save_dir", type = str, default = "./results")
     
@@ -246,10 +238,32 @@ if __name__ == "__main__":
             alpha = args['alpha'],
             n_classes = 2
         )
+        
+    elif args['model'] == 'ViViT':
+        model = ViViT(
+            image_size = 128,
+            patch_size = 16,
+            n_classes = 2,
+            n_frames = 21,
+            dim = 128,
+            depth = 2,
+            n_heads = 8,
+            pool = "mean",
+            in_channels = 3,
+            d_head = 64,
+            dropout = 0.1,
+            embedd_dropout=0.1,
+            scale_dim = 8,
+            alpha = 0.01
+        )
     
     model.summary()
     model.to(device)
 
     from src.utils.utility import measure_computation_time
-    t_avg, t_std, t_measures  = measure_computation_time(model, (1, 21, len(ts_cols)), n_samples = 16, device = device)
+    if args['model'] != 'ViViT':
+        t_avg, t_std, t_measures  = measure_computation_time(model, (1, 21, len(ts_cols)), n_samples = 16, device = device)
+    else:
+        t_avg, t_std, t_measures  = measure_computation_time(model, (1, 21, 3, 128, 128), n_samples = 16, device = device)
+    
     print("t_avg : {:.3f}, t_std : {:.3f}".format(t_avg, t_std))
