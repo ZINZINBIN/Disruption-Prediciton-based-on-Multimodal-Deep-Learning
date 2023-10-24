@@ -1,7 +1,7 @@
 import torch
 import torch.backends.cudnn as cudnn
 from torch.utils.data import Dataset
-import cv2, os, glob2, random
+import cv2, os, glob2, random, math
 import pandas as pd
 import numpy as np
 from typing import Optional, List, Literal, Union, Tuple
@@ -11,9 +11,9 @@ import torchvision.transforms as T
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import RobustScaler, MinMaxScaler, StandardScaler
 from sklearn.base import BaseEstimator
+from scipy.interpolate import interp1d
 from src.config import Config
 import time
-import gc
 
 config = Config()
 STATE_FIXED = config.STATE_FIXED
@@ -405,7 +405,7 @@ class VideoDataset(Dataset):
         idx_srt = self.path_indices[idx]
         idx_end = idx_srt + self.seq_len
 
-        frames = sorted(self.paths[idx_srt : idx_end])
+        frames = sorted(self.paths[idx_srt + 1: idx_end + 1])
         frame_count = len(frames)
         buffer = np.empty((frame_count, self.resize_height, self.resize_width, 3), np.dtype('float32'))
         for i, frame_name in enumerate(frames):
@@ -834,6 +834,64 @@ def plot_exp_prob_type_1(ts_data_0D : pd.DataFrame, prob_list, time_x, shot_num 
 
     return fig
 
+def plot_exp_prob_type_2(prob_list, time_x, shot_num : int, tftsrt, t_tq, t_cq, save_dir : str, t_pred:Optional[float] = 0.04):
+    # plot the disruption probability + zoom near the disruption phase
+    fig, ax = plt.subplots(1,1,figsize = (8,6))
+    fig.suptitle("Disruption prediction with shot : {}".format(shot_num))
+    
+    t_cq = round(t_cq, 3)
+    t_pred = round(t_pred, 2)
+    t_warning = round(t_cq - t_pred, 3)
+    
+    # probability
+    threshold_line = [0.5] * len(time_x)
+    ax.plot(time_x, prob_list, 'b', label = 'disrupt prob')
+    ax.plot(time_x, threshold_line, 'k', label = "threshold(p = 0.5)")
+    ax.axvline(x = t_cq, ymin = 0, ymax = 1, color = "green", linestyle = "dashed", label = "Disrupted (t={:.3f})".format(t_cq))
+    
+    if t_pred:
+        ax.axvline(x = t_warning, ymin = 0, ymax = 1, color = "red", linestyle = "dashed", label = "Warning (t={:.3f})".format(t_warning))
+    
+    ax.set_ylabel("probability")
+    ax.set_xlabel("time(unit : s)")
+    ax.set_ylim([0,1])
+    ax.set_xlim([t_tq - 0.15, t_cq + 0.075])
+    ax.legend(loc = 'upper left', facecolor = 'white', framealpha=1)
+    
+    fig.tight_layout()
+
+    if save_dir:
+        upper_dir = os.path.dirname(save_dir)
+        filename = save_dir.split("/")[-1].split(".")[0]
+        filename = "{}-zoom.png".format(filename)
+        new_save_dir = os.path.join(upper_dir, filename)
+        plt.savefig(new_save_dir, facecolor = fig.get_facecolor(), edgecolor = 'none', transparent = False)
+
+    return fig
+
+def moving_avarage_smoothing(X:np.array,k:int, method:Literal['backward', 'center'] = 'backward'):
+    S = np.zeros(X.shape[0])
+    
+    if method == 'backward':
+        for t in range(X.shape[0]):
+            if t < k:
+                S[t] = np.mean(X[:t+1])
+            else:
+                S[t] = np.sum(X[t-k:t])/k
+    else:
+        hw = k//2
+        for t in range(X.shape[0]):
+            if t < hw:
+                S[t] = np.mean(X[:t+1])
+            elif t  < X.shape[0] - hw:
+                S[t] = np.mean(X[t-hw:t+hw])
+            else:
+                S[t] = np.mean(X[t-hw:])
+    
+    S = np.clip(S, 0, 1)
+    
+    return S
+
 # function for ploting the probability curve for video network
 def generate_prob_curve(
     file_path : str,
@@ -893,7 +951,7 @@ def generate_prob_curve(
     interval = 1
     fps = 210
     
-    prob_list = [0] * (clip_len + frame_srt)+ prob_list
+    prob_list = [0] * (clip_len + frame_srt) + prob_list[1:-1]
     
     # correction for startup peaking effect : we will soon solve this problem
     for idx, prob in enumerate(prob_list):
@@ -901,14 +959,20 @@ def generate_prob_curve(
         if idx < fps * 1 and prob >= 0.5:
             prob_list[idx] = 0
 
-    time_x = np.arange(dist_frame, len(prob_list) + dist_frame) * (1/fps) * interval
+    # time_x = np.arange(dist_frame, len(prob_list) + dist_frame) * (1/fps) * interval
+    time_x = np.arange(0, len(prob_list)) * (1/fps) * interval
     
     print("\n(Info) flat-top : {:.3f}(s) | thermal quench : {:.3f}(s) | current quench : {:.3f}(s)\n".format(tftsrt, tTQend, tipminf))
     
     t_disrupt = tTQend
     t_current = tipminf
-            
+    
+    # f_prob = interp1d(time_x, prob_list, kind = 'cubic', fill_value = "extrapolate")
+    # time_x = np.linspace(0, len(prob_list) * interval, num = len(prob_list) * interval, endpoint = True) * (1/fps)
+    # prob_list = f_prob(np.linspace(0, len(prob_list) * interval, num = len(prob_list) * interval, endpoint = True) * (1/fps))
+    
     fig = plot_exp_prob_type_1(ts_data_0D, prob_list, time_x, shot_num, tftsrt, tTQend, t_current, save_dir)
+    _ = plot_exp_prob_type_2(prob_list, time_x, shot_num, tftsrt, tTQend, t_current, save_dir, dist_frame * 1 / fps)
 
     return time_x, prob_list
 
@@ -975,7 +1039,7 @@ def generate_prob_curve_from_0D(
     interval = 4
     fps = 210
     frame_srt = int(t_start * fps / interval)
-    prob_list = [0] * (frame_srt + seq_len + dist) + prob_list + [0] * seq_len
+    prob_list = [0] * (frame_srt + seq_len) + prob_list[1:] + [0] * seq_len
     
     # correction for startup peaking effect : we will soon solve this problem
     for idx, prob in enumerate(prob_list):
@@ -983,12 +1047,11 @@ def generate_prob_curve_from_0D(
         if idx < fps * 1 and prob >= 0.5:
             prob_list[idx] = 0
             
-    from scipy.interpolate import interp1d
-    
     prob_x = np.linspace(0, len(prob_list), num = len(prob_list), endpoint = True) * (interval/fps)
     prob_y = np.array(prob_list)
-    f_prob = interp1d(prob_x, prob_y, kind = 'cubic')
+    f_prob = interp1d(prob_x, prob_y, kind = 'linear')
     prob_list = f_prob(np.linspace(0, len(prob_list) * interval, num = len(prob_list) * interval, endpoint = True) * (1/fps))
+    prob_list = moving_avarage_smoothing(prob_list, 12)
     
     time_x = np.arange(0, len(prob_list)) * (1/fps)
     
@@ -998,6 +1061,8 @@ def generate_prob_curve_from_0D(
     t_current = tipminf
     
     fig = plot_exp_prob_type_1(ts_data_0D_before_scaling, prob_list, time_x, shot_num, tftsrt, tTQend, t_current, save_dir)
+    _ = plot_exp_prob_type_2(prob_list, time_x, shot_num, tftsrt, tTQend, t_current, save_dir, dist * 1 / fps * interval)
+    
     return time_x, prob_list
 
 def generate_prob_curve_from_multi(
@@ -1075,7 +1140,8 @@ def generate_prob_curve_from_multi(
     interval = tau
     fps = 210
 
-    total_prob_list = [0] * int(t_srt * fps / interval + dist) + prob_list + [0] * int(dt_end * fps / interval)
+    # total_prob_list = [0] * int(t_srt * fps / interval + dist) + prob_list + [0] * int(dt_end * fps / interval)
+    total_prob_list = [0] * int(t_srt * fps / interval) + prob_list[1:] + [0] * int(dt_end * fps / interval)
     
     # correction for startup peaking effect : we will soon solve this problem
     for idx, prob in enumerate(total_prob_list):
@@ -1087,17 +1153,15 @@ def generate_prob_curve_from_multi(
     
     # there are different time interval between each region
     x_srt = [i * interval / fps for i in range(0, int(t_srt * fps / interval))]
-    x_dist = [x_srt[-1] + i * 1 / fps for i in range(1, dist + 1)]
-    x_prob_list = [x_dist[-1] + i * 1 / fps * interval for i in range(1, len(prob_list) + int(dt_end * fps / interval) + 1)]
-    
-    # prob_x and prob_y for interpolation
-    prob_x = x_srt + x_dist + x_prob_list
-    prob_x = np.array(prob_x) + dist * 1 / fps
+    x_prob_list = [x_srt[-1] + (i+1) * 1 / fps * interval for i in range(0, len(prob_list[1:]) + int(dt_end * fps / interval))]
+    prob_x = np.array(x_srt + x_prob_list)
     prob_y = np.array(total_prob_list)
     
     # interpolation for modifying the time interval
-    f_prob = interp1d(prob_x, prob_y, kind = 'cubic', fill_value = "extrapolate")
+    f_prob = interp1d(prob_x, prob_y, kind = 'linear', fill_value = "extrapolate")
     total_prob_list = f_prob(np.linspace(0, t_end + dt_end, num = len(total_prob_list) * interval, endpoint = True))
+    total_prob_list = moving_avarage_smoothing(total_prob_list, 16, 'center')
+    prob_y = moving_avarage_smoothing(prob_y, 16, 'center')
     
     # For convinent view, - dist added to move the graph left to the x-axis
     # time_x = np.arange(dist, len(total_prob_list) + dist) * (1/fps)
@@ -1106,9 +1170,10 @@ def generate_prob_curve_from_multi(
     print("\n(Info) flat-top : {:.3f}(s) | thermal quench : {:.3f}(s) | current quench : {:.3f}(s)\n".format(tftsrt, tTQend, tipminf))
     
     t_disrupt = tTQend
-    t_current = tipminf
+    t_current = tipminf 
     
     fig = plot_exp_prob_type_1(ts_data_0D_origin, total_prob_list, time_x, shot_num, tftsrt, tTQend, tipminf, save_dir)
+    _ = plot_exp_prob_type_2(total_prob_list, time_x, shot_num, tftsrt, tTQend, t_current, save_dir, dist * 1 / fps * interval)
     
     return time_x, prob_list
 
