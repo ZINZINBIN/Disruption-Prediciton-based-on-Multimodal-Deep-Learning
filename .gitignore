@@ -11,6 +11,7 @@ runs/*
 hpo_checkpoint/*
 
 # result file
+results/*
 results/*.csv
 results/*.png
 results/*.txt

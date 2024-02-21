@@ -234,8 +234,8 @@ if __name__ == "__main__":
         f.write(txt)
     
     if args['package'] == "torchviz":
-        make_dot(model(data).mean(), params=dict(model.named_parameters()), show_attrs=False, show_saved=True).render( "./results/architecture_{}".format(args["model"]), format = "jpg")
+        make_dot(model(data).mean(), params=dict(model.named_parameters()), show_attrs=False, show_saved=True).render( "./results/architecture_{}".format(args["model"]), format = "png")
     elif args['package'] == "hiddenlayers":
         im = hl.build_graph(model, data)
-        im.save(path = "./results/architecture_{}".format(args["model"]), format = "jpg")
+        im.save(path = "./results/architecture_{}".format(args["model"]), format = "png")
     
