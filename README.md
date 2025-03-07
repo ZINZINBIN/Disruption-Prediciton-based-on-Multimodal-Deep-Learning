@@ -304,13 +304,13 @@ Jinsu Kim (2024). **Disruption-Prediciton-based-on-Multimodal-Deep-Learning**. G
 
 #### 📚 BibTeX:
 ```bibtex
-@software{Kim_Bayesian_Deep_Learning_2024,
+@software{Kim_Deep_Multimodal_Learning_2024,
 author = {Kim, Jinsu},
-doi = {https://doi.org/10.1088/1361-6587/ad48b7},
+doi = {https://doi.org/10.1016/j.fusengdes.2024.114204},
 license = {MIT},
-month = may,
-title = {{Bayesian Deep Learning based Disruption Prediction Model}},
-url = {https://github.com/ZINZINBIN/Bayesian-Disruption-Prediction},
+month = feb,
+title = {{Deep Multimodal Learning based KSTAR Disruption Prediction Model}},
+url = {https://github.com/ZINZINBIN/Disruption-Prediciton-based-on-Multimodal-Deep-Learning},
 version = {1.0.0},
 year = {2024}
 }
