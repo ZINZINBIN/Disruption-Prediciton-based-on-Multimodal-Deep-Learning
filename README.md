@@ -291,13 +291,27 @@
 - Borderline : inter-plane region (not used)
 - Normal : non-disruptive state
 
-## Reference
-- R2Plus1D : A Spatial-temporal Attention Module for 3D Convolution Network in Action Recognition(https://arxiv.org/abs/1711.11248)
-- Slowfast : SlowFast Networks for Video Recognition, Christoph Feichtenhofer et al, 2018(https://arxiv.org/abs/1812.03982)
-- Video Vision Transformer : ViViT: A Video Vision Transformer, Anurag Arnab et al, 2021(https://arxiv.org/pdf/2103.15691.pdf)
-- Multigrid : A Multigrid Method for Efficiently Training Video Models, Chao-Yuan Wu et al, 2020
-- Video Data Augmentation : VideoMix: Rethinking Data Augmentation for Video Classification
-- LDAM : Label-distribution-aware Margin Loss
-- Focal Loss : Focal Loss for Dense object detection, TY Lin et al, 2017
-- Gradient Blending : What Makes Training Multi-Modal Classification Networks Hard?, Weiyao Wang et al, 2022
-- Tensor Fusion Network : Tensor Fusion Network for Multimodal Sentiment Analysis, Amir Zadeh et al, 2017
+## 📖 Citation
+If you use this repository in your research, please cite the following:
+
+### 📜 Research Article
+[Disruption prediction and analysis through multimodal deep learning in KSTAR](https://doi.org/10.1016/j.fusengdes.2024.114204)  
+Kim, Jinsu, et al. "Disruption prediction and analysis through multimodal deep learning in KSTAR." Fusion Engineering and Design 200 (2024): 114204.
+
+### 📌 Code Repository
+Jinsu Kim (2024). **Disruption-Prediciton-based-on-Multimodal-Deep-Learning**. GitHub.  
+[https://github.com/ZINZINBIN/Disruption-Prediciton-based-on-Multimodal-Deep-Learning](https://github.com/ZINZINBIN/Disruption-Prediciton-based-on-Multimodal-Deep-Learning)
+
+#### 📚 BibTeX:
+```bibtex
+@software{Kim_Bayesian_Deep_Learning_2024,
+author = {Kim, Jinsu},
+doi = {https://doi.org/10.1088/1361-6587/ad48b7},
+license = {MIT},
+month = may,
+title = {{Bayesian Deep Learning based Disruption Prediction Model}},
+url = {https://github.com/ZINZINBIN/Bayesian-Disruption-Prediction},
+version = {1.0.0},
+year = {2024}
+}
+```
